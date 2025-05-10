@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cmake -B build -S . -DENABLE_TESTING:BOOL:=TRUE -DCMAKE_BUILD_TYPE:STRING:=Debug -DFETCHCONTENT_UPDATES_DISCONNECTED:BOOL:=TRUE
+cmake --build build

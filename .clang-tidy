@@ -1,0 +1,209 @@
+---
+# Borrowed from cmake-init project: https://github.com/friendlyanon/cmake-init
+# with modifications to naming conventions and a few checks that were annoying me.
+# Also added a few allowable identifer names < 3 characters.
+
+# TODO: Look into integrating some options from https://github.com/bencsikandrei/clang-tidy-cpp-template
+
+# Enable ALL the things! Except not really
+# misc-non-private-member-variables-in-classes: the options don't do anything
+# modernize-use-nodiscard: too aggressive, attribute is situational useful
+
+# cppcoreguidelines-avoid-magic-numbers : essentially a duplicate of readability-magic-numbers
+# hicpp-member-init: duplicate of cppcoreguidelines-pro-type-member-init
+# modernize-use-trailing-return-type : doesn't feel idiomatic to me, and it's still a little confusing to read
+# cert-dcl21-cpp: deprecated as of clang-tidy-19. Suggests returning of a `const` value.
+# performance-enum-size: A bit of a premature optimization. Reduces readability for very little benefit.
+Checks: "*,\
+  -google-readability-todo,\
+  -altera-*,\
+  -fuchsia-*,\
+  fuchsia-multiple-inheritance,\
+  -llvm-header-guard,\
+  -llvm-include-order,\
+  -llvmlibc-*,\
+  -cppcoreguidelines-avoid-magic-numbers,\
+  -modernize-use-nodiscard,\
+  -modernize-use-trailing-return-type,\
+  -misc-non-private-member-variables-in-classes,\
+  -cert-dcl21-cpp,\
+  -hicpp-member-init,\
+  -hicpp-special-member-functions,\
+  -performance-enum-size"
+WarningsAsErrors: ""
+CheckOptions:
+  # Conventional use of `os` and `is` for std::ostream and std::istream stream operator overloads
+  - key: "readability-identifier-length.IgnoredVariableNames"
+    value: "(id|fd|nr)"
+  - key: "readability-identifier-length.IgnoredParameterNames"
+    value: "(os|is|id|fd|nr)"
+  # Allow small, recognizable integer values. Not EVERYTHING has to be a constant, especially in academia
+  - key: "readability-magic-numbers.IgnoredIntegerValues"
+    value: "1;2;3;4;5;6;7;8;9;10;100"
+  # Qt headers are marked wrongly as "indirectly used", since they follow the
+  # stdlib convention of adding extra headers without the h(pp) suffix
+  - key: "misc-include-cleaner.IgnoreHeaders"
+    value: "Q*"
+  # While "const by defualt" is admittedly very nice, const in C / C++ could lead to dangerous behavior
+  # with unchecked pointers, or custom memory allocations. Modern compilers should also be smart enough
+  # to propegate const values at least in local scope, meaning this would just be visual bloat.
+  - key: "misc-const-correctness.AnalyzeValues"
+    value: "false"
+  # Stupid check by hicpp which says that (UNSIGNED_VAR >> 8) is wrong
+  - key: "hicpp-signed-bitwise.IgnorePositiveIntegerLiterals"
+    value: "true"
+  - key: "cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor"
+    value: "true"
+  - key: "bugprone-argument-comment.StrictMode"
+    value: "true"
+  # Prefer using enum classes with 2 values for parameters instead of bools
+  - key: "bugprone-argument-comment.CommentBoolLiterals"
+    value: "true"
+  - key: "bugprone-misplaced-widening-cast.CheckImplicitCasts"
+    value: "true"
+  - key: "bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression"
+    value: "true"
+  - key: "bugprone-suspicious-string-compare.WarnOnLogicalNotComparison"
+    value: "true"
+  - key: "readability-simplify-boolean-expr.ChainedConditionalReturn"
+    value: "true"
+  - key: "readability-simplify-boolean-expr.ChainedConditionalAssignment"
+    value: "true"
+  - key: "readability-uniqueptr-delete-release.PreferResetCall"
+    value: "true"
+  - key: "cppcoreguidelines-init-variables.MathHeader"
+    value: "<cmath>"
+  - key: "cppcoreguidelines-narrowing-conversions.PedanticMode"
+    value: "true"
+  # Allow some debug and logging macros
+  - key: "cppcoreguidelines-macro-usage.AllowedRegexp"
+    value: "^DEBUG*|^LOG*"
+  - key: "readability-else-after-return.WarnOnUnfixable"
+    value: "true"
+  - key: "readability-else-after-return.WarnOnConditionVariables"
+    value: "true"
+  - key: "readability-inconsistent-declaration-parameter-name.Strict"
+    value: "true"
+  - key: "readability-qualified-auto.AddConstToQualified"
+    value: "true"
+  # Identifier conventions is currently:
+  # - `lower_case` for variables and functions
+  # - `CamelCase` for types and enum constants
+  # - `UPPER_CASE` for constants (compile-time or otherwise)
+  # - `lower_case` for namespaces
+  # - class members are prefixed with `m_`
+
+  # Only one that is definitive as of yet is functions based on HW01 description
+  - key: "readability-identifier-naming.AbstractClassCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.ClassCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.ClassConstantCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ClassMemberCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ClassMethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ConstantCase"
+    value: "UPPER_CASE"
+  - key: "readability-identifier-naming.ConstantMemberCase"
+    value: "UPPER_CASE"
+  # Parameters are often `const&`, which should be the same case as other params
+  # const params that aren't refs or ptrs are almost never used anyways
+  - key: "readability-identifier-naming.ConstantParameterCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ConstantPointerParameterCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ConstexprFunctionCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ConstexprMethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ConstexprVariableCase"
+    value: "UPPER_CASE"
+  - key: "readability-identifier-naming.EnumCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.EnumConstantCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.FunctionCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.GlobalConstantCase"
+    value: "UPPER_CASE"
+  - key: "readability-identifier-naming.GlobalConstantPointerCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.GlobalFunctionCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.GlobalPointerCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.GlobalVariableCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.InlineNamespaceCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.LocalConstantCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.LocalConstantPointerCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.LocalPointerCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.LocalVariableCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.MacroDefinitionCase"
+    value: "UPPER_CASE"
+  - key: "readability-identifier-naming.MemberCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.MethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.NamespaceCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ParameterCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ParameterPackCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.PointerParameterCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.PrivateMemberCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.PrivateMemberSuffix"
+    value: "_"
+  - key: "readability-identifier-naming.PrivateMethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ProtectedMemberCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ProtectedMemberSuffix"
+    value: "_"
+  - key: "readability-identifier-naming.ProtectedMethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.PublicMemberCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.PublicMethodCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.ScopedEnumConstantCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.StaticConstantCase"
+    value: "UPPER_CASE"
+  - key: "readability-identifier-naming.StaticVariableCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.StructCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.TemplateParameterCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.TemplateTemplateParameterCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.TypeAliasCase"
+    value: "CamelCase"
+  # Allow for type aliases which comply with any standards named requirements
+  # Only includes some container and iterator idents for now.
+  - key: "readability-identifier-naming.TypeAliasIgnoredRegexp"
+    value: "(difference_type|value_type|pointer|reference|iterator_category|iterator|const_iterator)"
+  # Not sure that CamelCase is ideal, but it should not be used anyways due to `modernize-use-using` check
+  - key: "readability-identifier-naming.TypedefCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.TypeTemplateParameterCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.UnionCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.ValueTemplateParameterCase"
+    value: "CamelCase"
+  - key: "readability-identifier-naming.VariableCase"
+    value: "lower_case"
+  - key: "readability-identifier-naming.VirtualMethodCase"
+    value: "lower_case"

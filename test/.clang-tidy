@@ -1,0 +1,2 @@
+---
+Checks: "-cppcoreguidelines-avoid-do-while"

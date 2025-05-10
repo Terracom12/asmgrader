@@ -1,0 +1,24 @@
+---
+# TODO: Maybe a wider column width? Don't need split screen or anything
+# TODO: Double-check values based off of homework style guide
+BreakConstructorInitializers: BeforeComma
+
+AlwaysBreakTemplateDeclarations: true
+
+PointerAlignment: Left
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  SplitEmptyFunction: false
+  AfterClass: true
+  AfterFunction: false
+  AfterStruct: true
+
+TabWidth: 4
+IndentWidth: 4
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+
+ColumnLimit: 120
+
+AllowShortFunctionsOnASingleLine: Inline
