@@ -1,3 +1,6 @@
+CompileFlags:
+    CompilationDatabase: build/
+
 InlayHints:
     BlockEnd: No
     Designators: Yes
@@ -6,4 +9,6 @@ InlayHints:
     DeducedTypes: Yes
     TypeNameLimit: 24
 
-SortIncludes: CaseInsensitive
+Completion:
+    AllScopes: Yes
+    ArgumentLists: Delimeters # fo^ completes to foo(^)

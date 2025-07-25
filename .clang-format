@@ -21,4 +21,33 @@ AccessModifierOffset: -4
 
 ColumnLimit: 120
 
+FixNamespaceComments: true
+
 AllowShortFunctionsOnASingleLine: Inline
+
+SortIncludes: CaseInsensitive
+
+# Categories:
+#   Main header (top)
+#   Project headers
+#   3rd-party Library headers
+#   Std Library headers (C++)
+#   Other library headers
+#
+#   catch2_custom custom (top) as "main" include for tests
+IncludeCategories:
+  - Regex:           '^<(range|boost|fmt|catch2|nlohmann|argparse)/'
+    Priority:        2
+    CaseSensitive:   true
+  - Regex:           '^<[^\.]+>' # stdlib (C++, no .h)
+    Priority:        3
+
+    # other library headers (implicitly last)
+
+  - Regex:           '^"catch2_custom.hpp'
+    Priority:        -1
+
+  - Regex:           '^".*'  # project headers
+    Priority:        1
+
+IncludeBlocks: Regroup

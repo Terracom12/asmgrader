@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Executable with GDB",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/autograder/autograder",
+            "args": [
+                "${input:programArg}"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "ASAN_OPTIONS",
+                    "value": "detect_leaks=0:abort_on_error=1"
+                },
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "TRACE"
+                }
+            ],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Project"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "programArg",
+            "type": "promptString",
+            "description": "Enter program argument",
+            "default": ""
+        }
+    ]
+}

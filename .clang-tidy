@@ -16,6 +16,7 @@
 # performance-enum-size: A bit of a premature optimization. Reduces readability for very little benefit.
 Checks: "*,\
   -google-readability-todo,\
+  -google-readability-avoid-underscore-in-googletest-name,\
   -altera-*,\
   -fuchsia-*,\
   fuchsia-multiple-inheritance,\
@@ -29,14 +30,16 @@ Checks: "*,\
   -cert-dcl21-cpp,\
   -hicpp-member-init,\
   -hicpp-special-member-functions,\
+  -hicpp-explicit-conversions,\
+  -hicpp-vararg,\
   -performance-enum-size"
 WarningsAsErrors: ""
 CheckOptions:
   # Conventional use of `os` and `is` for std::ostream and std::istream stream operator overloads
   - key: "readability-identifier-length.IgnoredVariableNames"
-    value: "(id|fd|nr)"
+    value: "(id|fd|nr|it|fn)"
   - key: "readability-identifier-length.IgnoredParameterNames"
-    value: "(os|is|id|fd|nr)"
+    value: "(os|is|id|fd|nr|it|fn)"
   # Allow small, recognizable integer values. Not EVERYTHING has to be a constant, especially in academia
   - key: "readability-magic-numbers.IgnoredIntegerValues"
     value: "1;2;3;4;5;6;7;8;9;10;100"
@@ -44,6 +47,9 @@ CheckOptions:
   # stdlib convention of adding extra headers without the h(pp) suffix
   - key: "misc-include-cleaner.IgnoreHeaders"
     value: "Q*"
+  # For use with NonCopyable / NonMovable traits
+  - key: "cppcoreguidelines-special-member-functions.AllowImplicitlyDeletedCopyOrMove"
+    value: true
   # While "const by defualt" is admittedly very nice, const in C / C++ could lead to dangerous behavior
   # with unchecked pointers, or custom memory allocations. Modern compilers should also be smart enough
   # to propegate const values at least in local scope, meaning this would just be visual bloat.
@@ -77,7 +83,7 @@ CheckOptions:
     value: "true"
   # Allow some debug and logging macros
   - key: "cppcoreguidelines-macro-usage.AllowedRegexp"
-    value: "^DEBUG*|^LOG*"
+    value: "^DEBUG*|^LOG*|^UNIMPLEMENTED|^ASSERT*"
   - key: "readability-else-after-return.WarnOnUnfixable"
     value: "true"
   - key: "readability-else-after-return.WarnOnConditionVariables"

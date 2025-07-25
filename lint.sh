@@ -11,8 +11,7 @@ ROOT_DIR=$(
 cd "$ROOT_DIR"
 
 lint_files=$(
-    # find src/ include/ test/ -name '*.hpp' -or -name '*.cpp'
-    find src/ test/ -name '*.hpp' -or -name '*.cpp'
+    find core/ autograder/ test/ -name '*.hpp' -or -name '*.cpp'
 )
 compilation_db=build/compile_commands.json
 

@@ -15,7 +15,10 @@ if(MSVC)
   message( FATAL_ERROR "Compiling with MSVC is unsupported!" )
 endif()
 
-project(CS3BUnittests VERSION 0.0.1 LANGUAGES CXX)
+project(cs3b_autograder VERSION 0.0.1 LANGUAGES CXX)
+
+# Show download progress
+set(FETCHCONTENT_QUIET FALSE)
 
 # CMake package manager for easy dependency management
 #  use local packages if possible as to not download unnecessarily
@@ -26,8 +29,10 @@ include(cmake/CPM.cmake)
 add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-DDEBUG>")
 add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-DRELEASE>")
 
-# Add main project library
-add_subdirectory(src)
+# add_compile_options("-fconcepts-diagnostics-depth=3")
+
+add_subdirectory(core)
+add_subdirectory(autograder)
 
 option(ENABLE_TESTING "Whether to enable building of unit tests or not" FALSE)
 if (ENABLE_TESTING)
