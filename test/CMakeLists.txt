@@ -1,12 +1,9 @@
-# Based on Catch2 docs at https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
+# Partially based on Catch2 docs at:
+# https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
+
+include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
 
 # Catch2 for unit testing
-# FetchContent_Declare(
-#   Catch2
-#   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-#   GIT_TAG v3.6.0
-# )
-# FetchContent_MakeAvailable(Catch2)
 CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 
 ##### Test runner executable
@@ -36,19 +33,10 @@ target_include_directories(
 
 ##### Simple assembly executable
 
-set(TEST_ASM_TARGET asm_tests)
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-    set(TEST_ASM_SRC "simple_asm_x86_64.s")
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set(TEST_ASM_SRC "simple_asm_aarch64.s")
-else ()
-    message(FATAL_ERROR "Unsupported system processor") 
-endif ()
 
-
-set(CMAKE_ASM_FLAGS "-g -static -nolibc -nostartfiles -nostdlib")
-set_source_files_properties(${TEST_ASM_SRC} PROPERTIES LANGUAGE ASM)
-add_executable(asm_tests ${TEST_ASM_SRC})
+add_asm_arch_specific_impl(asm_tests simple_asm)
+# set_source_files_properties(${TEST_ASM_SRC} PROPERTIES LANGUAGE ASM)
+# add_executable(asm_tests ${TEST_ASM_SRC})
 
 target_compile_definitions(
     tests
