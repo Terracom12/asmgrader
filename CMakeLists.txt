@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
+# Disallow in-source builds
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR
+        "In-source builds are not allowed.\n"
+        "Please specify a seperate build directory with:\n"
+        "  cmake -B <build-dir>"
+    )
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
