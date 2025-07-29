@@ -1,6 +1,8 @@
 #pragma once
 
+#include "fmt/base.h"
 #include "logging.hpp"
+#include "util/extra_formatters.hpp"
 
 #include <fmt/format.h>
 
@@ -206,15 +208,6 @@ private:
     ExpectedData<T, E> data_;
 };
 
-template <typename T, typename E>
-inline auto format_as(const Expected<T, E>& from) {
-    if (!from) {
-        return fmt::format("Error({})", from.error());
-    }
-
-    return fmt::format("Expected({})", from.value());
-}
-
 template <typename E>
 inline auto format_as(const Expected<void, E>& from) {
     if (!from) {
@@ -244,4 +237,34 @@ template <typename T, typename E>
 
     _exit(1);
 }
+
 } // namespace util
+
+template <typename T, typename E>
+struct fmt::formatter<util::Expected<T, E>> : DebugFormatter
+{
+
+    auto format(const util::Expected<T, E>& from, fmt::format_context& ctx) const {
+        // TODO: Use a `copy` algo. `ranges::copy` has stricter iter reqs than the `ctx.out()` type impls
+        return format_to(ctx.out(), "{}", format_impl(from));
+    }
+
+private:
+    std::string format_impl(const util::Expected<T, E>& from) const {
+        if (!from) {
+            if constexpr (formattable<E>) {
+                return fmt::format("Error({})", from.error());
+            } else {
+                return "Error(<unformattable>)";
+            }
+        }
+
+        if constexpr (std::same_as<T, void>) {
+            return "Expected(void)";
+        } else if constexpr (formattable<T>) {
+            return fmt::format("Expected({})", from.value());
+        } else {
+            return "Expected(<unformattable>)";
+        }
+    }
+};

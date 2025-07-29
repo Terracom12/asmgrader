@@ -12,6 +12,7 @@
 #include <concepts>
 #include <ctime>
 #include <optional>
+#include <source_location>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -45,6 +46,15 @@ struct fmt::formatter<std::timespec> : formatter<std::string>
     template <typename Context>
     auto format(const std::timespec& from, Context& ctx) const {
         return format_to(ctx.out(), "timespec{{tv_sec={}, tv_nsec={}}}", from.tv_sec, from.tv_nsec);
+    }
+};
+
+template <>
+struct fmt::formatter<std::source_location> : formatter<std::string>
+{
+    auto format(const std::source_location& from, fmt::format_context& ctx) const {
+        return formatter<std::string>::format(
+            fmt::format("[{}@{}:{}:{}]", from.file_name(), from.line(), from.column(), from.function_name()), ctx);
     }
 };
 
@@ -138,7 +148,7 @@ struct FormatterImpl<Enum>
 };
 
 template <typename Aggregate>
-    requires(std::is_aggregate_v<Aggregate>)
+    requires(std::is_aggregate_v<Aggregate> && !std::is_array_v<Aggregate>)
 struct FormatterImpl<Aggregate>
 {
     static auto format(const Aggregate& from, fmt::format_context& ctx) {
