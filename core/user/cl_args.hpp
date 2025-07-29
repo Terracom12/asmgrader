@@ -20,6 +20,7 @@ public:
     {
         bool verbose;
         std::string assignment_name;
+        std::optional<std::string> file_name;
 
         /// Never = stop only on fatal errors
         /// FirstError = stop completely on the first error encountered

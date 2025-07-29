@@ -1,10 +1,13 @@
 #include "cl_args.hpp"
 
+#include "fmt/format.h"
 #include "registrars/global_registrar.hpp"
 
 #include <fmt/color.h>
 
+#include <filesystem>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -40,6 +43,7 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("--stop")
         .default_value(std::string{"never"})
         .choices("never", "first", "each")
+        .metavar("WHEN")
         .nargs(1)
         .action([&] (const std::string& opt) {
             if (opt == "first-error") {
@@ -51,6 +55,16 @@ void CommandLineArgs::setup_parser() {
             }
         })
         .help("Whether/when to stop early, to not flood the console with failing test messages.");
+
+    arg_parser_.add_argument("-f", "--file")
+        .action([this] (const std::string& opt) {
+                if (!std::filesystem::exists(opt)) {
+                    throw std::invalid_argument(fmt::format("Specified file {:?} does not exist!", opt));
+                }
+                opts_buffer_.file_name = opt;
+        })
+        .metavar("FILE")
+        .help("File to run tests on");
     // clang-format on
 }
 
