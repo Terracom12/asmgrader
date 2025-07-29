@@ -1,5 +1,6 @@
 #pragma once
 
+#include "subprocess/memory/concepts.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/traced_subprocess.hpp"
 #include "subprocess/tracer.hpp"
@@ -8,6 +9,7 @@
 #include "util/error_types.hpp"
 
 #include <csignal>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -33,7 +35,12 @@ public:
     /// Returns the result of the function call, or nullopt if the symbol name was not found
     /// or some other error occured
     template <typename Func, typename... Args>
-    util::Result<std::invoke_result_t<Func, Args...>> call_function(std::string_view name, const Args&... args);
+    util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> call_function(std::string_view name,
+                                                                                     Args&&... args);
+
+    template <typename Func, typename... Args>
+    util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> call_function(std::uintptr_t addr,
+                                                                                     Args&&... args);
 
 private:
     void check_is_elf() const;
@@ -44,26 +51,21 @@ private:
     std::unique_ptr<TracedSubprocess> subproc_;
     std::unique_ptr<SymbolTable> symtab_;
 };
-
 template <typename Func, typename... Args>
-util::Result<std::invoke_result_t<Func, Args...>> Program::call_function(std::string_view name, const Args&... args) {
-    using Ret = std::invoke_result_t<Func, Args...>;
-
-    auto symbol = symtab_->find(name);
-    if (!symbol) {
-        return util::ErrorKind::UnresolvedSymbol;
-    }
+util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> Program::call_function(std::uintptr_t addr,
+                                                                                          Args&&... args) {
+    using Ret = std::invoke_result_t<Func, MemoryIODecayed<Args>...>;
 
     Tracer& tracer = subproc_->get_tracer();
-    tracer.setup_function_call(args...);
+    TRY(tracer.setup_function_call(std::forward<Args>(args)...));
 
 #ifdef __aarch64__
     std::uintptr_t instr_pointer = tracer.get_registers().pc;
 #else // x86_64 assumed
-    std::uintptr_t instr_pointer = tracer.get_registers().rip;
+    std::uintptr_t instr_pointer = TRY(tracer.get_registers()).rip;
 #endif
-    LOG_TRACE("Jumping to: {}@{:#X} from {:#X}", symbol->name, symbol->address, instr_pointer);
-    tracer.jump_to(symbol->address);
+    LOG_TRACE("Jumping to: {:#X} from {:#X}", addr, instr_pointer);
+    TRY(tracer.jump_to(addr));
 
     auto run_res = tracer.run();
 
@@ -88,7 +90,7 @@ util::Result<std::invoke_result_t<Func, Args...>> Program::call_function(std::st
     if constexpr (std::same_as<Ret, void>) {
         return {};
     } else {
-        std::optional<Ret> return_val = tracer.process_function_ret<Ret>();
+        std::optional<Ret> return_val = TRY(tracer.process_function_ret<Ret>());
 
         if (!return_val) {
             return util::ErrorKind::UnknownError;
@@ -96,4 +98,17 @@ util::Result<std::invoke_result_t<Func, Args...>> Program::call_function(std::st
 
         return *return_val;
     }
+}
+
+template <typename Func, typename... Args>
+util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> Program::call_function(std::string_view name,
+                                                                                          Args&&... args) {
+    auto symbol = symtab_->find(name);
+    if (!symbol) {
+        return util::ErrorKind::UnresolvedSymbol;
+    }
+
+    LOG_TRACE("Resolved symbol {:?} at {:#X}", symbol->name, symbol->address);
+
+    return call_function<Func>(symbol->address, std::forward<Args>(args)...);
 }

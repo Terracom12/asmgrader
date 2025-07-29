@@ -7,7 +7,7 @@
 
 #include <sys/ptrace.h>
 
-ByteVector PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
+util::Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
     // TODO: Detetermine whether alignment logic is necessary
 
     // TODO: Use <algorithm> instead of ptr arithmetic
@@ -21,14 +21,10 @@ ByteVector PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t l
 
     while (length != 0) {
         size_t todo = std::min(length, sizeof(long) - (address & ALIGNMENT));
-        auto res = util::linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0);
+        long res = TRYE(util::linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0),
+                        util::ErrorKind::SyscallFailure);
 
-        if (!res) {
-            LOG_WARN("PTRACE_PEEKTEXT failed at {:#x}", address - (address & ALIGNMENT));
-            return {}; // FIXME
-        }
-
-        std::memcpy(raw_buffer_ptr, reinterpret_cast<char*>(&res.value()) + (address & ALIGNMENT), todo);
+        std::memcpy(raw_buffer_ptr, reinterpret_cast<char*>(&res) + (address & ALIGNMENT), todo);
 
         raw_buffer_ptr += todo;
         address += todo;
@@ -39,22 +35,26 @@ ByteVector PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t l
 
     return result_buffer;
 }
-void PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
+util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
+    // FIXME: Don't just extend by 0-bytes
     // TODO: Detetermine whether alignment logic is necessary
     static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
-    ASSERT(/*addr % ALIGNMENT == 0 &&*/ data.size() % ALIGNMENT == 0,
-           "'data.size()' and 'n' must be multiples of alignement - sizeof(long)");
+    // ASSERT(/*addr % ALIGNMENT == 0 &&*/ data.size() % ALIGNMENT == 0,
+    //        "'data.size()' and 'n' must be multiples of alignement - sizeof(long)");
+    auto aligned_data = data;
+    aligned_data.resize(aligned_data.size() + ((ALIGNMENT - (aligned_data.size() % ALIGNMENT)) % ALIGNMENT));
 
-    auto iter = data.begin();
+    auto iter = aligned_data.begin();
 
-    // Credit: https://unix.stackexchange.com/a/9068
-    for (std::size_t i = 0; i < data.size(); i += ALIGNMENT) {
-        assert_expected(
-            util::linux::ptrace(PTRACE_POKETEXT, get_pid(), address, *reinterpret_cast<const long*>(&*iter)));
+    for (std::size_t i = 0; i < aligned_data.size(); i += ALIGNMENT) {
+        TRYE(util::linux::ptrace(PTRACE_POKETEXT, get_pid(), address, *reinterpret_cast<const long*>(&*iter)),
+             util::ErrorKind::SyscallFailure);
 
         iter += ALIGNMENT;
         address += ALIGNMENT;
     }
+
+    return {};
 }
 
 // TODO: Consolidate repeated code in this and other read fn

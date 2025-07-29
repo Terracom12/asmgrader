@@ -2,11 +2,12 @@
 
 #include "boost/range/algorithm/copy.hpp"
 #include "subprocess/memory/memory_io_base.hpp"
+#include "subprocess/memory/non_terminated_str.hpp"
 #include "util/byte_vector.hpp"
 
-#include <array>
 #include <boost/range/algorithm/transform.hpp>
 
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -22,7 +23,7 @@
 /// struct TraceeMemoryTypedIO<Type>
 /// {
 /// public:
-///     static T read(std::uintptr_t address, TraceeMemory& mio);
+///     static util::Result<T> read(std::uintptr_t address, TraceeMemory& mio);
 ///     static ByteVector to_bytes(const T& data);
 /// };
 template <typename T>
@@ -72,8 +73,8 @@ template <typename T>
              std::is_bounded_array_v<T>
 struct MemoryIOSerde<T>
 {
-    static T read(std::uintptr_t address, MemoryIOBase& mio) {
-        const auto raw_data = mio.read_block_impl(address, sizeof(T));
+    static util::Result<T> read(std::uintptr_t address, MemoryIOBase& mio) {
+        const auto raw_data = TRY(mio.read_block_impl(address, sizeof(T)));
 
         return *detail::reinterpret_raw<T>(raw_data);
     }
@@ -84,9 +85,9 @@ struct MemoryIOSerde<T>
 template <>
 struct MemoryIOSerde<std::string>
 {
-    static std::string read(std::uintptr_t address, MemoryIOBase& mio) {
+    static util::Result<std::string> read(std::uintptr_t address, MemoryIOBase& mio) {
         auto is_null_term = [](std::byte chr) { return static_cast<char>(chr) == '\0'; };
-        const auto raw_data = mio.read_until(address, is_null_term);
+        const auto raw_data = TRY(mio.read_until(address, is_null_term));
 
         return data_to_str(raw_data);
     }
@@ -107,19 +108,11 @@ struct MemoryIOSerde<std::string>
     }
 };
 
-// A non-null-terminated string for serialization/deserialization
-template <std::size_t Length>
-struct NonTermString
-{
-    const char* string{};
-    constexpr static auto LENGTH = Length;
-};
-
 template <std::size_t Length>
 struct MemoryIOSerde<NonTermString<Length>>
 {
-    static NonTermString<Length> read(std::uintptr_t address, MemoryIOBase& mio) {
-        const auto raw_data = mio.read_block_impl(address, Length);
+    static util::Result<NonTermString<Length>> read(std::uintptr_t address, MemoryIOBase& mio) {
+        const auto raw_data = TRY(mio.read_block_impl(address, Length));
 
         return {.string = MemoryIOSerde<std::string>::data_to_str(raw_data)};
     }

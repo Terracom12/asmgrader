@@ -1,6 +1,7 @@
 #pragma once
 
 #include "meta/count_if.hpp"
+#include "meta/tuple_matcher.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "subprocess/memory/memory_io.hpp"
 #include "subprocess/run_result.hpp"
@@ -10,6 +11,7 @@
 
 #include <fmt/format.h>
 
+#include <any>
 #include <array>
 #include <chrono>
 #include <concepts>
@@ -20,7 +22,9 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include <linux/ptrace.h>
@@ -49,17 +53,17 @@ public:
     util::Result<RunResult> run();
 
     /// Executes a syscall with the given arguments as the stopped tracee
-    SyscallRecord execute_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
+    util::Result<SyscallRecord> execute_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get the general purpose registers of the stopped tracee
     /// IMPORTANT: this is (obviously) architecture-dependent
-    user_regs_struct get_registers() const;
-    user_fpregs_struct get_fp_registers() const;
+    util::Result<user_regs_struct> get_registers() const;
+    util::Result<user_fpregs_struct> get_fp_registers() const;
 
     /// Set the general purpose registers of the stopped tracee
     /// IMPORTANT: this is (obviously) architecture-dependent
-    void set_registers(user_regs_struct regs) const;
-    void set_fp_registers(user_fpregs_struct regs) const;
+    util::Result<void> set_registers(user_regs_struct regs) const;
+    util::Result<void> set_fp_registers(user_fpregs_struct regs) const;
 
     /// Obtain records of syscalls run so far in the child process
     const std::vector<SyscallRecord>& get_records() const { return syscall_records_; }
@@ -74,19 +78,21 @@ public:
     static util::Result<void> init_child();
 
     /// Set the child process's instruction pointer to `address`
-    void jump_to(std::uintptr_t address);
+    util::Result<void> jump_to(std::uintptr_t address);
 
     static constexpr auto DEFAULT_TIMEOUT = std::chrono::milliseconds{10};
 
     template <typename... Args>
-    void setup_function_call(const Args&... args);
+    util::Result<void> setup_function_call(Args&&... args);
 
     /// AFTER a function has been called, inspects register values
     /// (and memory if necessary) to construct the expected return type.
     ///
     /// std::nullopt is returned if it's not possible to construct return type.
     template <typename Ret>
-    std::optional<Ret> process_function_ret();
+    util::Result<Ret> process_function_ret();
+
+    MemoryIOBase& get_memory_io();
 
 private:
     /// Ensure that invariants hold
@@ -97,13 +103,13 @@ private:
     /// that they do not hold
     void assert_invariants() const;
 
-    void setup_function_return();
+    util::Result<void> setup_function_return();
 
     /// Returns: value that should be written to the nth register
     template <typename Arg>
-    std::uint64_t setup_function_param(const Arg& arg);
+    util::Result<std::uint64_t> setup_function_param(const Arg& arg);
     template <std::floating_point Arg>
-    std::floating_point auto setup_function_param(const Arg& arg);
+    auto setup_function_param(const Arg& arg);
 
     /**
      * @brief Resumes the child proc until a condition is encountered, or a timeout occurs
@@ -121,13 +127,13 @@ private:
     util::Result<SyscallRecord> run_next_syscall(std::chrono::microseconds timeout = DEFAULT_TIMEOUT) const;
 
     /// Precondition: child process must be stopped after waitid(2) returned a syscall trap event
-    SyscallRecord get_syscall_entry_info(struct ptrace_syscall_info* entry) const;
-    void get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const;
+    util::Result<SyscallRecord> get_syscall_entry_info(struct ptrace_syscall_info* entry) const;
+    util::Result<void> get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const;
 
     // template <typename T>
     // T from_raw_value(std::uint64_t value) const;
 
-    SyscallRecord::SyscallArg from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const;
+    util::Result<SyscallRecord::SyscallArg> from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const;
 
     pid_t pid_ = -1;
 
@@ -144,7 +150,7 @@ private:
 };
 
 template <typename... Args>
-void Tracer::setup_function_call(const Args&... args) {
+util::Result<void> Tracer::setup_function_call(Args&&... args) {
     constexpr std::size_t NUM_FP_ARGS = util::count_if_v<std::is_floating_point, Args...>;
     constexpr std::size_t NUM_INT_ARGS = sizeof...(Args) - NUM_FP_ARGS;
 
@@ -161,17 +167,17 @@ void Tracer::setup_function_call(const Args&... args) {
     mmaped_used_amt_ = 0;
 
     // prepare return location
-    setup_function_return();
+    TRY(setup_function_return());
 
     // prepare arguments
-    user_regs_struct int_regs = get_registers();
-    user_fpregs_struct fp_regs = get_fp_registers();
+    user_regs_struct int_regs = TRY(get_registers());
+    user_fpregs_struct fp_regs = TRY(get_fp_registers());
 
     // unused in the case that there are no function arguments
     [[maybe_unused]] auto setup_raw_arg = [&, num_fp = 0, num_int = 0]<typename T>(T arg) mutable {
         if constexpr (std::floating_point<T>) {
 #ifdef __aarch64__
-            UNIMPLEMENTED("TODO: implement floating-point params for aarch64");
+            static_assert(false, "Floating point parameters not yet supported for aarch64");
 #else // x86_64 assumed
             std::memcpy(&fp_regs.xmm_space[static_cast<std::ptrdiff_t>(num_fp * 4)], &arg, sizeof(T));
 #endif
@@ -201,21 +207,33 @@ void Tracer::setup_function_call(const Args&... args) {
                 break;
             default:
                 __builtin_unreachable();
-            };
-
+            }
 #endif
             num_int++;
         }
     };
 
-    (setup_raw_arg(setup_function_param(args)), ...);
+    if constexpr (sizeof...(Args) > 0) {
+        std::tuple reg_param_vals = std::make_tuple(setup_function_param(std::forward<Args>(args))...);
 
-    set_registers(int_regs);
-    set_fp_registers(fp_regs);
+        std::optional first_error =
+            util::tuple_find_first([](const auto& val) { return val.has_error(); }, reg_param_vals);
+
+        if (first_error.has_value()) {
+            return std::visit([](const auto& err_val) { return err_val.error(); }, *first_error);
+        }
+
+        std::apply([&](const auto&... vals) { (setup_raw_arg(*vals), ...); }, reg_param_vals);
+
+        TRY(set_registers(int_regs));
+        TRY(set_fp_registers(fp_regs));
+    }
+
+    return {};
 }
 
 template <typename Arg>
-std::uint64_t Tracer::setup_function_param(const Arg& arg) {
+util::Result<std::uint64_t> Tracer::setup_function_param(const Arg& arg) {
     if constexpr (std::integral<Arg>) {
         return static_cast<std::uint64_t>(arg);
     } else if constexpr (std::is_pointer_v<Arg>) {
@@ -223,7 +241,7 @@ std::uint64_t Tracer::setup_function_param(const Arg& arg) {
         return reinterpret_cast<std::uint64_t>(arg);
     } else {
         std::uintptr_t loc = mmaped_address_ + mmaped_used_amt_;
-        std::size_t num_bytes = memory_io_->write(loc, arg);
+        std::size_t num_bytes = TRY(memory_io_->write(loc, arg));
 
         mmaped_used_amt_ += num_bytes;
 
@@ -232,17 +250,17 @@ std::uint64_t Tracer::setup_function_param(const Arg& arg) {
 }
 
 template <std::floating_point Arg>
-std::floating_point auto setup_function_param(const Arg& arg) {
+auto setup_function_param(const Arg& arg) {
     return arg;
 }
 
 template <typename Ret>
-std::optional<Ret> Tracer::process_function_ret() {
+util::Result<Ret> Tracer::process_function_ret() {
     static_assert(std::is_fundamental_v<Ret> || std::is_pointer_v<Ret>,
                   "Non-fundamental and non-pointer types are not yet supported as function return types");
 
     if constexpr (std::floating_point<Ret>) {
-        user_fpregs_struct fp_regs = get_fp_registers();
+        user_fpregs_struct fp_regs = TRY(get_fp_registers());
 #ifdef __aarch64__
         UNIMPLEMENTED("TODO: implement floating-point return types for aarch64");
 #else // x86_64 assumed
@@ -251,7 +269,7 @@ std::optional<Ret> Tracer::process_function_ret() {
         return *reinterpret_cast<Ret*>(&fp_regs.xmm_space[0]);
 #endif
     } else {
-        user_regs_struct int_regs = get_registers();
+        user_regs_struct int_regs = TRY(get_registers());
 #ifdef __aarch64__
         std::uint64_t ret = int_regs.regs[0];
 #else // x86_64 assumed
