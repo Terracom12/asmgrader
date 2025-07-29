@@ -1,6 +1,7 @@
 #pragma once
 
 #include "test/test_base.hpp"
+#include "user/cl_args.hpp"
 #include "util/class_traits.hpp"
 
 #include <range/v3/algorithm/transform.hpp>
@@ -24,7 +25,13 @@ public:
     void add_test(std::unique_ptr<TestBase> test) const noexcept;
 
     std::string_view get_name() const noexcept { return name_; }
-    const std::filesystem::path& get_exec_path() const noexcept { return exec_path_; }
+    std::filesystem::path get_exec_path() const noexcept {
+        // FIXME: This is a bit jank
+        if (program_args->file_name) {
+            return *program_args->file_name;
+        }
+        return exec_path_;
+    }
 
     auto get_tests() const noexcept {
         return tests_ | ranges::views::transform([](std::unique_ptr<TestBase>& test) -> TestBase& { return *test; });

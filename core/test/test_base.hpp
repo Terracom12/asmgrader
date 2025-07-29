@@ -19,25 +19,13 @@ public:
         , assignment_{&assignment} {}
     virtual ~TestBase() noexcept = default;
 
-    std::string_view get_name() const noexcept { return name_; }
-
-    template <typename Func>
-    AsmFunction<Func> find_function(std::string name);
-
-    std::string get_stdout();
-
     virtual void run(TestContext& ctx) = 0;
 
     const Assignment& get_assignment() const { return *assignment_; }
+
+    std::string_view get_name() const noexcept { return name_; }
 
 private:
     std::string_view name_;
     const Assignment* assignment_;
 };
-
-template <typename Func>
-AsmFunction<Func> TestBase::find_function(std::string name) {
-    // UNIMPLEMENTED();
-    std::ignore = name;
-    return {std::move(name), 0x0};
-}

@@ -31,7 +31,7 @@ AssignmentResult TestRunner::run_all() const {
 }
 
 TestResult TestRunner::run_one(TestBase& test) const {
-    TestContext context(std::string{test.get_name()}, Program{assignment_->get_exec_path(), {}});
+    TestContext context(test, Program{assignment_->get_exec_path(), {}});
 
     test.run(context);
 

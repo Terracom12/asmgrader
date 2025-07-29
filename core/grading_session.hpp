@@ -1,5 +1,9 @@
 #pragma once
 
+#include "util/extra_formatters.hpp"
+
+#include <fmt/base.h>
+
 #include <source_location>
 #include <string>
 #include <string_view>
@@ -26,6 +30,19 @@ struct RequirementResult
     };
 
     DebugInfo debug_info;
+};
+
+template <>
+struct fmt::formatter<RequirementResult::DebugInfo> : DebugFormatter
+{
+    constexpr auto format(const RequirementResult::DebugInfo& from, fmt::format_context& ctx) const {
+        // Explicitly called "DebugInfo", so fmt to an empty string if not debug mode
+        if (is_debug_format) {
+            return ctx.out();
+        }
+
+        return fmt::format_to(ctx.out(), "{{{} at {}}}", from.msg, from.loc);
+    }
 };
 
 struct TestResult

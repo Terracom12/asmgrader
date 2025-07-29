@@ -95,6 +95,7 @@ add_library(
     user/cl_args.hpp
 
     test/asm_function.hpp
+    test/asm_symbol.hpp
     test/test_base.hpp
     test/assignment.hpp
 
