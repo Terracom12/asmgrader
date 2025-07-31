@@ -70,7 +70,7 @@ struct MemoryIOSerde<ByteVector>
 // "Raw" conversions (essentially just reinterpret_cast)
 template <typename T>
     requires std::is_arithmetic_v<T> || std::same_as<T, std::timespec> || std::is_pointer_v<T> ||
-             std::is_bounded_array_v<T>
+             std::is_bounded_array_v<T> || (std::is_aggregate_v<T> && !std::is_array_v<T>)
 struct MemoryIOSerde<T>
 {
     static util::Result<T> read(std::uintptr_t address, MemoryIOBase& mio) {

@@ -1,30 +1,32 @@
 #pragma once
 
+#include "meta/always_false.hpp"
+
+#include <boost/mp11/algorithm.hpp>
+#include <boost/mp11/detail/mp_list.hpp>
+
 #include <cstddef>
-#include <tuple>
 
 namespace util {
 
 template <typename Func>
-struct FunctionType
+struct FunctionTraits
 {
-    static_assert(sizeof(Func) && false, "Must be instantiated with a callable type");
+    static_assert(util::always_false_v<Func>, "Must be instantiated with a callable type");
 };
 
-template <typename Ret, typename... Args>
-struct FunctionType<Ret(Args...)>
+template <typename FuncRet, typename... FuncArgs>
+struct FunctionTraits<FuncRet(FuncArgs...)>
 {
-    using ret = Ret;
+    using Ret = FuncRet;
 
-    static constexpr auto num_args = sizeof...(Args);
-
-    using args = std::tuple<Args...>;
+    using Args = boost::mp11::mp_list<FuncArgs...>;
 
     template <std::size_t I>
-        requires(I < num_args)
-    struct arg
+        requires(I < boost::mp11::mp_size<Args>::value)
+    struct Arg
     {
-        using type = std::tuple_element_t<I, std::tuple<Args...>>;
+        using type = boost::mp11::mp_at_c<Args, I>;
     };
 };
 

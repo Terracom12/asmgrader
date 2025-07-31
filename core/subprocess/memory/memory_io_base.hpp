@@ -24,12 +24,12 @@ public:
         : pid_{pid} {};
     virtual ~MemoryIOBase() = default;
 
-    template <MemoryReadSupportedType T>
+    template <MemoryReadSupported T>
     util::Result<T> read(std::uintptr_t address) {
         return MemoryIOSerde<T>::read(address, *this);
     }
 
-    template <MemoryReadSupportedType T>
+    template <MemoryReadSupported T>
         requires std::is_trivial_v<T> // more complex types may have sizes that don't correspond
     util::Result<std::vector<T>> read_array(std::uintptr_t address, std::size_t size) {
         std::vector<T> result;
@@ -42,7 +42,7 @@ public:
         return result;
     }
 
-    template <MemoryReadSupportedType T>
+    template <MemoryReadSupported T>
         requires std::is_trivial_v<T> // more complex types may have sizes that don't correspond
     util::Result<std::vector<T>> read_array(std::uintptr_t address, std::function<bool(const T&)> until_predicate) {
         std::vector<T> result;
@@ -65,7 +65,7 @@ public:
     }
 
     // FIXME: The reinterpret_cast's to/from std::uintptr_t and pointer types seems kinda bad
-    template <MemoryReadSupportedType T>
+    template <MemoryReadSupported T>
     util::Result<util::remove_all_pointers_t<T>> read_deref_all(std::uintptr_t address) {
         if constexpr (std::is_pointer_v<T>) {
             using NextType = std::remove_pointer_t<T>;
@@ -79,7 +79,7 @@ public:
         }
     }
 
-    template <MemoryWriteSupportedType T>
+    template <MemoryWriteSupported T>
     util::Result<std::size_t> write(std::uintptr_t address, const T& data) {
         ByteVector bytes = MemoryIOSerde<T>::to_bytes(data);
         TRY(this->write_block_impl(address, bytes));

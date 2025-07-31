@@ -71,6 +71,7 @@ add_library(
     util/error_types.hpp
     util/extra_formatters.hpp
     util/byte_vector.hpp
+    util/byte_array.hpp
     util/timespec_operator_eq.hpp
 
     meta/always_false.hpp
@@ -96,6 +97,7 @@ add_library(
 
     test/asm_function.hpp
     test/asm_symbol.hpp
+    test/asm_data.hpp
     test/test_base.hpp
     test/assignment.hpp
 
@@ -191,8 +193,6 @@ add_library(
 
     symbols/elf_reader.cpp
     symbols/symbol_table.cpp
-
-    util/byte_vector.cpp
 
     program/program.cpp
 

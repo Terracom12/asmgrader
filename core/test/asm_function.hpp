@@ -2,12 +2,14 @@
 
 #include "meta/always_false.hpp"
 #include "program/program.hpp"
+#include "subprocess/memory/concepts.hpp"
 #include "util/error_types.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 template <typename T>
 class AsmFunction
@@ -22,7 +24,7 @@ public:
     AsmFunction(Program& prog, std::string name, std::uintptr_t address);
     AsmFunction(Program& prog, std::string name, util::ErrorKind resolution_err);
 
-    template <typename... Ts>
+    template <MemoryIOCompatible<Args>... Ts>
         requires(sizeof...(Ts) == sizeof...(Args))
     util::Result<Ret> operator()(Ts&&... args) {
         if (resolution_err_.has_value()) {

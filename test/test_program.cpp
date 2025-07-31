@@ -4,6 +4,7 @@
 #include "util/error_types.hpp"
 
 #include <cstdint>
+#include <tuple>
 
 using sum = std::uint64_t(std::uint64_t, std::uint64_t);
 using sum_and_write = void(std::uint64_t, std::uint64_t);
@@ -41,14 +42,14 @@ TEST_CASE("Call sum function") {
 TEST_CASE("Call sum_and_write function") {
     Program prog(ASM_TESTS_EXEC, {});
 
-    prog.call_function<sum_and_write>("sum_and_write", 0, 0);
+    REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0, 0));
     REQUIRE(prog.get_subproc().read_stdout() == std::string{"\0\0\0\0\0\0\0\0", 8});
 
-    prog.call_function<sum_and_write>("sum_and_write", 'a', 5);
+    REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 'a', 5));
     // 'a' + 5 = 'f'
     REQUIRE(prog.get_subproc().read_stdout() == std::string{"f\0\0\0\0\0\0\0", 8});
 
-    prog.call_function<sum_and_write>("sum_and_write", 0x1010101010101010, 0x1010101010101010);
+    REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0x1010101010101010, 0x1010101010101010));
     static_assert(' ' == 0x10 + 0x10, "Somehow not ASCII encoded???");
     // 0x10 + 0x10 = 0x20 (space ' ')
     REQUIRE(prog.get_subproc().read_stdout() == "        ");

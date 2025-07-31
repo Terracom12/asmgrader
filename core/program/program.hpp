@@ -35,12 +35,10 @@ public:
     /// Returns the result of the function call, or nullopt if the symbol name was not found
     /// or some other error occured
     template <typename Func, typename... Args>
-    util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> call_function(std::string_view name,
-                                                                                     Args&&... args);
+    util::Result<typename util::FunctionTraits<Func>::Ret> call_function(std::string_view name, Args&&... args);
 
     template <typename Func, typename... Args>
-    util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> call_function(std::uintptr_t addr,
-                                                                                     Args&&... args);
+    util::Result<typename util::FunctionTraits<Func>::Ret> call_function(std::uintptr_t addr, Args&&... args);
 
 private:
     void check_is_elf() const;
@@ -52,9 +50,8 @@ private:
     std::unique_ptr<SymbolTable> symtab_;
 };
 template <typename Func, typename... Args>
-util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> Program::call_function(std::uintptr_t addr,
-                                                                                          Args&&... args) {
-    using Ret = std::invoke_result_t<Func, MemoryIODecayed<Args>...>;
+util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(std::uintptr_t addr, Args&&... args) {
+    using Ret = typename util::FunctionTraits<Func>::Ret;
 
     Tracer& tracer = subproc_->get_tracer();
     TRY(tracer.setup_function_call(std::forward<Args>(args)...));
@@ -101,8 +98,7 @@ util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> Program::call
 }
 
 template <typename Func, typename... Args>
-util::Result<std::invoke_result_t<Func, MemoryIODecayed<Args>...>> Program::call_function(std::string_view name,
-                                                                                          Args&&... args) {
+util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(std::string_view name, Args&&... args) {
     auto symbol = symtab_->find(name);
     if (!symbol) {
         return util::ErrorKind::UnresolvedSymbol;

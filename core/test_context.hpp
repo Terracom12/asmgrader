@@ -3,13 +3,16 @@
 #include "grading_session.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
+#include "test/asm_data.hpp"
 #include "test/asm_function.hpp"
 #include "test/asm_symbol.hpp"
+#include "util/byte_array.hpp"
 #include "util/error_types.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+#include <cstddef>
 #include <string>
 #include <string_view>
 
@@ -65,8 +68,7 @@ private:
 
 template <typename T>
 AsmSymbol<T> TestContext::find_symbol(std::string_view name) {
-    static_assert(MemoryReadSupportedType<T>,
-                  "Specified type does not have supported memory read operation! See docs.");
+    static_assert(MemoryReadSupported<T>, "Specified type does not have supported memory read operation! See docs.");
 
     auto symbol = prog_.get_symtab().find(name);
 
