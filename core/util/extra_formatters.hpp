@@ -8,6 +8,7 @@
 #include <boost/type_index.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <range/v3/range/concepts.hpp>
 
 #include <concepts>
 #include <ctime>
@@ -148,7 +149,7 @@ struct FormatterImpl<Enum>
 };
 
 template <typename Aggregate>
-    requires(std::is_aggregate_v<Aggregate> && !std::is_array_v<Aggregate>)
+    requires(std::is_aggregate_v<Aggregate> && !std::is_array_v<Aggregate> && !ranges::range<Aggregate>)
 struct FormatterImpl<Aggregate>
 {
     static auto format(const Aggregate& from, fmt::format_context& ctx) {
