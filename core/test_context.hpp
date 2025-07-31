@@ -3,6 +3,7 @@
 #include "grading_session.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
+#include "test/asm_buffer.hpp"
 #include "test/asm_data.hpp"
 #include "test/asm_function.hpp"
 #include "test/asm_symbol.hpp"
@@ -51,6 +52,10 @@ public:
     template <typename T>
     AsmSymbol<T> find_symbol(std::string_view name);
 
+    /// Create a buffer of ``NumBytes``
+    template <std::size_t NumBytes>
+    AsmBuffer<NumBytes> create_buffer();
+
     /// Find a named function in the associated program
     template <typename Func>
     AsmFunction<Func> find_function(std::string name);
@@ -65,6 +70,13 @@ private:
     /// Mutable result_. Not useful for output until ``finalize`` is called
     TestResult result_;
 };
+
+template <std::size_t NumBytes>
+AsmBuffer<NumBytes> TestContext::create_buffer() {
+    AsmBuffer<NumBytes> buffer{prog_};
+
+    return buffer;
+}
 
 template <typename T>
 AsmSymbol<T> TestContext::find_symbol(std::string_view name) {

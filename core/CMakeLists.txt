@@ -98,6 +98,7 @@ add_library(
     test/asm_function.hpp
     test/asm_symbol.hpp
     test/asm_data.hpp
+    test/asm_buffer.hpp
     test/test_base.hpp
     test/assignment.hpp
 
