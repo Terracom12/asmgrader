@@ -67,7 +67,7 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
     TRY(tracer.setup_function_call(std::forward<Args>(args)...));
 
 #ifdef __aarch64__
-    std::uintptr_t instr_pointer = tracer.get_registers().pc;
+    std::uintptr_t instr_pointer = TRY(tracer.get_registers()).pc;
 #else // x86_64 assumed
     std::uintptr_t instr_pointer = TRY(tracer.get_registers()).rip;
 #endif

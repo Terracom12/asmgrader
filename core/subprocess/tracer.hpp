@@ -180,7 +180,7 @@ util::Result<void> Tracer::setup_function_call(Args&&... args) {
     [[maybe_unused]] auto setup_raw_arg = [&, num_fp = 0, num_int = 0]<typename T>(T arg) mutable {
         if constexpr (std::floating_point<T>) {
 #ifdef __aarch64__
-            static_assert(false, "Floating point parameters not yet supported for aarch64");
+            static_assert(!std::floating_point<T>, "Floating point parameters not yet supported for aarch64");
 #else // x86_64 assumed
             std::memcpy(&fp_regs.xmm_space[static_cast<std::ptrdiff_t>(num_fp * 4)], &arg, sizeof(T));
 #endif

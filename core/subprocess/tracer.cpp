@@ -239,14 +239,14 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     new_regs.regs[8] = sys_nr;
     std::uint64_t instr_ptr = orig_regs.pc;
 
-    auto orig_instrs = TRY(memory_io_->read_bytes(orig_regs.pc, 8));
+    auto orig_instrs = TRY(memory_io_->read_bytes(instr_ptr, 8));
 
     // Encoding for:
     //   svc 0         - d4000001
     //   nop           - d503201f
     ByteVector new_instrs = ByteVector::from<std::uint32_t, std::uint32_t>(0xD4000001, //
                                                                            0xD503201F);
-    TRY(memory_io_->write(orig_regs.pc, new_instrs));
+    TRY(memory_io_->write(instr_ptr, new_instrs));
 #else
     // syscall args are rdi, rsi, rdx, r10, r8, r9
     new_regs.rdi = args[0];
