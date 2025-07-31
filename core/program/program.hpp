@@ -30,7 +30,9 @@ public:
     util::Result<RunResult> run();
 
     TracedSubprocess& get_subproc();
+    const TracedSubprocess& get_subproc() const;
     SymbolTable& get_symtab();
+    const SymbolTable& get_symtab() const;
 
     /// Returns the result of the function call, or nullopt if the symbol name was not found
     /// or some other error occured

@@ -47,8 +47,14 @@ void Program::check_is_elf() const {
 TracedSubprocess& Program::get_subproc() {
     return *subproc_;
 }
+const TracedSubprocess& Program::get_subproc() const {
+    return *subproc_;
+}
 
 SymbolTable& Program::get_symtab() {
+    return *symtab_;
+}
+const SymbolTable& Program::get_symtab() const {
     return *symtab_;
 }
 util::Result<RunResult> Program::run() {
