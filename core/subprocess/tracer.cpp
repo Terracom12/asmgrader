@@ -69,7 +69,7 @@ util::Result<void> Tracer::begin(pid_t pid) {
     // in the child process
     auto mmap_syscall_res = TRY(execute_syscall(SYS_mmap, {/*addr=*/0,
                                                            /*length=*/MMAP_LENGTH,
-                                                           /*prot=*/PROT_READ | PROT_EXEC,
+                                                           /*prot=*/PROT_WRITE | PROT_READ | PROT_EXEC,
                                                            /*flags=*/MAP_PRIVATE | MAP_ANONYMOUS,
                                                            // NOLINTNEXTLINE(google-runtime-int)
                                                            /*fd=*/static_cast<unsigned long>(-1),

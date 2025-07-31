@@ -57,6 +57,17 @@ SymbolTable& Program::get_symtab() {
 const SymbolTable& Program::get_symtab() const {
     return *symtab_;
 }
+
 util::Result<RunResult> Program::run() {
     return subproc_->run();
+}
+
+std::uintptr_t Program::alloc_mem(std::size_t amt) {
+    auto offset = (alloced_mem_ += amt);
+
+    ASSERT(alloced_mem_ < Tracer::MMAP_LENGTH * 3 / 4, "Attempting to allocate too much memory in asm program!");
+
+    // Simple stack-esque allocation:
+    // Begin at final mmapped address then grow downwards
+    return subproc_->get_tracer().get_mmapped_addr() + Tracer::MMAP_LENGTH - offset;
 }

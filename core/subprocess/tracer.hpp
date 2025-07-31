@@ -44,6 +44,8 @@ using user_fpregs_struct = user_fpsimd_struct;
 class Tracer
 {
 public:
+    constexpr static std::size_t MMAP_LENGTH = 4096;
+
     Tracer() = default;
 
     /// Sets up tracing in parent process, then stops child immediately after exec call
@@ -94,6 +96,8 @@ public:
 
     MemoryIOBase& get_memory_io();
 
+    std::uintptr_t get_mmapped_addr() const { return mmaped_address_; }
+
 private:
     /// Ensure that invariants hold
     ///   pid_ parent is this process
@@ -143,7 +147,6 @@ private:
 
     std::optional<int> exit_code_;
 
-    constexpr static std::size_t MMAP_LENGTH = 4096;
     std::size_t mmaped_address_{};
 
     std::size_t mmaped_used_amt_{};

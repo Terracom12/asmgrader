@@ -1,5 +1,6 @@
 #pragma once
 
+#include "meta/functional_traits.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/traced_subprocess.hpp"
@@ -9,6 +10,7 @@
 #include "util/error_types.hpp"
 
 #include <csignal>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -42,6 +44,9 @@ public:
     template <typename Func, typename... Args>
     util::Result<typename util::FunctionTraits<Func>::Ret> call_function(std::uintptr_t addr, Args&&... args);
 
+    // TODO: Proper allocation (and deallocation!!)
+    std::uintptr_t alloc_mem(std::size_t amt);
+
 private:
     void check_is_elf() const;
 
@@ -50,7 +55,10 @@ private:
 
     std::unique_ptr<TracedSubprocess> subproc_;
     std::unique_ptr<SymbolTable> symtab_;
+
+    std::size_t alloced_mem_{};
 };
+
 template <typename Func, typename... Args>
 util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(std::uintptr_t addr, Args&&... args) {
     using Ret = typename util::FunctionTraits<Func>::Ret;
