@@ -66,6 +66,7 @@ add_library(
     subprocess/run_result.hpp
 
     util/class_traits.hpp
+    util/macros.hpp
     util/linux.hpp
     util/expected.hpp
     util/unreachable.hpp

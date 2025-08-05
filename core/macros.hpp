@@ -4,11 +4,9 @@
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
 #include "test/assignment.hpp"            // IWYU pragma: export
 #include "test/test_base.hpp"             // IWYU pragma: export
+#include "util/macros.hpp"
 
 // Some macros to substantially simplify test-case development
-
-#define CONCAT_IMPL(a, b) a##b
-#define CONCAT(a, b) CONCAT_IMPL(a, b)
 
 #define ASSIGNMENT(cpp_identifier, name, executable)                                                                   \
     const static Assignment& cpp_identifier = /* NOLINT(misc-use-anonymous-namespace)*/                                \
