@@ -1,9 +1,9 @@
 #pragma once
 
-#include "fmt/base.h"
 #include "logging.hpp"
 #include "util/extra_formatters.hpp"
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <concepts>

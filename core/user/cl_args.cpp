@@ -1,9 +1,9 @@
 #include "cl_args.hpp"
 
-#include "fmt/format.h"
 #include "registrars/global_registrar.hpp"
 
 #include <fmt/color.h>
+#include <fmt/format.h>
 
 #include <filesystem>
 #include <span>
