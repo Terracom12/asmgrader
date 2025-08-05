@@ -16,7 +16,6 @@ class AsmData
 {
 public:
     AsmData(Program& prog, std::uintptr_t address);
-    virtual ~AsmData() = default;
 
     std::uintptr_t get_address() const { return address_; }
 
@@ -30,7 +29,7 @@ public:
     // this constraint permits a simplified writing interface
     // e.g., a std::string can be written to a char* buffer
         requires(MemoryWriteSupported<U>)
-    util::Result<T> set_value(U&& val) const;
+    util::Result<T> set_value(const U& val) const;
 
     /// Zeros the object of type ``T`` residing in the asm program
     ///
@@ -54,11 +53,11 @@ template <typename T>
     requires(MemoryReadSupported<T>)
 template <MemoryIOCompatible<T> U>
     requires(MemoryWriteSupported<U>)
-util::Result<T> AsmData<T>::set_value(U&& val) const {
-    auto prev = get_value();
+util::Result<T> AsmData<T>::set_value(const U& val) const {
+    auto prev = TRY(get_value());
 
     MemoryIOBase& mio = prog_->get_subproc().get_tracer().get_memory_io();
-    TRY(mio.write(address_, std::forward<U>(val)));
+    TRY(mio.write(address_, val));
 
     return prev;
 }
@@ -86,7 +85,7 @@ util::Result<T> AsmData<T>::get_value_impl() const {
 template <typename T>
     requires(MemoryReadSupported<T>)
 util::Result<T> AsmData<T>::get_value() const {
-    auto value = get_value_impl();
+    auto value = TRY(get_value_impl());
 
     std::string val_str = "<unformattable>";
     if constexpr (fmt::formattable<T>) {
