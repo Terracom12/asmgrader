@@ -59,7 +59,7 @@ pkg_check_modules(LIBELF REQUIRED libelf)
 # Interface library for including headers and compilation options
 # Just for use with `autograder_assignments_lib` target for now
 add_library(
-    autograder_interface
+    asmgrader_interface
     INTERFACE
 
     subprocess/subprocess.hpp
@@ -122,7 +122,7 @@ add_library(
 )
 
 target_compile_options(
-	autograder_interface
+	asmgrader_interface
     INTERFACE
 
     "$<$<COMPILE_LANGUAGE:C,CXX>:-Werror;-Wall;-Wextra;-Wpedantic;-Wshadow;-Wconversion>"
@@ -143,7 +143,7 @@ target_compile_options(
 )
 
 target_link_options(
-	autograder_interface
+	asmgrader_interface
 
     INTERFACE
     # Disable optimizations in debug mode
@@ -159,12 +159,12 @@ target_link_options(
 # Public header files
 # TODO: Yeah, `.` is bad practice...
 target_include_directories(
-	autograder_interface
+	asmgrader_interface
     INTERFACE .
 )
 
 target_link_libraries(
-    autograder_interface
+    asmgrader_interface
     INTERFACE
 
     fmt::fmt
@@ -181,15 +181,15 @@ target_link_libraries(
 )
 
 # libelf options
-target_include_directories(autograder_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
-target_link_libraries(autograder_interface INTERFACE ${LIBELF_LIBRARIES})
-target_compile_options(autograder_interface INTERFACE ${LIBELF_CFLAGS_OTHER})
+target_include_directories(asmgrader_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
+target_link_libraries(asmgrader_interface INTERFACE ${LIBELF_LIBRARIES})
+target_compile_options(asmgrader_interface INTERFACE ${LIBELF_CFLAGS_OTHER})
 
 #### Core library declaration
 
 # Create core library for easy use with assignment tests and unit tests in test/
 add_library(
-	autograder_core
+	asmgrader_core
 
     subprocess/subprocess.cpp
     subprocess/traced_subprocess.cpp
@@ -215,22 +215,22 @@ add_library(
 )
 
 target_link_libraries(
-	autograder_core
+	asmgrader_core
 
     PUBLIC
-    autograder_interface
+    asmgrader_interface
 )
 
 # Create library for core + main so that the user doesn't need to provide an entry point
 add_library(
-    autograder_core_with_main
+    asmgrader_core_with_main
 
     main.cpp
 )
 
 target_link_libraries(
-    autograder_core_with_main
+    asmgrader_core_with_main
 
     PUBLIC
-    autograder_core
+    asmgrader_core
 )
