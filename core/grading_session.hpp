@@ -3,6 +3,9 @@
 #include "util/extra_formatters.hpp"
 
 #include <fmt/base.h>
+#include <gsl/util>
+#include <range/v3/algorithm/all_of.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 
 #include <source_location>
 #include <string>
@@ -61,6 +64,12 @@ struct AssignmentResult
 {
     std::string name;
     std::vector<TestResult> test_results;
+
+    bool all_passed() const noexcept { return ranges::all_of(test_results, &TestResult::passed); }
+    int num_tests_passed() const noexcept {
+        return gsl::narrow_cast<int>(ranges::count_if(test_results, &TestResult::passed));
+    }
+    int num_tests_failed() const noexcept { return gsl::narrow_cast<int>(test_results.size()) - num_tests_passed(); }
 };
 
 struct GradingSession
