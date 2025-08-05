@@ -1,3 +1,4 @@
+#include "grading_session.hpp"
 #include "registrars/global_registrar.hpp"
 #include "test/assignment.hpp"
 #include "test/test_base.hpp"
@@ -34,7 +35,7 @@ int main(int argc, const char* argv[]) {
 
     TestRunner runner{*assignment};
 
-    auto res = runner.run_all();
+    AssignmentResult res = runner.run_all();
 
-    return EXIT_SUCCESS;
+    return res.num_tests_failed();
 }

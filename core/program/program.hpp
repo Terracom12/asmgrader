@@ -9,6 +9,8 @@
 #include "util/class_traits.hpp"
 #include "util/error_types.hpp"
 
+#include <fmt/format.h>
+
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
@@ -16,7 +18,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <vector>
 
 class Program : util::NonCopyable
@@ -35,6 +36,9 @@ public:
     const TracedSubprocess& get_subproc() const;
     SymbolTable& get_symtab();
     const SymbolTable& get_symtab() const;
+
+    const std::filesystem::path& get_path() const;
+    const std::vector<std::string>& get_args() const;
 
     /// Returns the result of the function call, or nullopt if the symbol name was not found
     /// or some other error occured
@@ -66,6 +70,12 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
     Tracer& tracer = subproc_->get_tracer();
     TRY(tracer.setup_function_call(std::forward<Args>(args)...));
 
+    if (auto res = subproc_->get_tracer().get_memory_io().read_bytes(subproc_->get_tracer().get_mmapped_addr(), 32);
+        res) {
+        LOG_TRACE("Memory (32 bytes) at start of mmaped addr (0x{:x}): {::x}",
+                  subproc_->get_tracer().get_mmapped_addr(), *res);
+    }
+
 #ifdef __aarch64__
     std::uintptr_t instr_pointer = TRY(tracer.get_registers()).pc;
 #else // x86_64 assumed
@@ -91,6 +101,19 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
     // We expect that the function returns to our written instruction, which is essentially a breakpoint
     // that raises SIGTRAP
     if (run_res->get_kind() != SignalCaught || run_res->get_code() != SIGTRAP) {
+        LOG_DEBUG("Unexpected return from function: kind={}, code={}", fmt::underlying(run_res->get_kind()),
+                  run_res->get_code());
+
+        std::uintptr_t instr_addr =
+#ifdef __aarch64__
+            subproc_->get_tracer().get_registers()->pc;
+#else
+            subproc_->get_tracer().get_registers()->rip;
+#endif
+        if (auto res = subproc_->get_tracer().get_memory_io().read_bytes(instr_addr, 16); res) {
+            LOG_TRACE("Memory (16 bytes) at point of instruction ptr (0x{:x}): {::x}", instr_addr, *res);
+        }
+
         return util::ErrorKind::UnexpectedReturn;
     }
 

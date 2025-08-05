@@ -8,10 +8,10 @@
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer_types.hpp"
 #include "util/error_types.hpp"
+#include "util/unreachable.hpp"
 
 #include <fmt/format.h>
 
-#include <any>
 #include <array>
 #include <chrono>
 #include <concepts>
@@ -131,13 +131,13 @@ private:
     util::Result<SyscallRecord> run_next_syscall(std::chrono::microseconds timeout = DEFAULT_TIMEOUT) const;
 
     /// Precondition: child process must be stopped after waitid(2) returned a syscall trap event
-    util::Result<SyscallRecord> get_syscall_entry_info(struct ptrace_syscall_info* entry) const;
-    util::Result<void> get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const;
+    SyscallRecord get_syscall_entry_info(struct ptrace_syscall_info* entry) const;
+    void get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const;
 
     // template <typename T>
     // T from_raw_value(std::uint64_t value) const;
 
-    util::Result<SyscallRecord::SyscallArg> from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const;
+    SyscallRecord::SyscallArg from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const;
 
     pid_t pid_ = -1;
 
@@ -209,7 +209,7 @@ util::Result<void> Tracer::setup_function_call(Args&&... args) {
                 int_regs.r9 = arg;
                 break;
             default:
-                __builtin_unreachable();
+                unreachable();
             }
 #endif
             num_int++;

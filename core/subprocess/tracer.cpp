@@ -8,8 +8,11 @@
 #include "util/byte_vector.hpp"
 #include "util/error_types.hpp"
 #include "util/expected.hpp"
+#include "util/extra_formatters.hpp"
 #include "util/linux.hpp"
+#include "util/unreachable.hpp"
 
+#include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <range/v3/algorithm.hpp>
@@ -24,6 +27,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <elf.h> // NT_PRSTATUS
@@ -131,7 +135,7 @@ void Tracer::assert_invariants() const {
     }
 }
 
-util::Result<SyscallRecord> Tracer::get_syscall_entry_info(struct ptrace_syscall_info* entry) const {
+SyscallRecord Tracer::get_syscall_entry_info(struct ptrace_syscall_info* entry) const {
     assert_invariants();
 
     ASSERT(entry->op == PTRACE_SYSCALL_INFO_ENTRY);
@@ -144,7 +148,7 @@ util::Result<SyscallRecord> Tracer::get_syscall_entry_info(struct ptrace_syscall
     const auto& syscall_entry = SYSCALL_MAP.at(entry->entry.nr);
 
     for (const auto& [reg_value, syscall_param] : ranges::views::zip(entry->entry.args, syscall_entry.parameters())) {
-        args.push_back(TRY(from_syscall_value(reg_value, syscall_param.type)));
+        args.push_back(from_syscall_value(reg_value, syscall_param.type));
     }
 
     return SyscallRecord{.num = entry->entry.nr,
@@ -155,7 +159,7 @@ util::Result<SyscallRecord> Tracer::get_syscall_entry_info(struct ptrace_syscall
 
     // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 }
-util::Result<void> Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const {
+void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const {
     assert_invariants();
 
     ASSERT(exit->op == PTRACE_SYSCALL_INFO_EXIT);
@@ -173,8 +177,6 @@ util::Result<void> Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptra
     }();
 
     // NOLINTEND(cppcoreguidelines-pro-type-union-access)
-
-    return {};
 }
 
 util::Result<void> Tracer::jump_to(std::uintptr_t address) {
@@ -295,8 +297,6 @@ util::Result<RunResult> Tracer::run() {
 
         auto wait_result = TracedWaitid::wait_with_timeout(pid_, DEFAULT_TIMEOUT);
 
-        // FIXME: CATCH SEGFAULTS!!!
-
         if (wait_result == util::ErrorKind::TimedOut) {
             LOG_DEBUG("Child process (pid={}) timed out. Stopping...", pid_);
 
@@ -327,7 +327,7 @@ util::Result<RunResult> Tracer::run() {
             assert_expected(util::linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(info), &info));
 
             if (info.op == PTRACE_SYSCALL_INFO_ENTRY) {
-                SyscallRecord record = TRY(get_syscall_entry_info(&info));
+                SyscallRecord record = get_syscall_entry_info(&info);
                 syscall_records_.push_back(std::move(record));
             } else if (info.op == PTRACE_SYSCALL_INFO_EXIT) {
                 if (syscall_records_.empty() || syscall_records_.back().ret != std::nullopt) {
@@ -335,7 +335,7 @@ util::Result<RunResult> Tracer::run() {
                     continue;
                 }
 
-                TRY(get_syscall_exit_info(syscall_records_.back(), &info));
+                get_syscall_exit_info(syscall_records_.back(), &info);
             } else {
                 LOG_WARN("Unhandled syscall trap (op = {}). Skipping handling...", info.op);
             }
@@ -345,6 +345,11 @@ util::Result<RunResult> Tracer::run() {
 
         // trapped by a signal (such as by a SEGFAULT)
         if (waitid_data.type == CLD_TRAPPED) {
+            // FIXME: better macro, or abstracted registers
+#ifndef __aarch64__
+            LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
+                      util::fmt_or_unknown(get_registers()));
+#endif
             return RunResult::make_signal_caught(*waitid_data.signal_num);
         }
 
@@ -357,17 +362,21 @@ util::Result<RunResult> Tracer::run() {
         }
     }
 
-    __builtin_unreachable();
+    unreachable();
 }
 
 util::Result<void> Tracer::setup_function_return() {
     // TODO: Could do a couple fewer context switches by doing register setup all at once if perf is a concern
     user_regs_struct regs = TRY(get_registers());
 
-    const std::uintptr_t return_loc = mmaped_address_ + mmaped_used_amt_;
-
     // NOLINTBEGIN(readability-magic-numbers)
 #ifdef __aarch64__
+    // Instructions must be 4-byte aligned
+    // TODO: Create helper for writing aligned data
+    constexpr std::size_t ALIGNMENT = 4;
+    const std::uintptr_t return_loc =
+        (mmaped_address_ + mmaped_used_amt_) + (ALIGNMENT - (mmaped_address_ + mmaped_used_amt_) % ALIGNMENT);
+
     // LR
     regs.regs[30] = return_loc;
 
@@ -379,7 +388,8 @@ util::Result<void> Tracer::setup_function_return() {
                          0x1F, 0x20, 0x03, 0xD5};
 
 #else // x86_64 assumed
-      // return address placed on stack
+    const std::uintptr_t return_loc = mmaped_address_ + mmaped_used_amt_;
+    // return address placed on stack
     regs.rsp -= 8; // FIXME: Should it not be 16-byte aligned?
     TRY(memory_io_->write(regs.rsp, return_loc));
 
@@ -392,7 +402,8 @@ util::Result<void> Tracer::setup_function_return() {
     // NOLINTEND(readability-magic-numbers)
 
     TRY(memory_io_->write(return_loc, instrs));
-    mmaped_used_amt_ += instrs.size();
+    // FIXME: Adding some extra padding so we don't run into issues with my buggy PtraceMemoryIO implementation
+    mmaped_used_amt_ = return_loc - (mmaped_address_ + mmaped_used_amt_) + instrs.size() + 32;
 
     TRY(set_registers(regs));
 
@@ -462,14 +473,14 @@ util::Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds t
     }
     TRYE(util::linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(exit), &exit), SyscallFailure);
 
-    SyscallRecord rec = TRY(get_syscall_entry_info(&entry));
-    TRY(get_syscall_exit_info(rec, &exit));
+    SyscallRecord rec = get_syscall_entry_info(&entry);
+    get_syscall_exit_info(rec, &exit);
 
     return rec;
 }
 
 // FIXME: Parse fixed-length strings seperately
-util::Result<SyscallRecord::SyscallArg> Tracer::from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const {
+SyscallRecord::SyscallArg Tracer::from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const {
     using enum SyscallEntry::Type;
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -488,21 +499,26 @@ util::Result<SyscallRecord::SyscallArg> Tracer::from_syscall_value(std::uint64_t
         return convert(static_cast<void*>(nullptr));
 
     case CString:
-        return TRY(memory_io_->read<std::string>(value));
+        return memory_io_->read<std::string>(value);
     case NTCStringArray: {
-        std::vector<std::uintptr_t> string_ptr_array =
-            TRY(memory_io_->read_array<std::uintptr_t>(value, [](const auto& elem) { return elem == 0; }));
+        auto string_ptr_array =
+            memory_io_->read_array<std::uintptr_t>(value, [](const auto& elem) { return elem == 0; });
 
-        std::vector<std::string> result(string_ptr_array.size());
-        for (const auto& [ptr, elem] : ranges::views::zip(string_ptr_array, result)) {
-            elem = TRY(memory_io_->read<std::string>(ptr));
+        if (!string_ptr_array) {
+            // FIXME: ouch... these types hurt me
+            return util::Result<std::vector<util::Result<std::string>>>{string_ptr_array.error()};
         }
 
-        return result;
+        std::vector<util::Result<std::string>> result(string_ptr_array->size());
+        for (const auto& [ptr, elem] : ranges::views::zip(string_ptr_array.value(), result)) {
+            elem = memory_io_->read<std::string>(ptr);
+        }
+
+        return {util::Result<decltype(result)>{result}};
     }
 
     case TimeSpecPtr:
-        return TRY(memory_io_->read<std::timespec>(value));
+        return memory_io_->read<std::timespec>(value);
 
     default:
         ASSERT(false, "Invalid syscall entry type parse");

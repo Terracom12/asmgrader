@@ -63,11 +63,22 @@ util::Result<RunResult> Program::run() {
 }
 
 std::uintptr_t Program::alloc_mem(std::size_t amt) {
-    auto offset = (alloced_mem_ += amt);
+    // Extra offset to not accidentally run into memory issues on border
+    constexpr auto OFFSET_ADDITION = 32;
+
+    auto offset = (alloced_mem_ += amt) + OFFSET_ADDITION;
 
     ASSERT(alloced_mem_ < Tracer::MMAP_LENGTH * 3 / 4, "Attempting to allocate too much memory in asm program!");
 
     // Simple stack-esque allocation:
     // Begin at final mmapped address then grow downwards
     return subproc_->get_tracer().get_mmapped_addr() + Tracer::MMAP_LENGTH - offset;
+}
+
+const std::filesystem::path& Program::get_path() const {
+    return path_;
+}
+
+const std::vector<std::string>& Program::get_args() const {
+    return args_;
 }

@@ -4,18 +4,18 @@
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "test/asm_buffer.hpp"
-#include "test/asm_data.hpp"
 #include "test/asm_function.hpp"
 #include "test/asm_symbol.hpp"
-#include "util/byte_array.hpp"
 #include "util/error_types.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 class TestBase;
 
@@ -41,11 +41,31 @@ public:
     /// Test name getter
     std::string_view get_name() const;
 
+    /// Restarts the entire program
+    ///
+    /// Note: if the asm executable has changed, this will launch with the NEW executable
+    /// Important: this has the almost certain effect of invalidating all buffers or other
+    ///            addressable references to said program, as the address space WILL change
+    util::Result<void> restart_program();
+
+    // Low-level exececutor of an arbitrary syscall
+    util::Result<SyscallRecord> exec_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
+
     /// Get any **new** stdout from the program since the last call to this function
     util::Result<std::string> get_stdout();
 
     /// Get all stdout from since the beginning of the test invokation
     std::string get_full_stdout();
+
+    /// Flushes any reamaining unread data in the stdin buffer
+    /// Returns: number of bytes flushed, or error kind if failure occured
+    util::Result<std::size_t> flush_stdin();
+
+    /// Obtain a list of the syscalls that have been executed so far
+    const std::vector<SyscallRecord>& get_syscall_records() const;
+
+    /// Get any **new** stdout from the program since the last call to this function
+    util::Result<void> send_stdin(const std::string& input);
 
     /// Find a named symbol in the associated program
     /// \tparam T  type of data that the symbol refers to
