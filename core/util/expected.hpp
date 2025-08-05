@@ -39,6 +39,11 @@ public:
     constexpr Expected()
         : data_{} {}
 
+    template <typename... Args>
+    explicit constexpr Expected(std::in_place_t /*unused*/, Args&&... args)
+        requires(!std::is_void_v<T> && std::constructible_from<ExpectedT, Args...>)
+        : data_{std::in_place_type<ExpectedT>, std::forward<Args>(args)...} {}
+
     template <typename Tu>
     constexpr Expected(Tu&& value) // NOLINT(*-explicit-*)
         requires(!std::is_void_v<T> && std::convertible_to<Tu, T>)
