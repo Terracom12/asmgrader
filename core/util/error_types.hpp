@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/expected.hpp"
+#include "util/macros.hpp"
 
 #include <boost/describe.hpp>
 
@@ -24,17 +25,22 @@ using Result = util::Expected<T, ErrorKind>;
 
 /// If the supplied argument is an error (unexpected) type, then propegate the error type `e` up
 /// the call stack. Otherwise, continue execution as normal
-//_Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-#define TRYE(val, e)                                                                                                   \
+// NOLINTBEGIN(bugprone-macro-parentheses)
+#define TRYE_IMPL(val, e, ident)                                                                                       \
     __extension__({                                                                                                    \
-        const auto& errref = val;                                                                                      \
-        if (errref.has_error()) {                                                                                      \
+        const auto& ident = val;                                                                                       \
+        if (ident.has_error()) {                                                                                       \
             using enum util::ErrorKind;                                                                                \
             return e;                                                                                                  \
         }                                                                                                              \
-        errref.value();                                                                                                \
-    }) // _Pragma("GCC diagnostic pop")
+        ident.value();                                                                                                 \
+    })
+
+#define TRY_IMPL(val, ident) TRYE_IMPL(val, ident.error(), ident)
+// NOLINTEND(bugprone-macro-parentheses)
+
+#define TRYE(val, e) TRYE_IMPL(val, e, CONCAT(errref_uniq__, __COUNTER__))
 
 /// If the supplied argument is an error (unexpected) type, then propegate it up the call stack.
 /// Otherwise, continue execution as normal
-#define TRY(val) TRYE(val, errref.error())
+#define TRY(val) TRY_IMPL(val, CONCAT(errrefe_uniq__, __COUNTER__))
