@@ -36,23 +36,43 @@ util::Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address,
     return result_buffer;
 }
 util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
-    // FIXME: Don't just extend by 0-bytes
     // TODO: Detetermine whether alignment logic is necessary
-    static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
+    // static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
     // ASSERT(/*addr % ALIGNMENT == 0 &&*/ data.size() % ALIGNMENT == 0,
     //        "'data.size()' and 'n' must be multiples of alignement - sizeof(long)");
-    auto aligned_data = data;
-    aligned_data.resize(aligned_data.size() + ((ALIGNMENT - (aligned_data.size() % ALIGNMENT)) % ALIGNMENT));
 
-    auto iter = aligned_data.begin();
+    // NOLINTBEGIN(google-runtime-int) - based on ptrace(2) spec
 
-    for (std::size_t i = 0; i < aligned_data.size(); i += ALIGNMENT) {
-        TRYE(util::linux::ptrace(PTRACE_POKETEXT, get_pid(), address, *reinterpret_cast<const long*>(&*iter)),
+    auto length = data.size();
+    auto iter = data.begin();
+
+    long ptrace_write_data{};
+
+    while (length != 0) {
+        size_t todo = std::min(length, sizeof(long));
+
+        // move the bytes at the back of `ptrace_write_data` that we need to write AGAIN
+        // to the front of the data buffer
+        if (todo < 8) {
+            long temp_buffer{};
+            std::memcpy(reinterpret_cast<char*>(&temp_buffer), reinterpret_cast<const char*>(&ptrace_write_data) + todo,
+                        sizeof(long) - todo);
+            std::memcpy(reinterpret_cast<char*>(&ptrace_write_data), reinterpret_cast<const char*>(&temp_buffer),
+                        sizeof(long) - todo);
+        }
+        std::memcpy(reinterpret_cast<char*>(&ptrace_write_data) + sizeof(long) - todo,
+                    reinterpret_cast<const char*>(&*iter), todo);
+
+        std::size_t ptrace_write_addr = address - 8 + todo;
+        TRYE(util::linux::ptrace(PTRACE_POKETEXT, get_pid(), ptrace_write_addr, ptrace_write_data),
              util::ErrorKind::SyscallFailure);
 
-        iter += ALIGNMENT;
-        address += ALIGNMENT;
+        iter += static_cast<std::ptrdiff_t>(todo);
+        address += todo;
+        length -= todo;
     }
+
+    // NOLINTEND(google-runtime-int)
 
     return {};
 }
