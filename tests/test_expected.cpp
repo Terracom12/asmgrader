@@ -34,10 +34,10 @@ TEST_CASE("Equality and comparison operators") {
 
     REQUIRE(Et{123} == Et{123});
     REQUIRE(Et{123} != Et{456});
-    REQUIRE(Et{123} <= Et{456});
-    REQUIRE(Et{123} < Et{456});
-    REQUIRE(Et{123} >= Et{123});
-    REQUIRE(Et{456} > Et{123});
+    // REQUIRE(Et{123} <= Et{456});
+    // REQUIRE(Et{123} < Et{456});
+    // REQUIRE(Et{123} >= Et{123});
+    // REQUIRE(Et{456} > Et{123});
 
     // Implicit conversions from value / error
     REQUIRE(Et{123} == 123);

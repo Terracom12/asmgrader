@@ -9,7 +9,7 @@ CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 ##### Test runner executable
 
 add_executable(
-    tests
+    asmgrader_tests
 
     catch2_custom.hpp
     test_subprocess.cpp
@@ -21,13 +21,13 @@ add_executable(
 )
 
 target_link_libraries(
-    tests
-    PUBLIC autograder_core
+    asmgrader_tests
+    PUBLIC asmgrader_core
     PRIVATE Catch2::Catch2
 )
 
 target_include_directories(
-    tests
+    asmgrader_tests
     PRIVATE ../core
 )
 
@@ -35,11 +35,9 @@ target_include_directories(
 
 
 add_asm_arch_specific_impl(asm_tests simple_asm)
-# set_source_files_properties(${TEST_ASM_SRC} PROPERTIES LANGUAGE ASM)
-# add_executable(asm_tests ${TEST_ASM_SRC})
 
 target_compile_definitions(
-    tests
+    asmgrader_tests
 
     PRIVATE
     "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""

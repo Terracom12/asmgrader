@@ -46,5 +46,5 @@ add_subdirectory(autograder)
 option(ENABLE_TESTING "Whether to enable building of unit tests or not" FALSE)
 if (ENABLE_TESTING)
     # Add project tests
-    add_subdirectory(test)
+    add_subdirectory(tests)
 endif()
