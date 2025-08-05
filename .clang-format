@@ -36,7 +36,7 @@ SortIncludes: CaseInsensitive
 #
 #   catch2_custom custom (top) as "main" include for tests
 IncludeCategories:
-  - Regex:           '^<(range|boost|fmt|catch2|nlohmann|argparse)/'
+  - Regex:           '^<(range|boost|fmt|catch2|nlohmann|argparse|gsl)/'
     Priority:        2
     CaseSensitive:   true
   - Regex:           '^<[^\.]+>' # stdlib (C++, no .h)

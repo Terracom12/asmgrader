@@ -1,5 +1,6 @@
 ##### Dependencies
 
+# Boost for various utilities
 CPMAddPackage(
   NAME Boost
   VERSION 1.88.0 # Versions less than 1.85.0 may need patches for installation targets.
@@ -39,6 +40,14 @@ if(range-v3_ADDED)
   target_include_directories(range-v3 INTERFACE "${range-v3_SOURCE_DIR}/include")
 endif()
 
+# GSL for more conformant code
+CPMAddPackage(
+  NAME GSL
+  GITHUB_REPOSITORY microsoft/GSL
+  VERSION 4.2.0
+  GIT_SHALLOW TRUE
+  OPTIONS "GSL_MSVC_STATIC_ANALYZER=OFF"
+)
 
 # TODO: Probably want to statically link...
 find_package(PkgConfig REQUIRED)
@@ -168,6 +177,7 @@ target_link_libraries(
     Boost::pfr
     Boost::describe
     range-v3
+    Microsoft.GSL::GSL
 )
 
 # libelf options

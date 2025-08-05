@@ -86,7 +86,7 @@ template <>
 struct MemoryIOSerde<std::string>
 {
     static util::Result<std::string> read(std::uintptr_t address, MemoryIOBase& mio) {
-        auto is_null_term = [](std::byte chr) { return static_cast<char>(chr) == '\0'; };
+        auto is_null_term = [](std::byte chr) { return std::to_integer<char>(chr) == '\0'; };
         const auto raw_data = TRY(mio.read_until(address, is_null_term));
 
         return data_to_str(raw_data);
@@ -103,7 +103,7 @@ struct MemoryIOSerde<std::string>
     static std::string data_to_str(const std::vector<std::byte>& data) {
         std::string result;
         result.resize(data.size());
-        boost::range::transform(data, result.begin(), [](std::byte byte) { return static_cast<char>(byte); });
+        boost::range::transform(data, result.begin(), [](std::byte byte) { return std::to_integer<char>(byte); });
         return result;
     }
 };

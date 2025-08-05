@@ -1,9 +1,14 @@
 #pragma once
 
+#include <gsl/assert>
+#include <gsl/util>
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/transform.hpp>
+#include <range/v3/range/concepts.hpp>
+#include <range/v3/range/traits.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <span>
 #include <utility>
@@ -16,36 +21,30 @@ public:
 
     // Conversion constructor from other containers holding "byte-like" objects (char, unsigned char)
     template <typename T>
-        requires requires(T::value_type value) {
-            { static_cast<std::byte>(value) };
-        }
     explicit ByteVector(const T& container)
         : std::vector<std::byte>{container.size()} {
-        ranges::transform(container, this->begin(), [](T::value_type value) { return static_cast<std::byte>(value); });
+        init_range_to_bytes(container);
     }
 
     // FIXME: Duplicated code
-    template <typename T>
-        requires requires(T value) {
-            { static_cast<std::byte>(value) };
-        }
-    ByteVector(std::initializer_list<T> init)
+    ByteVector(std::initializer_list<std::uint8_t> init)
         : std::vector<std::byte>{init.size()} {
-        ranges::transform(init, this->begin(), [](T value) { return static_cast<std::byte>(value); });
+        init_range_to_bytes(init);
     }
 
     /// T should be a stdlib-compatible container type
     /// where std::byte is convertible to T::value_type
-    template <typename T>
-        requires requires(T rng, std::size_t size, std::byte byte) {
-            { rng.resize(size) };
-            { static_cast<T::value_type>(byte) };
+    template <ranges::range Range>
+        requires requires(Range range, std::size_t size, std::byte byte) {
+            { range.resize(size) };
+            { std::to_integer<ranges::range_value_t<Range>>(byte) };
         }
-    T to() const {
-        T result;
+    Range to() const {
+        Range result;
         result.resize(this->size());
 
-        ranges::transform(*this, result.begin(), [](std::byte value) { return static_cast<T::value_type>(value); });
+        ranges::transform(*this, result.begin(),
+                          [](std::byte value) { return std::to_integer<ranges::range_value_t<Range>>(value); });
 
         return result;
     }
@@ -66,5 +65,14 @@ public:
         (ranges::copy(std::bit_cast<std::array<std::byte, sizeof(Ts)>>(args), std::exchange(it, it + sizeof(Ts))), ...);
 
         return result;
+    }
+
+private:
+    template <ranges::range Range>
+        requires requires(ranges::range_value_t<Range> value) { std::byte{value}; }
+    void init_range_to_bytes(const Range& range) {
+        Expects(size() == ranges::size(range));
+
+        ranges::transform(range, this->begin(), [](std::uint8_t value) { return std::byte{value}; });
     }
 };
