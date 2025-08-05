@@ -2,6 +2,7 @@
 
 #include "expected.hpp"
 #include "logging.hpp"
+#include "util/extra_formatters.hpp"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -321,7 +322,8 @@ inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, Data
     if (errno) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("ptrace failed: '{}'", err);
+        LOG_DEBUG("ptrace(req={}, pid={}, addr={}, data={}) failed: '{}'", request, pid, fmt_or_unknown(addr),
+                  fmt_or_unknown(data), err);
 
         return err;
     }
