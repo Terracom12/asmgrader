@@ -30,7 +30,14 @@
 // TODO: Just disable Werror publicly instead
 
 #define REQUIRE(condition, ...)                                                                                        \
-    ctx.require(static_cast<bool>(condition), __VA_ARGS__ __VA_OPT__(, ) RequirementResult::DebugInfo{#condition})
+    __extension__({                                                                                                    \
+        auto cond__var = condition;                                                                                    \
+        bool cond__bool__val = static_cast<bool>(cond__var);                                                           \
+        if (!cond__bool__val) {                                                                                        \
+            LOG_DEBUG("Requirement failed: {}", cond__var);                                                            \
+        }                                                                                                              \
+        ctx.require(cond__bool__val, __VA_ARGS__ __VA_OPT__(, ) RequirementResult::DebugInfo{#condition});             \
+    })
 
 #define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
     __extension__({                                                                                                    \
