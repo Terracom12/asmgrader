@@ -1,4 +1,5 @@
 CompileFlags:
+    Remove: -fconcepts-diagnostics-depth=3
     CompilationDatabase: build/
 
 InlayHints:
@@ -11,4 +12,4 @@ InlayHints:
 
 Completion:
     AllScopes: Yes
-    ArgumentLists: Delimeters # fo^ completes to foo(^)
+    ArgumentLists: Delimiters # fo^ completes to foo(^)
