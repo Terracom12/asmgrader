@@ -11,9 +11,12 @@ ROOT_DIR=$(
 cd "$ROOT_DIR"
 
 lint_files=$(
-    find core/ autograder/ test/ -name '*.hpp' -or -name '*.cpp'
+    find core/ grader/ tests/ -name '*.hpp' -or -name '*.cpp'
 )
 compilation_db=build/compile_commands.json
 
 clang-tidy $lint_files -p "$compilation_db" --warnings-as-errors='*'
 clang-format $lint_files --dry-run -Werror
+
+# Find improper library header conventions ("" instead of <>)
+grep -E '"(range|boost|fmt|catch2|nlohmann|argparse|gsl)/' $lint_files

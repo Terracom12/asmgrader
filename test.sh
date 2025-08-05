@@ -9,4 +9,11 @@ if [ ! -v LOG_LEVEL ]; then
     export LOG_LEVEL=error
 fi
 
-./build/test/tests
+unittests_res=0
+if ! ./build/test/tests; then unittests_res=$?; fi
+
+if [[ -f ./grader/run-tests.sh ]]; then
+    ./grader/run-tests.sh ./build
+fi
+
+exit $unittests_res
