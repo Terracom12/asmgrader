@@ -68,6 +68,7 @@ add_library(
     util/class_traits.hpp
     util/linux.hpp
     util/expected.hpp
+    util/unreachable.hpp
     util/error_types.hpp
     util/extra_formatters.hpp
     util/byte_vector.hpp
