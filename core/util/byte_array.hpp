@@ -10,15 +10,28 @@
 
 #include <array>
 #include <cstddef>
-#include <limits>
 #include <span>
 #include <type_traits>
 #include <utility>
 
 template <std::size_t Size>
-class ByteArray : public std::array<std::byte, Size>
+class ByteArray
 {
 public:
+    // A bunch of aliases for use with algorithm templates that check for them
+    using value_type = std::byte;
+    using allocator_type = std::allocator<std::byte>;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
+    using iterator = std::array<std::byte, Size>::iterator;
+    using const_iterator = std::array<std::byte, Size>::const_iterator;
+    using reverse_iterator = std::array<std::byte, Size>::reverse_iterator;
+    using const_reverse_iterator = std::array<std::byte, Size>::const_reverse_iterator;
+
     // // Conversion constructor from other containers holding "byte-like" objects (char, unsigned char)
     // template <typename T>
     //     requires requires(T::value_type value) {
@@ -35,6 +48,17 @@ public:
     //
     //     from_range(std::forward<Range>(range));
     // }
+    //
+
+    auto begin() { return data.begin(); }
+    auto begin() const { return data.begin(); }
+    auto cbegin() const { return data.cend(); }
+
+    auto end() { return data.end(); }
+    auto end() const { return data.end(); }
+    auto cend() const { return data.cend(); }
+
+    std::size_t size() const { return data.size(); }
 
     /// T should be a stdlib-compatible container type
     /// where std::byte is convertible to T::value_type
@@ -45,7 +69,7 @@ public:
         }
     constexpr T to() const {
         T result;
-        result.resize(this->size());
+        result.resize(size());
 
         ranges::transform(*this, result.begin(), [](std::byte value) { return std::to_integer<T::value_type>(value); });
 
@@ -87,19 +111,17 @@ public:
         return result;
     }
 
+    std::array<std::byte, Size> data;
+
 private:
     template <ranges::range Range>
         requires requires(ranges::range_value_t<Range> value) {
-            {
-                std::byte {
-                    value
-                }
-            };
+            { std::byte{value} };
         }
     constexpr void from_range(Range&& range) {
         // static_assert(get_size_if_constexpr(range) <= Size, "Passed range is too large for this ByteArray");
         Expects(ranges::size(range) < Size);
-        ranges::transform(std::forward<Range>(range), this->begin(), [](std::byte value) { return std::byte{value}; });
+        ranges::transform(std::forward<Range>(range), data.begin(), [](std::byte value) { return std::byte{value}; });
     }
 
     static constexpr auto TRY_CONSTEXPR = []<std::size_t>() {};

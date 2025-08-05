@@ -37,7 +37,7 @@ ByteVector reinterpret_raw(const T& data) {
     const auto* first = reinterpret_cast<const std::byte*>(&data);
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    return {first, first + sizeof(data)};
+    return ByteVector{first, first + sizeof(data)};
 }
 
 template <typename T>
@@ -76,7 +76,7 @@ struct MemoryIOSerde<T>
     static util::Result<T> read(std::uintptr_t address, MemoryIOBase& mio) {
         const auto raw_data = TRY(mio.read_block_impl(address, sizeof(T)));
 
-        return *detail::reinterpret_raw<T>(raw_data);
+        return raw_data.bit_cast_to<T>();
     }
 
     static ByteVector to_bytes(const T& data) { return detail::reinterpret_raw(data); }
@@ -94,18 +94,13 @@ struct MemoryIOSerde<std::string>
 
     static ByteVector to_bytes(const std::string& data) {
         // Include '\0'
-        auto raw_data = detail::reinterpret_raw_each(data);
+        auto raw_data = ByteVector::from(data);
         raw_data.push_back(static_cast<std::byte>('\0'));
 
         return raw_data;
     }
 
-    static std::string data_to_str(const std::vector<std::byte>& data) {
-        std::string result;
-        result.resize(data.size());
-        boost::range::transform(data, result.begin(), [](std::byte byte) { return std::to_integer<char>(byte); });
-        return result;
-    }
+    static std::string data_to_str(const ByteVector& data) { return data.to_range<std::string>(); }
 };
 
 template <std::size_t Length>

@@ -2,6 +2,7 @@
 
 #include "logging.hpp"
 
+#include <gsl/assert>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/iterator/insert_iterators.hpp>
 
@@ -12,7 +13,7 @@ SymbolTable::SymbolTable(const std::vector<Symbol>& symbols) {
     ranges::copy_if(symbols, ranges::back_inserter(symbols_),
                     [](const Symbol& sym) { return sym.kind == Symbol::Static && !sym.name.empty(); });
 
-    ASSERT(symbols_.size() > 0, "Symbol table should not be empty");
+    Ensures(symbols_.size() > 0);
 }
 
 std::optional<Symbol> SymbolTable::find(std::string_view name) const {

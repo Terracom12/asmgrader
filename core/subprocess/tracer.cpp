@@ -384,8 +384,10 @@ util::Result<void> Tracer::setup_function_return() {
     //   brk 0x1234    - d4224680
     //   nop           - d503201f
     // 32-bit alignment is required
-    ByteVector instrs = {0x80, 0x46, 0x22, 0xD4, //
-                         0x1F, 0x20, 0x03, 0xD5};
+    auto instrs = ByteVector::from<std::uint32_t, std::uint32_t>( //
+        0xD4224680,                                               //
+        0xD503201F,                                               //
+    );
 
 #else // x86_64 assumed
     const std::uintptr_t return_loc = mmaped_address_ + mmaped_used_amt_;
