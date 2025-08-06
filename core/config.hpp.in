@@ -1,0 +1,57 @@
+#pragma once
+
+#include <fmt/compile.h>
+#include <fmt/format.h>
+#include <range/v3/iterator.hpp>
+
+#include <array>
+#include <string_view>
+
+// @ident@ expressions are substituted by CMake
+// clang-format off
+#define ASMGRADER_VERSION_MAJOR @asmgrader_VERSION_MAJOR@
+#define ASMGRADER_VERSION_MINOR @asmgrader_VERSION_MINOR@
+#define ASMGRADER_VERSION_PATCH @asmgrader_VERSION_PATCH@
+// clang-format on
+
+consteval unsigned int get_version() {
+    // The maximum value of any MAJOR / MINOR / PATCH field
+    constexpr auto MAX_VERSION_FIELD = 99;
+
+    static_assert(ASMGRADER_VERSION_MAJOR < MAX_VERSION_FIELD);
+    static_assert(ASMGRADER_VERSION_MINOR < MAX_VERSION_FIELD);
+    static_assert(ASMGRADER_VERSION_PATCH < MAX_VERSION_FIELD);
+
+    constexpr auto MINOR_MULTIPLIER = MAX_VERSION_FIELD + 1;
+    constexpr auto MAJOR_MULTIPLIER = MINOR_MULTIPLIER * MINOR_MULTIPLIER;
+
+    return ASMGRADER_VERSION_MAJOR * MAJOR_MULTIPLIER + ASMGRADER_VERSION_MAJOR * MINOR_MULTIPLIER +
+           ASMGRADER_VERSION_PATCH;
+}
+
+namespace detail {
+
+struct VersionStringImpl
+{
+    static constexpr auto MAX_SZ = 32; // being a bit liberal here
+    std::array<char, MAX_SZ> buffer{};
+    std::size_t size{};
+
+    consteval VersionStringImpl() {
+        ranges::iterator_t<decltype(buffer)> end_it =
+            fmt::format_to(buffer.begin(), FMT_COMPILE("{}.{}.{}"), ASMGRADER_VERSION_MAJOR, ASMGRADER_VERSION_MINOR,
+                           ASMGRADER_VERSION_PATCH);
+
+        size = static_cast<std::size_t>(end_it - buffer.begin());
+    }
+
+    consteval std::string_view str_view() const { return {buffer.begin(), size}; }
+};
+
+constexpr VersionStringImpl VERSION_STRING{};
+
+} // namespace detail
+
+consteval std::string_view get_version_string() {
+    return detail::VERSION_STRING.str_view();
+}

@@ -1,3 +1,4 @@
+#include "config.hpp"
 #include "grading_session.hpp"
 #include "registrars/global_registrar.hpp"
 #include "test/assignment.hpp"
@@ -17,6 +18,8 @@ int main(int argc, const char* argv[]) {
     LOG_TRACE("Registered tests: {::}", GlobalRegistrar::get().for_each_assignment([](const Assignment& assignment) {
         return fmt::format("{:?}: {}", assignment.get_name(), assignment.get_test_names());
     }));
+
+    fmt::println("AsmGrader v{} ({:06})", get_version_string(), get_version());
 
     std::span<const char*> args{argv, static_cast<std::size_t>(argc)};
 

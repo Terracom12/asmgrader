@@ -54,6 +54,11 @@ find_package(PkgConfig REQUIRED)
 # libelf for reading symbols from an ELF
 pkg_check_modules(LIBELF REQUIRED libelf)
 
+##### Project configuration
+# For now, just substitutes version numbers as defined in root CMake project() decl
+
+configure_file(config.hpp.in config.hpp)
+
 ##### Library declarations
 
 # Interface library for including headers and compilation options
@@ -160,7 +165,10 @@ target_link_options(
 # TODO: Yeah, `.` is bad practice...
 target_include_directories(
 	asmgrader_interface
-    INTERFACE .
+    INTERFACE 
+
+    .
+    "${CMAKE_CURRENT_BINARY_DIR}"   # For generated `configure.hpp`
 )
 
 target_link_libraries(
