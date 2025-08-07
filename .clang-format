@@ -19,6 +19,8 @@ IndentWidth: 4
 IndentAccessModifiers: false
 AccessModifierOffset: -4
 
+SeparateDefinitionBlocks: Always
+
 ColumnLimit: 120
 
 FixNamespaceComments: true

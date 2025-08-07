@@ -28,5 +28,6 @@ fi
 # abortions will cause gdb to break on ASAN errors
 gdb --ex 'set environment ASAN_OPTIONS detect_leaks=0:abort_on_error=1' \
     --ex "set environment LOG_LEVEL $LOG_LEVEL" \
+    --quiet \
     "${GDB_ARGS[@]}" \
     --args $EXEC "${EXEC_ARGS[@]}"

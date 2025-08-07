@@ -10,6 +10,21 @@ InlayHints:
     DeducedTypes: Yes
     TypeNameLimit: 24
 
+Diagnostics:
+    UnusedIncludes: Strict
+    MissingIncludes: Strict
+
+Style:
+    #QuotedHeaders: "core/.*"
+    AngledHeaders: "(range|boost|fmt|catch2|nlohmann|argparse|gsl)/.*"
+
 Completion:
     AllScopes: Yes
     ArgumentLists: Delimiters # fo^ completes to foo(^)
+
+---
+
+If:
+    PathMatch: ".*\\.in"
+Diagnostics:
+    Suppress: "*"

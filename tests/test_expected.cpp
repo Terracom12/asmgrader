@@ -34,10 +34,10 @@ TEST_CASE("Equality and comparison operators") {
 
     REQUIRE(Et{123} == Et{123});
     REQUIRE(Et{123} != Et{456});
-    // REQUIRE(Et{123} <= Et{456});
-    // REQUIRE(Et{123} < Et{456});
-    // REQUIRE(Et{123} >= Et{123});
-    // REQUIRE(Et{456} > Et{123});
+    REQUIRE(Et{123} <= Et{456});
+    REQUIRE(Et{123} < Et{456});
+    REQUIRE(Et{123} >= Et{123});
+    REQUIRE(Et{456} > Et{123});
 
     // Implicit conversions from value / error
     REQUIRE(Et{123} == 123);
@@ -83,6 +83,7 @@ consteval Expected<std::array<int, 10>, int> aggregate_expected_test(bool error)
 
     return std::array<int, 10>{1, 2, 3, 4, 5};
 }
+
 static_assert(aggregate_expected_test(false).value() == std::array<int, 10>{1, 2, 3, 4, 5});
 static_assert(aggregate_expected_test(true).error() == -1);
 

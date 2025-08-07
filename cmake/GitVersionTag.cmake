@@ -13,6 +13,8 @@ function(git_version_tag version_major_var version_minor_var version_patch_var)
         set(${version_minor_var} 0 PARENT_SCOPE)
         set(${version_patch_var} 0 PARENT_SCOPE)
         return()
+    else ()
+        message(STATUS "Detected version ${GIT_TAG} from git tag")
     endif()
 
     string(REGEX MATCH "v?([0-9]+)\\.([0-9]+)\\.([0-9]+)" _ ${GIT_TAG})

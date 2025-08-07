@@ -4,7 +4,6 @@
 #include "util/error_types.hpp"
 
 #include <cstdint>
-#include <tuple>
 
 using sum = std::uint64_t(std::uint64_t, std::uint64_t);
 using sum_and_write = void(std::uint64_t, std::uint64_t);
