@@ -1,18 +1,27 @@
 #include "cl_args.hpp"
 
 #include "registrars/global_registrar.hpp"
+#include "test/assignment.hpp"
+#include "user/program_options.hpp"
+#include "util/expected.hpp"
+#include "version.hpp"
 
+#include <argparse/argparse.hpp>
+#include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
+#include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <span>
 #include <stdexcept>
 #include <string>
-#include <utility>
+#include <string_view>
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
-    : arg_parser_{args[0], "0.0.1", argparse::default_arguments::help}
+    : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
     , args_{args.begin(), args.end()} {
     // Add parser arguments
     setup_parser();
@@ -21,6 +30,8 @@ CommandLineArgs::CommandLineArgs(std::span<const char*> args)
 void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
+
+    arg_parser_.add_description(fmt::format("AsmGrader v{}", ASMGRADER_VERSION_STRING));
 
     // clang-format off
     auto& assignment_arg = arg_parser_.add_argument("assignment")
@@ -32,6 +43,17 @@ void CommandLineArgs::setup_parser() {
         assignment_arg.add_choice(assignment.get_name());
     });
 
+    // Verbatim from argparse.hpp, except replacing `-v` with `-V`
+    arg_parser_.add_argument("-V", "--version")
+        .action([&](const auto & /*unused*/) {
+            fmt::println(ASMGRADER_VERSION_STRING);
+            std::exit(0);
+        })
+        .default_value(false)
+        .help("prints version information and exits")
+        .implicit_value(true)
+        .nargs(0);
+
     arg_parser_.add_argument("-v", "--verbose")
         .flag()
         .store_into(opts_buffer_.verbose)
@@ -41,17 +63,19 @@ void CommandLineArgs::setup_parser() {
     //  maybe want to switch to another lib, or just do it myself
 
     arg_parser_.add_argument("--stop")
-        .default_value(std::string{"never"})
         .choices("never", "first", "each")
+        .default_value(std::string{"never"})
         .metavar("WHEN")
         .nargs(1)
         .action([&] (const std::string& opt) {
+            using enum ProgramOptions::StopOpt;
+
             if (opt == "first-error") {
-                opts_buffer_.stop_option = ProgramOptions::FirstError;
+                opts_buffer_.stop_option = FirstError;
             } else if (opt == "each-test-error") {
-                opts_buffer_.stop_option = ProgramOptions::EachTestError;
+                opts_buffer_.stop_option = EachTestError;
             } else if (opt == "never") {
-                opts_buffer_.stop_option = ProgramOptions::Never;
+                opts_buffer_.stop_option = Never;
             }
         })
         .help("Whether/when to stop early, to not flood the console with failing test messages.");
@@ -65,47 +89,61 @@ void CommandLineArgs::setup_parser() {
         })
         .metavar("FILE")
         .help("File to run tests on");
+
+    arg_parser_.add_argument("-c", "--color")
+        .choices("never", "auto", "always")
+        .default_value(std::string{"auto"})
+        .metavar("WHEN")
+        .nargs(1)
+        .help("When to use colors")
+        .action([this] (const std::string& opt) {
+                using enum ProgramOptions::ColorizeOpt;
+
+                if (opt == "never") {
+                    opts_buffer_.colorize_option = Never;
+                } else if (opt == "auto") {
+                    opts_buffer_.colorize_option = Auto;
+                } else if (opt == "always") {
+                    opts_buffer_.colorize_option = Always;
+                }
+        });
     // clang-format on
 }
 
-util::Expected<void, std::string> CommandLineArgs::parse() {
+util::Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
     parse_successful_ = false;
 
     try {
         arg_parser_.parse_args(args_);
-        // LOG_TRACE("Program options: {}", opts_buffer_);
     } catch (const std::exception& err) {
         return err.what();
     }
 
     parse_successful_ = true;
 
-    return {};
+    return opts_buffer_;
 }
 
 std::string CommandLineArgs::help_message() const {
     return arg_parser_.help().str();
 }
+
 std::string CommandLineArgs::usage_message() const {
     return arg_parser_.usage();
 }
 
-std::string_view CommandLineArgs::get_basename(std::string_view full_name) {
-    return full_name.substr(full_name.find_last_of('/') + 1);
+std::string CommandLineArgs::get_basename(std::string_view full_name) {
+    return std::string{full_name.substr(full_name.find_last_of('/') + 1)};
 }
 
-void CommandLineArgs::set_global() const {
-    if (!parse_successful_) {
-        return;
+ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code) {
+    CommandLineArgs cl_args{args};
+    auto opts_res = cl_args.parse();
+
+    if (!opts_res) {
+        fmt::println("{}\n{}", styled(opts_res.error(), fg(fmt::color::red)), cl_args.help_message());
+        std::exit(exit_code);
     }
 
-    ProgramArgsSingleton::set_options(opts_buffer_);
-}
-
-const std::optional<CommandLineArgs::ProgramOptions>& ProgramArgsSingleton::get_options() noexcept {
-    return opts;
-}
-
-void ProgramArgsSingleton::set_options(std::optional<CommandLineArgs::ProgramOptions> options) noexcept {
-    opts = std::move(options);
+    return opts_res.value();
 }

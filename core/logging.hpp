@@ -12,6 +12,7 @@
 #include <fmt/color.h>
 #include <fmt/ranges.h>
 
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib> // For abort
@@ -34,6 +35,7 @@
 #endif
 
 #include <spdlog/cfg/env.h>
+#include <spdlog/common.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -57,6 +59,7 @@ struct AssertionError : std::runtime_error
 {
     explicit AssertionError(const std::string& condition)
         : std::runtime_error(condition) {}
+
     AssertionError(const std::string& condition, const std::string& msg)
         : std::runtime_error(condition + " : " + msg) {}
 };
@@ -85,6 +88,7 @@ struct AssertionError : std::runtime_error
 
 #ifdef DEBUG
 #define DEBUG_ASSERT(expr, ...) ASSERT(expr, "[!DEBUG!] " __VA_ARGS__)
+
 namespace detail {
 
 // AllowImplicitlyDeletedCopyOrMove is set to true, so the lint here seems like a false positive
@@ -106,6 +110,7 @@ struct DebugTimeHelper : util::NonMovable
 };
 
 } // namespace detail
+
 #define DEBUG_TIME(expr)                                                                                               \
     [&]() {                                                                                                            \
         detail::DebugTimeHelper debug_time_helper__(#expr);                                                            \
@@ -120,16 +125,15 @@ struct DebugTimeHelper : util::NonMovable
 inline std::string get_err_msg(int err) {
     return std::error_code(err, std::generic_category()).message();
 }
+
 /// Obtain Linux error (i.e., ``errno``) message via libc functions
 inline std::string get_err_msg() {
     return get_err_msg(errno);
 }
 
 inline void init_loggers() {
-#if defined(TRACE)
-    spdlog::set_level(spdlog::level::trace);
-#elif defined(DEBUG)
-    spdlog::set_level(spdlog::level::debug);
+#if defined(DEBUG)
+    spdlog::set_level(spdlog::level::warn);
 #elif defined(RELEASE)
     spdlog::set_level(spdlog::level::err);
 #else

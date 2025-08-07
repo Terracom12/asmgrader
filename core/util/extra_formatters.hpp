@@ -12,13 +12,18 @@
 
 #include <concepts>
 #include <ctime>
+#include <exception>
 #include <optional>
 #include <source_location>
 #include <string>
+#include <string_view>
 #include <system_error>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
+
+#include <string.h>
 
 namespace util {
 
@@ -56,10 +61,19 @@ struct DebugFormatter
 };
 
 template <>
+struct fmt::formatter<std::exception> : formatter<std::string>
+{
+    auto format(const std::exception& from, fmt::format_context& ctx) const {
+        std::string str = fmt::format("{}: '{}'", boost::typeindex::type_id_runtime(from).pretty_name(), from.what());
+
+        return formatter<std::string>::format(str, ctx);
+    }
+};
+
+template <>
 struct fmt::formatter<std::timespec> : formatter<std::string>
 {
-    template <typename Context>
-    auto format(const std::timespec& from, Context& ctx) const {
+    auto format(const std::timespec& from, fmt::format_context& ctx) const {
         return format_to(ctx.out(), "timespec{{tv_sec={}, tv_nsec={}}}", from.tv_sec, from.tv_nsec);
     }
 };
@@ -163,7 +177,8 @@ struct FormatterImpl<Enum>
 };
 
 template <typename Aggregate>
-    requires(std::is_aggregate_v<Aggregate> && !std::is_array_v<Aggregate> && !ranges::range<Aggregate>)
+    requires(std::is_aggregate_v<Aggregate> && std::is_standard_layout_v<Aggregate> && !std::is_array_v<Aggregate> &&
+             !ranges::range<Aggregate>)
 struct FormatterImpl<Aggregate>
 {
     static auto format(const Aggregate& from, fmt::format_context& ctx) {
@@ -234,9 +249,13 @@ enum class SEa {};
 enum class SEb { A, B };
 enum class SEc {};
 enum class SEd { A, B };
+
 enum Ea {};
+
 enum Eb { A, B };
+
 enum Ec {};
+
 enum Ed { C, D };
 
 // NOLINTBEGIN
