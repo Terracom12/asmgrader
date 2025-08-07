@@ -23,7 +23,11 @@ if(MSVC)
   message( FATAL_ERROR "Compiling with MSVC is unsupported!" )
 endif()
 
-project(asmgrader VERSION 0.0.1 LANGUAGES CXX)
+include(cmake/GitVersionTag.cmake)
+
+git_version_tag(MAJOR MINOR PATCH)
+
+project(AsmGrader VERSION ${MAJOR}.${MINOR}.${PATCH} LANGUAGES CXX)
 
 # Show download progress
 set(FETCHCONTENT_QUIET FALSE)
