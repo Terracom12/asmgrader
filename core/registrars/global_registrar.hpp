@@ -4,11 +4,13 @@
 
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 

@@ -26,6 +26,7 @@
 #include <ios>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -159,6 +160,7 @@ SyscallRecord Tracer::get_syscall_entry_info(struct ptrace_syscall_info* entry) 
 
     // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 }
+
 void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const {
     assert_invariants();
 
@@ -386,7 +388,7 @@ util::Result<void> Tracer::setup_function_return() {
     // 32-bit alignment is required
     auto instrs = ByteVector::from<std::uint32_t, std::uint32_t>( //
         0xD4224680,                                               //
-        0xD503201F,                                               //
+        0xD503201F                                                //
     );
 
 #else // x86_64 assumed
