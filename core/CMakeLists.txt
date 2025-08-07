@@ -8,7 +8,7 @@ CPMAddPackage(
   PATCHES "boost-pfr-system.patch"   # Make the compiler think that Boost is a system lib as to not emit warnings
   #URL_HASH SHA256=3621533e820dcab1e8012afd583c0c73cf0f77694952b81352bf38c1488f9cb4
   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr" # Note the escapes!
+          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace" # Note the escapes!
 )
 
 # spdlog for logging
@@ -57,7 +57,7 @@ pkg_check_modules(LIBELF REQUIRED libelf)
 ##### Project configuration
 # For now, just substitutes version numbers as defined in root CMake project() decl
 
-configure_file(config.hpp.in config.hpp)
+configure_file(version.hpp.in version.hpp)
 
 ##### Library declarations
 
@@ -100,8 +100,10 @@ add_library(
     registrars/global_registrar.hpp
     registrars/auto_registrars.hpp
 
-    serializers/plaintext_serializer.hpp
-    serializers/serializer.hpp
+    output/plaintext_serializer.hpp
+    output/serializer.hpp
+    output/sink.hpp
+    output/stdout_sink.hpp
 
     symbols/elf_reader.hpp
     symbols/symbol.hpp
@@ -122,6 +124,8 @@ add_library(
     test_runner.hpp
 
     grading_session.hpp
+
+    exceptions.hpp
 
     macros.hpp
 )
@@ -184,9 +188,19 @@ target_link_libraries(
     Boost::mp11
     Boost::pfr
     Boost::describe
+    Boost::stacktrace
     range-v3
     Microsoft.GSL::GSL
 )
+
+if (TARGET boost_stacktrace_from_exception)
+
+    target_link_libraries(
+        asmgrader_interface
+        INTERFACE
+        boost_stacktrace_from_exception
+    )
+endif ()
 
 # libelf options
 target_include_directories(asmgrader_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
@@ -206,6 +220,9 @@ add_library(
     subprocess/memory/memory_io_base.cpp
     subprocess/memory/ptrace_memory_io.cpp
     subprocess/run_result.cpp
+
+    output/plaintext_serializer.cpp
+    output/stdout_sink.cpp
 
     registrars/global_registrar.cpp
 

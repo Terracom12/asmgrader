@@ -2,6 +2,7 @@
 
 #include "util/class_traits.hpp"
 #include "util/error_types.hpp"
+#include "util/expected.hpp"
 #include "util/linux.hpp"
 
 #include <chrono>
@@ -11,6 +12,7 @@
 #include <vector>
 
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 class Subprocess : util::NonCopyable
@@ -24,10 +26,11 @@ public:
     Subprocess& operator=(Subprocess&&) noexcept;
 
     template <typename Rep, typename Period>
-    std::optional<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
+    util::Result<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
         return read_stdout_poll_impl(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
     }
-    std::optional<std::string> read_stdout();
+
+    util::Result<std::string> read_stdout();
 
     /// Get all stdout since the program has launched
     const std::string& get_full_stdout();
@@ -77,7 +80,7 @@ private:
     std::string stdout_buffer_;
     std::size_t stdout_cursor_{};
 
-    std::optional<std::string> read_stdout_poll_impl(int timeout_ms);
+    util::Result<std::string> read_stdout_poll_impl(int timeout_ms);
 
     /// Reads any data on the stdout pipe to stdout_buffer_
     util::Result<void> read_stdout_impl();

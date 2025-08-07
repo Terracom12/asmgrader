@@ -1,7 +1,9 @@
 #pragma once
 
+#include "exceptions.hpp"
+#include "fmt/base.h"
+#include "logging.hpp"
 #include "program/program.hpp"
-#include "subprocess/memory/concepts.hpp"
 #include "test/asm_data.hpp"
 #include "util/error_types.hpp"
 
@@ -9,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 template <typename T>
 class AsmSymbol : AsmData<T>
@@ -19,7 +22,7 @@ public:
 
     std::string_view get_name() const;
 
-    util::Result<T> get_value() const override;
+    T get_value() const override;
 
 private:
     std::string name_;
@@ -32,9 +35,9 @@ std::string_view AsmSymbol<T>::get_name() const {
 }
 
 template <typename T>
-util::Result<T> AsmSymbol<T>::get_value() const {
+T AsmSymbol<T>::get_value() const {
     if (resolution_err_.has_value()) {
-        return *resolution_err_;
+        throw ContextInternalError(*resolution_err_, "failed to resolve function");
     }
 
     auto value = AsmData<T>::get_value_impl();

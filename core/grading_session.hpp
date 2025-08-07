@@ -1,5 +1,8 @@
 #pragma once
 
+// TODO: Rename this file
+
+#include "exceptions.hpp"
 #include "util/extra_formatters.hpp"
 
 #include <fmt/base.h>
@@ -7,6 +10,7 @@
 #include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 
+#include <optional>
 #include <source_location>
 #include <string>
 #include <string_view>
@@ -56,7 +60,10 @@ struct TestResult
     int num_passed{};
     int num_total{};
 
-    constexpr bool passed() const noexcept { return num_failed() == 0; }
+    std::optional<ContextInternalError> error;
+
+    constexpr bool passed() const noexcept { return !error && num_failed() == 0; }
+
     constexpr int num_failed() const noexcept { return num_total - num_passed; }
 };
 
@@ -66,9 +73,11 @@ struct AssignmentResult
     std::vector<TestResult> test_results;
 
     bool all_passed() const noexcept { return ranges::all_of(test_results, &TestResult::passed); }
+
     int num_tests_passed() const noexcept {
         return gsl::narrow_cast<int>(ranges::count_if(test_results, &TestResult::passed));
     }
+
     int num_tests_failed() const noexcept { return gsl::narrow_cast<int>(test_results.size()) - num_tests_passed(); }
 };
 

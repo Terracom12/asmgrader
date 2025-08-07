@@ -3,6 +3,7 @@
 #include "logging.hpp"
 #include "subprocess/tracer_types.hpp"
 #include "util/error_types.hpp"
+#include "util/expected.hpp"
 #include "util/linux.hpp"
 
 #include <fmt/ranges.h>
@@ -20,6 +21,7 @@
 #include <poll.h>
 #include <sched.h>
 #include <sys/ioctl.h>
+#include <sys/poll.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -155,7 +157,7 @@ bool Subprocess::is_alive() const {
     return util::linux::kill(child_pid_, 0) != std::make_error_code(std::errc::no_such_process);
 }
 
-std::optional<std::string> Subprocess::read_stdout_poll_impl(int timeout_ms) {
+util::Result<std::string> Subprocess::read_stdout_poll_impl(int timeout_ms) {
     // If the pipe is already closed, all we can do is try reading from the buffer
     if (stdout_pipe_.read_fd == -1) {
         return read_stdout();
@@ -163,11 +165,12 @@ std::optional<std::string> Subprocess::read_stdout_poll_impl(int timeout_ms) {
 
     struct pollfd poll_struct = {.fd = stdout_pipe_.read_fd, .events = POLLIN, .revents = 0};
 
+    // TODO: Create wrapper in linux.hpp
     int res = poll(&poll_struct, 1, timeout_ms);
     // Error
     if (res == -1) {
         LOG_WARN("Error polling for read from stdout pipe: '{}'", get_err_msg());
-        return "";
+        return util::ErrorKind::SyscallFailure;
     }
     // Timeout occured
     if (res == 0) {
@@ -177,12 +180,12 @@ std::optional<std::string> Subprocess::read_stdout_poll_impl(int timeout_ms) {
     return read_stdout();
 }
 
-std::optional<std::string> Subprocess::read_stdout() {
-    std::ignore = read_stdout_impl();
+util::Result<std::string> Subprocess::read_stdout() {
+    TRY(read_stdout_impl());
 
     // Cursor is still at the end of the buffer -> no data was read
     if (stdout_cursor_ == stdout_buffer_.size()) {
-        return std::nullopt;
+        return "";
     }
 
     auto res = stdout_buffer_.substr(stdout_cursor_);

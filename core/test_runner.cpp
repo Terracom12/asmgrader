@@ -1,23 +1,42 @@
 #include "test_runner.hpp"
 
+#include "exceptions.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
+#include "output/serializer.hpp"
+#include "program/program.hpp"
 #include "test/assignment.hpp"
+#include "test/test_base.hpp"
+#include "test_context.hpp"
 
+#include <filesystem>
+#include <memory>
+#include <optional>
 #include <ranges>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
-TestRunner::TestRunner(const Assignment& assignment)
-    : assignment_{&assignment} {}
+TestRunner::TestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer)
+    : assignment_{&assignment}
+    , serializer_{std::move(serializer)} {}
 
-AssignmentResult TestRunner::run_all() const {
+AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
     // Assignment name -> TestResults
     std::unordered_map<std::string_view, std::vector<TestResult>> result;
+
+    if (alternative_path) {
+        assignment_->set_exec_path(std::move(*alternative_path));
+    }
 
     for (TestBase& test : assignment_->get_tests()) {
         const std::string_view assignment_name = test.get_assignment().get_name();
 
         const TestResult test_result = run_one(test);
+
+        serializer_->on_test_result(test_result);
 
         result[assignment_name].push_back(test_result);
     }
@@ -33,7 +52,14 @@ AssignmentResult TestRunner::run_all() const {
 TestResult TestRunner::run_one(TestBase& test) const {
     TestContext context(test, Program{assignment_->get_exec_path(), {}});
 
-    test.run(context);
+    try {
+        test.run(context);
+    } catch (const ContextInternalError& ex) {
+        LOG_DEBUG("Internal context test error: {}", ex);
+        auto res = context.finalize();
+        res.error = ex;
+        return res;
+    }
 
     return context.finalize();
 }

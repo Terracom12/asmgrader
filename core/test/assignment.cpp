@@ -2,6 +2,11 @@
 
 #include "test/test_base.hpp"
 
+#include <filesystem>
+#include <memory>
+#include <string_view>
+#include <utility>
+
 Assignment::Assignment(std::string_view name, std::filesystem::path exec_path) noexcept
     : name_{name}
     , exec_path_{std::move(exec_path)} {}

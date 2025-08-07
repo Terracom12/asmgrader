@@ -1,8 +1,11 @@
 #pragma once
 
 #include "grading_session.hpp"
+#include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
+#include "subprocess/run_result.hpp"
+#include "subprocess/syscall_record.hpp"
 #include "test/asm_buffer.hpp"
 #include "test/asm_function.hpp"
 #include "test/asm_symbol.hpp"
@@ -11,11 +14,15 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
+
+#include <sys/user.h>
 
 class TestBase;
 
@@ -46,26 +53,29 @@ public:
     /// Note: if the asm executable has changed, this will launch with the NEW executable
     /// Important: this has the almost certain effect of invalidating all buffers or other
     ///            addressable references to said program, as the address space WILL change
-    util::Result<void> restart_program();
+    void restart_program();
 
     // Low-level exececutor of an arbitrary syscall
     util::Result<SyscallRecord> exec_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get any **new** stdout from the program since the last call to this function
-    util::Result<std::string> get_stdout();
+    std::string get_stdout();
 
     /// Get all stdout from since the beginning of the test invokation
     std::string get_full_stdout();
 
     /// Flushes any reamaining unread data in the stdin buffer
     /// Returns: number of bytes flushed, or error kind if failure occured
-    util::Result<std::size_t> flush_stdin();
+    std::size_t flush_stdin();
 
     /// Obtain a list of the syscalls that have been executed so far
     const std::vector<SyscallRecord>& get_syscall_records() const;
 
+    /// Get the current register state of the program
+    user_regs_struct get_registers() const;
+
     /// Get any **new** stdout from the program since the last call to this function
-    util::Result<void> send_stdin(const std::string& input);
+    void send_stdin(const std::string& input);
 
     /// Find a named symbol in the associated program
     /// \tparam T  type of data that the symbol refers to
@@ -81,7 +91,7 @@ public:
     AsmFunction<Func> find_function(std::string name);
 
     /// Run the program normally from `_start`
-    util::Result<RunResult> run();
+    RunResult run();
 
 private:
     TestBase* associated_test_;

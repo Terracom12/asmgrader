@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/expected.hpp"
-#include "util/macros.hpp"
 
 #include <boost/describe.hpp>
 
@@ -22,6 +21,8 @@ template <typename T>
 using Result = util::Expected<T, ErrorKind>;
 
 } // namespace util
+
+#include "util/macros.hpp"
 
 /// If the supplied argument is an error (unexpected) type, then propegate the error type `e` up
 /// the call stack. Otherwise, continue execution as normal
