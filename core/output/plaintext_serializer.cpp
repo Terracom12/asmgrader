@@ -1,14 +1,18 @@
 #include "output/plaintext_serializer.hpp"
 
 #include "grading_session.hpp"
+#include "logging.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
 #include "user/program_options.hpp"
+#include "util/terminal_checks.hpp"
 
 #include <fmt/color.h>
 #include <fmt/format.h>
 
+#include <cstddef>
 #include <string>
+#include <string_view>
 
 #include <unistd.h>
 
@@ -26,25 +30,81 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     std::string req_result_str;
 
     if (data.passed) {
-        req_result_str = style("PASSED", SUCCESS_STYLE);
+        req_result_str = style_str("PASSED", SUCCESS_STYLE);
     } else {
-        req_result_str = style("FAILED", ERROR_STYLE);
+        req_result_str = style_str("FAILED", ERROR_STYLE);
     }
 
-    std::string msg_str = style(data.msg, VALUE_STYLE);
-
-    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, msg_str);
+    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.msg, VALUE_STYLE));
 
     sink_.write(out);
 }
 
 void PlainTextSerializer::on_test_result(const TestResult& data) {
+    // Don't output success results if not in verbose mode
+    if (data.passed() && !verbose_) {
+        return;
+    }
+
+    std::string header_msg =
+        fmt::format("{0}\nTest Case: {1}\n{0}\n", LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
+
+    if (data.num_total == 0) {
+        header_msg += "No test requirements.\n";
+    }
+
+    sink_.write(header_msg);
+
     for (const RequirementResult& req : data.requirement_results) {
         on_requirement_result(req);
     }
+
+    // Extra newline to seperate tests
+    sink_.write("\n");
 }
 
-void PlainTextSerializer::on_assignment_result([[maybe_unused]] const AssignmentResult& data) {}
+void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
+    std::string out =
+        fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
+
+    auto labeled_num = [](int num, std::string_view label_singular) {
+        return fmt::format("{} {}", num, pluralize(label_singular, num));
+    };
+
+    // Mostly copying Catch2's format for now, so full credit to them
+
+    if (data.all_passed()) {
+        std::string success_msg = style_str("All tests passed", SUCCESS_STYLE);
+        std::string requirements_msg = labeled_num(data.num_requirements_total, "requirement");
+        std::string tests_msg = labeled_num(static_cast<int>(data.test_results.size()), "test");
+
+        out += fmt::format("{} ({} in {})\n", success_msg, requirements_msg, tests_msg);
+        sink_.write(out);
+
+        return;
+    }
+
+    // We would need >99999 requirements for this to look off
+    static constexpr std::size_t FIELD_WIDTH = 12;
+
+    auto pass_fail_line = [this](std::string_view label, int num_passed, int num_failed) {
+        int num_total = num_passed + num_failed;
+
+        std::string total_msg = fmt::format("{} total", num_total);
+        std::string passed_msg = fmt::format("{} passed", num_passed);
+        std::string failed_msg = fmt::format("{} failed", num_failed);
+
+        return fmt::format("{0:<{4}}: {1:>{4}} | {2:>{4}} | {3:>{4}}", label, total_msg,
+                           style(passed_msg, SUCCESS_STYLE), style(failed_msg, ERROR_STYLE), FIELD_WIDTH);
+    };
+
+    std::string tests_line = pass_fail_line("Tests", data.num_tests_passed(), data.num_tests_failed());
+    std::string requirements_line =
+        pass_fail_line("Requirements", data.num_requirements_passed(), data.num_requirements_failed());
+
+    out += fmt::format("{}\n{}\n", tests_line, requirements_line);
+    sink_.write(out);
+}
 
 void PlainTextSerializer::on_metadata() {}
 
@@ -60,6 +120,19 @@ bool PlainTextSerializer::process_colorize_opt(ProgramOptions::ColorizeOpt color
         return true;
     }
 
-    // Colorize if output is going to a terminal, otherwise do not
-    return ::isatty(STDOUT_FILENO) == 1;
+    // Colorize if output is going to a color-supporting terminal, otherwise do not
+    LOG_DEBUG("In terminal: {} & Color Supporting Terminal: {}", in_terminal(stdout), is_color_terminal());
+
+    return in_terminal(stdout) && is_color_terminal();
+}
+
+std::string PlainTextSerializer::pluralize(std::string_view root, int count, std::string_view suffix,
+                                           std::size_t replace_last_chars) {
+    if (count == 1) {
+        return std::string{root};
+    }
+
+    root.remove_suffix(replace_last_chars);
+
+    return fmt::format("{}{}", root, suffix);
 }

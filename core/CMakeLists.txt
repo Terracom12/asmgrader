@@ -89,6 +89,7 @@ add_library(
     util/byte_vector.hpp
     util/byte_array.hpp
     util/timespec_operator_eq.hpp
+    util/terminal_checks.hpp
 
     meta/always_false.hpp
     meta/functional_traits.hpp
@@ -220,6 +221,8 @@ add_library(
     subprocess/memory/memory_io_base.cpp
     subprocess/memory/ptrace_memory_io.cpp
     subprocess/run_result.cpp
+
+    util/terminal_checks.cpp
 
     output/plaintext_serializer.cpp
     output/stdout_sink.cpp

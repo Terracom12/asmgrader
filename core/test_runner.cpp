@@ -26,6 +26,7 @@ TestRunner::TestRunner(Assignment& assignment, std::unique_ptr<Serializer> seria
 AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
     // Assignment name -> TestResults
     std::unordered_map<std::string_view, std::vector<TestResult>> result;
+    int num_total_requirements = 0;
 
     if (alternative_path) {
         assignment_->set_exec_path(std::move(*alternative_path));
@@ -39,14 +40,21 @@ AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> altern
         serializer_->on_test_result(test_result);
 
         result[assignment_name].push_back(test_result);
+
+        num_total_requirements += test_result.num_total;
     }
 
     if (result.size() > 1) {
         UNIMPLEMENTED("Multi-assignment runs are not yet supported! {}", result | std::ranges::views::keys);
     }
 
-    return AssignmentResult{.name = std::string{result.begin()->first},
-                            .test_results = std::move(result.begin()->second)};
+    AssignmentResult res{.name = std::string{result.begin()->first},
+                         .test_results = std::move(result.begin()->second),
+                         .num_requirements_total = num_total_requirements};
+
+    serializer_->on_assignment_result(res);
+
+    return res;
 }
 
 TestResult TestRunner::run_one(TestBase& test) const {

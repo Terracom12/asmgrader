@@ -9,7 +9,10 @@
 #include <gsl/util>
 #include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/algorithm/count_if.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
+#include <range/v3/view/transform.hpp>
 
+#include <functional>
 #include <optional>
 #include <source_location>
 #include <string>
@@ -71,6 +74,7 @@ struct AssignmentResult
 {
     std::string name;
     std::vector<TestResult> test_results;
+    int num_requirements_total{};
 
     bool all_passed() const noexcept { return ranges::all_of(test_results, &TestResult::passed); }
 
@@ -79,6 +83,13 @@ struct AssignmentResult
     }
 
     int num_tests_failed() const noexcept { return gsl::narrow_cast<int>(test_results.size()) - num_tests_passed(); }
+
+    int num_requirements_failed() const noexcept {
+        auto failed_view = test_results | ranges::views::transform(&TestResult::num_failed);
+        return ranges::fold_left(failed_view, 0, std::plus<>{});
+    }
+
+    int num_requirements_passed() const noexcept { return num_requirements_total - num_requirements_failed(); }
 };
 
 struct GradingSession
