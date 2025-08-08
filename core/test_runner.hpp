@@ -2,7 +2,7 @@
 
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
-#include "test/test_base.hpp"
+#include "api/test_base.hpp"
 
 #include <filesystem>
 #include <memory>

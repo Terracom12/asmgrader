@@ -1,9 +1,9 @@
 #pragma once
 
+#include "api/assignment.hpp"             // IWYU pragma: export
+#include "api/test_base.hpp"              // IWYU pragma: export
 #include "grading_session.hpp"            // IWYU pragma: export
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
-#include "test/assignment.hpp"            // IWYU pragma: export
-#include "test/test_base.hpp"             // IWYU pragma: export
 #include "util/macros.hpp"
 
 // Some macros to substantially simplify test-case development
@@ -27,7 +27,6 @@
 #define TEST(assignment, name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), assignment, name)
 
 // Don't emit annoying sign comparison warnings on user facing API
-// TODO: Just disable Werror publicly instead
 
 #define REQUIRE(condition, ...)                                                                                        \
     __extension__({                                                                                                    \

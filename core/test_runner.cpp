@@ -1,18 +1,19 @@
 #include "test_runner.hpp"
 
+#include "api/assignment.hpp"
+#include "api/test_base.hpp"
+#include "api/test_context.hpp"
 #include "exceptions.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "output/serializer.hpp"
 #include "program/program.hpp"
-#include "test/assignment.hpp"
-#include "test/test_base.hpp"
-#include "test_context.hpp"
+
+#include <range/v3/view/map.hpp>
 
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -45,7 +46,7 @@ AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> altern
     }
 
     if (result.size() > 1) {
-        UNIMPLEMENTED("Multi-assignment runs are not yet supported! {}", result | std::ranges::views::keys);
+        UNIMPLEMENTED("Multi-assignment runs are not yet supported! {}", result | ranges::views::keys);
     }
 
     AssignmentResult res{.name = std::string{result.begin()->first},

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "test/asm_function.hpp"
+#include "api/asm_function.hpp"
 #include "test_context.hpp"
 
 #include <string>

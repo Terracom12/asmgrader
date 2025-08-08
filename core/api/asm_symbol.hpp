@@ -4,7 +4,7 @@
 #include "fmt/base.h"
 #include "logging.hpp"
 #include "program/program.hpp"
-#include "test/asm_data.hpp"
+#include "api/asm_data.hpp"
 #include "util/error_types.hpp"
 
 #include <cstdint>

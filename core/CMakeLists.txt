@@ -114,21 +114,21 @@ add_library(
 
     user/cl_args.hpp
 
-    test/asm_function.hpp
-    test/asm_symbol.hpp
-    test/asm_data.hpp
-    test/asm_buffer.hpp
-    test/test_base.hpp
-    test/assignment.hpp
+    api/asm_function.hpp
+    api/asm_symbol.hpp
+    api/asm_data.hpp
+    api/asm_buffer.hpp
+    api/test_base.hpp
+    api/assignment.hpp
+    api/test_context.hpp
+    api/macros.hpp
+    api.hpp
 
-    test_context.hpp
     test_runner.hpp
 
     grading_session.hpp
 
     exceptions.hpp
-
-    macros.hpp
 )
 
 target_compile_options(
@@ -229,7 +229,6 @@ add_library(
 
     registrars/global_registrar.cpp
 
-    test_context.cpp
     test_runner.cpp
 
     symbols/elf_reader.cpp
@@ -239,7 +238,8 @@ add_library(
 
     user/cl_args.cpp
 
-    test/assignment.cpp
+    api/assignment.cpp
+    api/test_context.cpp
 )
 
 target_link_libraries(

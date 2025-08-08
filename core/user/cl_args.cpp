@@ -1,7 +1,7 @@
 #include "cl_args.hpp"
 
 #include "registrars/global_registrar.hpp"
-#include "test/assignment.hpp"
+#include "api/assignment.hpp"
 #include "user/program_options.hpp"
 #include "util/expected.hpp"
 #include "version.hpp"

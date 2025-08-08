@@ -1,6 +1,6 @@
 #include "global_registrar.hpp"
 
-#include "test/assignment.hpp"
+#include "api/assignment.hpp"
 
 #include <memory>
 

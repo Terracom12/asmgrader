@@ -1,8 +1,8 @@
 #pragma once
 
 #include "registrars/global_registrar.hpp"
-#include "test/assignment.hpp"
-#include "test/test_base.hpp"
+#include "api/assignment.hpp"
+#include "api/test_base.hpp"
 
 #include <concepts>
 #include <memory>
