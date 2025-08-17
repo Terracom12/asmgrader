@@ -2,7 +2,9 @@
 
 #include "api/assignment.hpp"
 
-#include <memory>
+#include <cstddef>
+#include <string_view>
+#include <vector>
 
 GlobalRegistrar& GlobalRegistrar::get() noexcept {
     // thread-safe singleton initialization pattern
@@ -11,11 +13,11 @@ GlobalRegistrar& GlobalRegistrar::get() noexcept {
     return local_instance;
 }
 
-Assignment& GlobalRegistrar::add(Assignment assignment) noexcept {
-    registered_assignments_.push_back(std::make_unique<Assignment>(std::move(assignment)));
-
-    return *registered_assignments_.back().get();
-}
+// void GlobalRegistrar::add_test(std::unique_ptr<TestBase> test) noexcept {
+//     registered_assignments_.push_back(std::make_unique<Assignment>(std::move(assignment)));
+//
+//     return *registered_assignments_.back().get();
+// }
 
 std::vector<std::string_view> GlobalRegistrar::get_assignment_names() {
     return for_each_assignment([](const Assignment& assignment) { return assignment.get_name(); });

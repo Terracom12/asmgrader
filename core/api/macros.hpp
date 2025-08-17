@@ -1,18 +1,19 @@
 #pragma once
 
-#include "api/assignment.hpp"             // IWYU pragma: export
-#include "api/test_base.hpp"              // IWYU pragma: export
-#include "grading_session.hpp"            // IWYU pragma: export
+#include "api/assignment.hpp"  // IWYU pragma: export
+#include "api/test_base.hpp"   // IWYU pragma: export
+#include "grading_session.hpp" // IWYU pragma: export
+#include "logging.hpp"
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
 #include "util/macros.hpp"
 
-// Some macros to substantially simplify test-case development
+// Some macros to substantially simplify test case development
 
 #define ASSIGNMENT(cpp_identifier, name, executable)                                                                   \
     const static Assignment& cpp_identifier = /* NOLINT(misc-use-anonymous-namespace)*/                                \
         GlobalRegistrar::get().add(Assignment{name, executable});
 
-#define TEST_IMPL(ident, assignment, name, ...)                                                                        \
+#define TEST_IMPL(ident, name, /*metadata attributes*/...)                                                             \
     namespace {                                                                                                        \
     class ident final : public TestBase                                                                                \
     {                                                                                                                  \
@@ -20,13 +21,14 @@
         using TestBase::TestBase;                                                                                      \
         void run(TestContext& ctx) override;                                                                           \
     };                                                                                                                 \
-    const TestAutoRegistrar CONCAT(ident, __registrar){ident{assignment, name}, assignment};                           \
+    constexpr auto CONCAT(ident, __metadata) = metadata::create(metadata::DEFAULT_METADATA,                            \
+                                                                metadata::global_file_metadata() __VA_OPT__(, )        \
+                                                                    __VA_ARGS__);                                      \
+    const TestAutoRegistrar<ident> CONCAT(ident, __registrar){name, CONCAT(ident, __metadata)};                        \
     }                                                                                                                  \
     void ident::run([[maybe_unused]] TestContext& ctx)
 
-#define TEST(assignment, name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), assignment, name)
-
-// Don't emit annoying sign comparison warnings on user facing API
+#define TEST(name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), name)
 
 #define REQUIRE(condition, ...)                                                                                        \
     __extension__({                                                                                                    \
@@ -49,3 +51,11 @@
         }                                                                                                              \
         req_eq_res__;                                                                                                  \
     })
+
+#define FILE_METADATA(...)                                                                                             \
+    namespace metadata {                                                                                               \
+    consteval auto global_file_metadata() {                                                                            \
+        using metadata::Assignment, metadata::Weight, metadata::ProfOnly;                                              \
+        return Metadata{__VA_ARGS__};                                                                                  \
+    }                                                                                                                  \
+    } // namespace metadata

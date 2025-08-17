@@ -120,6 +120,7 @@ add_library(
     api/asm_buffer.hpp
     api/test_base.hpp
     api/assignment.hpp
+    api/metadata.hpp
     api/test_context.hpp
     api/macros.hpp
     api.hpp
