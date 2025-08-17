@@ -12,11 +12,14 @@ add_executable(
     asmgrader_tests
 
     catch2_custom.hpp
+
+    test_metadata.cpp
     test_subprocess.cpp
     test_expected.cpp
     test_symbol_reader.cpp
     test_memory_io.cpp
     test_program.cpp
+
     catch_main.cpp
 )
 
