@@ -1,7 +1,7 @@
 #include "cl_args.hpp"
 
-#include "registrars/global_registrar.hpp"
 #include "api/assignment.hpp"
+#include "registrars/global_registrar.hpp"
 #include "user/program_options.hpp"
 #include "util/expected.hpp"
 #include "version.hpp"
@@ -31,7 +31,12 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    arg_parser_.add_description(fmt::format("AsmGrader v{}", ASMGRADER_VERSION_STRING));
+    constexpr auto VERSION_FMT = "AsmGrader v{}"
+#ifdef PROFESSOR_VERSION
+                                 " (Professor's Version)"
+#endif
+        ;
+    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING));
 
     // clang-format off
     auto& assignment_arg = arg_parser_.add_argument("assignment")

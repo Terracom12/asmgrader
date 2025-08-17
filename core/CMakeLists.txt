@@ -59,14 +59,10 @@ pkg_check_modules(LIBELF REQUIRED libelf)
 
 configure_file(version.hpp.in version.hpp)
 
-##### Library declarations
+##### Variable declarations
 
-# Interface library for including headers and compilation options
-# Just for use with `autograder_assignments_lib` target for now
-add_library(
-    asmgrader_interface
-    INTERFACE
-
+set(
+    INTERF_SOURCES
     subprocess/subprocess.hpp
     subprocess/traced_subprocess.hpp
     subprocess/tracer.hpp
@@ -132,9 +128,8 @@ add_library(
     exceptions.hpp
 )
 
-target_compile_options(
-	asmgrader_interface
-    INTERFACE
+set(
+    INTERF_COMPILE_OPTS
 
     "$<$<COMPILE_LANGUAGE:C,CXX>:-Werror;-Wall;-Wextra;-Wpedantic;-Wshadow;-Wconversion>"
 
@@ -153,10 +148,9 @@ target_compile_options(
     "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-O3;-Werror>"
 )
 
-target_link_options(
-	asmgrader_interface
+set(
+    INTERF_LINK_OPTS
 
-    INTERFACE
     # Disable optimizations in debug mode
     "$<$<CONFIG:Debug>:-O0;-fno-omit-frame-pointer>"
 
@@ -166,20 +160,15 @@ target_link_options(
     "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-no-pie>"
 )
 
-
-# Public header files
 # TODO: Yeah, `.` is bad practice...
-target_include_directories(
-	asmgrader_interface
-    INTERFACE 
+set(
+    INTERF_INCLUDE_DIRS
 
     .
-    "${CMAKE_CURRENT_BINARY_DIR}"   # For generated `configure.hpp`
 )
 
-target_link_libraries(
-    asmgrader_interface
-    INTERFACE
+set(
+    INTERF_LINK_LIBS
 
     fmt::fmt
     argparse
@@ -195,25 +184,8 @@ target_link_libraries(
     Microsoft.GSL::GSL
 )
 
-if (TARGET boost_stacktrace_from_exception)
-
-    target_link_libraries(
-        asmgrader_interface
-        INTERFACE
-        boost_stacktrace_from_exception
-    )
-endif ()
-
-# libelf options
-target_include_directories(asmgrader_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
-target_link_libraries(asmgrader_interface INTERFACE ${LIBELF_LIBRARIES})
-target_compile_options(asmgrader_interface INTERFACE ${LIBELF_CFLAGS_OTHER})
-
-#### Core library declaration
-
-# Create core library for easy use with assignment tests and unit tests in test/
-add_library(
-	asmgrader_core
+set(
+    CORE_SOURCES
 
     subprocess/subprocess.cpp
     subprocess/traced_subprocess.cpp
@@ -243,23 +215,109 @@ add_library(
     api/test_context.cpp
 )
 
-target_link_libraries(
-	asmgrader_core
-
-    PUBLIC
-    asmgrader_interface
-)
-
-# Create library for core + main so that the user doesn't need to provide an entry point
-add_library(
-    asmgrader_core_with_main
+set(
+    CORE_WITH_MAIN_SOURCES
 
     main.cpp
 )
 
-target_link_libraries(
-    asmgrader_core_with_main
+##### Helper function to create all core targets. Used to create a near-duplicate target for professor mode
 
-    PUBLIC
-    asmgrader_core
+function(create_targets  basename)
+    ##### Library declarations
+
+    # Interface library for including headers and compilation options
+    # Just for use with `autograder_assignments_lib` target for now
+    add_library(
+        ${basename}_interface
+        INTERFACE
+
+        ${INTERF_SOURCES}
+    )
+
+    target_compile_options(
+        ${basename}_interface
+        INTERFACE
+
+        ${INTERF_COMPILE_OPTS}
+    )
+
+    target_link_options(
+        ${basename}_interface
+        INTERFACE
+
+        ${INTERF_LINK_OPTS}
+    )
+
+    # Public header files
+    target_include_directories(
+        ${basename}_interface
+        INTERFACE 
+
+        ${INTERF_INCLUDE_DIRS}
+        "${CMAKE_CURRENT_BINARY_DIR}"   # For generated `configure.hpp`
+    )
+
+    target_link_libraries(
+        ${basename}_interface
+        INTERFACE
+
+        ${INTERF_LINK_LIBS}
+    )
+
+    if (TARGET boost_stacktrace_from_exception)
+        target_link_libraries(
+            ${basename}_interface
+            INTERFACE
+            boost_stacktrace_from_exception
+        )
+    endif ()
+
+    # libelf options
+    target_include_directories(${basename}_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
+    target_link_libraries(${basename}_interface INTERFACE ${LIBELF_LIBRARIES})
+    target_compile_options(${basename}_interface INTERFACE ${LIBELF_CFLAGS_OTHER})
+
+    #### Core library
+
+    # Create core library for easy use with assignment tests and unit tests in test/
+    add_library(
+        ${basename}_core
+
+        ${CORE_SOURCES}
+    )
+
+    target_link_libraries(
+        ${basename}_core
+
+        PUBLIC
+        ${basename}_interface
+    )
+
+# Create library for core + main so that the user doesn't need to provide an entry point
+    add_library(
+        ${basename}_core_with_main
+
+        ${CORE_WITH_MAIN_SOURCES}
+    )
+
+    target_link_libraries(
+        ${basename}_core_with_main
+
+        PUBLIC
+        ${basename}_core
+    )
+
+endfunction()
+
+##### Student version
+create_targets(asmgrader)
+
+##### Professor version
+create_targets(asmgrader_prof)
+target_compile_definitions(
+    asmgrader_prof_interface
+
+    INTERFACE
+    "PROFESSOR_VERSION"
 )
