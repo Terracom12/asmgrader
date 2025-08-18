@@ -7,17 +7,20 @@
 #include "registrars/global_registrar.hpp"
 #include "test_runner.hpp"
 #include "user/cl_args.hpp"
+#include "user/file_searcher.hpp"
 #include "user/program_options.hpp"
 
 #include <boost/stacktrace/stacktrace.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <range/v3/algorithm/count.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include <cstddef>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <span>
@@ -46,6 +49,9 @@ int main(int argc, const char* argv[]) {
                       return fmt::format("{:?}: {}", assignment.get_name(), assignment.get_test_names());
                   }));
 
+#ifdef PROFESSOR_VERSION
+#endif // PROFESSOR_VERSION
+
         std::span<const char*> args{argv, static_cast<std::size_t>(argc)};
 
         const ProgramOptions options = parse_args_or_exit(args);
@@ -59,9 +65,12 @@ int main(int argc, const char* argv[]) {
             std::make_unique<PlainTextSerializer>(output_sink, options.colorize_option, options.verbose);
         TestRunner runner{*assignment, std::move(output_serializer)};
 
+#ifndef PROFESSOR_VERSION
+
         AssignmentResult res = runner.run_all(options.file_name);
 
         return res.num_tests_failed();
+#endif // !PROFESSOR_VERSION
     } catch (const std::exception& ex) {
         handle_exception(ex);
     } catch (...) {

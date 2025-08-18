@@ -109,6 +109,7 @@ set(
     program/program.hpp
 
     user/cl_args.hpp
+    user/file_searcher.hpp
 
     api/asm_function.hpp
     api/asm_symbol.hpp
@@ -294,7 +295,7 @@ function(create_targets  basename)
         ${basename}_interface
     )
 
-# Create library for core + main so that the user doesn't need to provide an entry point
+    # Create library for core + main so that the user doesn't need to provide an entry point
     add_library(
         ${basename}_core_with_main
 
@@ -315,6 +316,20 @@ create_targets(asmgrader)
 
 ##### Professor version
 create_targets(asmgrader_prof)
+target_sources(
+    asmgrader_prof_interface
+
+    INTERFACE
+    user/file_searcher.hpp
+    user/assignment_file_searcher.hpp
+)
+target_sources(
+    asmgrader_prof_core
+
+    PUBLIC
+    user/file_searcher.cpp
+    user/assignment_file_searcher.cpp
+)
 target_compile_definitions(
     asmgrader_prof_interface
 

@@ -2,6 +2,7 @@
 
 #include "api/assignment.hpp"
 #include "registrars/global_registrar.hpp"
+#include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
 #include "util/expected.hpp"
 #include "version.hpp"
@@ -15,10 +16,12 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <regex>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
     : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
@@ -26,6 +29,19 @@ CommandLineArgs::CommandLineArgs(std::span<const char*> args)
     // Add parser arguments
     setup_parser();
 }
+
+namespace {
+
+void ensure_regular_file(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
+    if (!std::filesystem::exists(path)) {
+        throw std::invalid_argument(fmt::format(fmt, path.string()) + " does not exist");
+    }
+    if (!std::filesystem::is_regular_file(path)) {
+        throw std::invalid_argument(fmt::format(fmt, path.string()) + " is not a regular file");
+    }
+}
+
+} // namespace
 
 void CommandLineArgs::setup_parser() {
     const auto assignment_names =
@@ -37,6 +53,9 @@ void CommandLineArgs::setup_parser() {
 #endif
         ;
     arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING));
+
+    // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
+    //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
 
     // clang-format off
     auto& assignment_arg = arg_parser_.add_argument("assignment")
@@ -50,22 +69,19 @@ void CommandLineArgs::setup_parser() {
 
     // Verbatim from argparse.hpp, except replacing `-v` with `-V`
     arg_parser_.add_argument("-V", "--version")
+        .default_value(false)
+        .implicit_value(true)
+        .nargs(0)
         .action([&](const auto & /*unused*/) {
             fmt::println(ASMGRADER_VERSION_STRING);
             std::exit(0);
         })
-        .default_value(false)
-        .help("prints version information and exits")
-        .implicit_value(true)
-        .nargs(0);
+        .help("prints version information and exits");
 
     arg_parser_.add_argument("-v", "--verbose")
         .flag()
         .store_into(opts_buffer_.verbose)
         .help("Output with more verbosity");
-
-    // FIXME: argparse is kind of annoying
-    //  maybe want to switch to another lib, or just do it myself
 
     arg_parser_.add_argument("--stop")
         .choices("never", "first", "each")
@@ -85,15 +101,6 @@ void CommandLineArgs::setup_parser() {
         })
         .help("Whether/when to stop early, to not flood the console with failing test messages.");
 
-    arg_parser_.add_argument("-f", "--file")
-        .action([this] (const std::string& opt) {
-                if (!std::filesystem::exists(opt)) {
-                    throw std::invalid_argument(fmt::format("Specified file {:?} does not exist!", opt));
-                }
-                opts_buffer_.file_name = opt;
-        })
-        .metavar("FILE")
-        .help("File to run tests on");
 
     arg_parser_.add_argument("-c", "--color")
         .choices("never", "auto", "always")
@@ -112,6 +119,42 @@ void CommandLineArgs::setup_parser() {
                     opts_buffer_.colorize_option = Always;
                 }
         });
+
+#ifdef PROFESSOR_VERSION
+    arg_parser_.add_argument("-fm", "--file-matcher")
+        .default_value(std::string{AssignmentFileSearcher::DEFAULT_REGEX})
+        .nargs(1)
+        .metavar("REGEX")
+        .action([this] (const std::string& opt) {
+                // Ensure that the matcher is a valid RegEx
+                try {
+                    std::ignore = std::regex{opt};
+                } catch (std::exception& ex) {
+                    throw std::invalid_argument(fmt::format("File matcher {:?} is invalid. {}", opt, ex.what()));
+                }
+                opts_buffer_.file_matcher = opt;
+        })
+        .help("RegEx to match files for a given student and assignment.\nSee docs for syntax details.");
+
+    arg_parser_.add_argument("-db", "--database")
+        .nargs(1)
+        .metavar("FILE")
+        .action([this] (const std::string& opt) {
+                ensure_regular_file(opt, "Database file {:?}");
+
+                opts_buffer_.database_path = opt;
+        })
+        .help("CSV database file with student names. If not specified, "
+              "will attempt to find student submissions recursively using heuristics.\nSee docs for format spec.");
+#else // PROFESSOR_VERSION
+    arg_parser_.add_argument("-f", "--file")
+        .metavar("FILE")
+        .action([this] (const std::string& opt) {
+                ensure_regular_file(opt, "File to run tests on {:?}");
+                opts_buffer_.file_name = opt;
+        })
+        .help("File to run tests on");
+#endif // PROFESSOR_VERSION
     // clang-format on
 }
 

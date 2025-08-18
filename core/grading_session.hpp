@@ -92,6 +92,22 @@ struct AssignmentResult
     int num_requirements_passed() const noexcept { return num_requirements_total - num_requirements_failed(); }
 };
 
-struct GradingSession
+// PROFESSOR_VERSION only
+
+struct StudentInfo
 {
+    std::string first_name;
+    std::string last_name;
+    // TODO: ids for students with the same names?
+};
+
+struct StudentResult
+{
+    StudentInfo info;
+    AssignmentResult result;
+};
+
+struct MultiStudentResult
+{
+    std::vector<StudentResult> results;
 };
