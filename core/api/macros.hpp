@@ -5,6 +5,7 @@
 #include "grading_session.hpp" // IWYU pragma: export
 #include "logging.hpp"
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
+#include "test_context.hpp"
 #include "util/macros.hpp"
 
 // Some macros to substantially simplify test case development
@@ -21,6 +22,7 @@
         using TestBase::TestBase;                                                                                      \
         void run(TestContext& ctx) override;                                                                           \
     };                                                                                                                 \
+    using namespace metadata; /*NOLINT(google-build-using-namespace)*/                                                 \
     constexpr auto CONCAT(ident, __metadata) = metadata::create(metadata::DEFAULT_METADATA,                            \
                                                                 metadata::global_file_metadata() __VA_OPT__(, )        \
                                                                     __VA_ARGS__);                                      \
@@ -28,7 +30,15 @@
     }                                                                                                                  \
     void ident::run([[maybe_unused]] TestContext& ctx)
 
-#define TEST(name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), name)
+#define TEST(name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), name __VA_OPT__(, ) __VA_ARGS__)
+
+// Simple way to ensure that no instructions are generated for prof-only tests when
+// compiling for the students' version
+#ifdef PROFESSOR_VERSION
+#define PROF_ONLY_TEST(name, ...) TEST(name, ProfOnly __VA_OPT__(, ) __VA_ARGS__)
+#else
+#define PROF_ONLY_TEST(name, ...) [[maybe_unused]] static void CONCAT(prof_test_unused, __COUNTER__)(TestContext & ctx)
+#endif // PROFESSOR_VERSION
 
 #define REQUIRE(condition, ...)                                                                                        \
     __extension__({                                                                                                    \
