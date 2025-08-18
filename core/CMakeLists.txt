@@ -122,6 +122,9 @@ set(
     api/macros.hpp
     api.hpp
 
+    app/app.hpp
+    app/trace_exception.hpp
+
     test_runner.hpp
 
     grading_session.hpp
@@ -313,6 +316,18 @@ endfunction()
 
 ##### Student version
 create_targets(asmgrader)
+target_sources(
+    asmgrader_interface
+
+    INTERFACE
+    app/student_app.hpp
+)
+target_sources(
+    asmgrader_core
+
+    PRIVATE
+    app/student_app.cpp
+)
 
 ##### Professor version
 create_targets(asmgrader_prof)
@@ -322,17 +337,21 @@ target_sources(
     INTERFACE
     user/file_searcher.hpp
     user/assignment_file_searcher.hpp
-)
-target_sources(
-    asmgrader_prof_core
 
-    PUBLIC
-    user/file_searcher.cpp
-    user/assignment_file_searcher.cpp
+    app/professor_app.hpp
 )
 target_compile_definitions(
     asmgrader_prof_interface
 
     INTERFACE
     "PROFESSOR_VERSION"
+)
+target_sources(
+    asmgrader_prof_core
+
+    PRIVATE
+    user/file_searcher.cpp
+    user/assignment_file_searcher.cpp
+
+    app/professor_app.cpp
 )

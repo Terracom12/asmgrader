@@ -184,7 +184,7 @@ std::string CommandLineArgs::get_basename(std::string_view full_name) {
     return std::string{full_name.substr(full_name.find_last_of('/') + 1)};
 }
 
-ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code) {
+ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code) noexcept {
     CommandLineArgs cl_args{args};
     auto opts_res = cl_args.parse();
 

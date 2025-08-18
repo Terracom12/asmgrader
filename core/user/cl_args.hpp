@@ -43,4 +43,4 @@ private:
     bool parse_successful_ = false;
 };
 
-ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code = 1);
+ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code = 1) noexcept;
