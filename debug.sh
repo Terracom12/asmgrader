@@ -8,7 +8,7 @@ if [[ $1 == "tests" || $1 == "t" ]]; then
     EXEC_ARGS=(--break)
     shift
 else
-    EXEC="./build/autograder/autograder"
+    EXEC="./build/grader/grader"
     EXEC_ARGS=()
 fi
 
