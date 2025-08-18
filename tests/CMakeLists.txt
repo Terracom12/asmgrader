@@ -19,6 +19,7 @@ add_executable(
     test_symbol_reader.cpp
     test_memory_io.cpp
     test_program.cpp
+    test_database_reader.cpp
 
     catch_main.cpp
 )

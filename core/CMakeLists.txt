@@ -129,6 +129,8 @@ set(
 
     grading_session.hpp
 
+    database_reader.hpp
+
     exceptions.hpp
 )
 
@@ -217,6 +219,8 @@ set(
 
     api/assignment.cpp
     api/test_context.cpp
+
+    database_reader.cpp
 )
 
 set(
