@@ -1,18 +1,18 @@
 #pragma once
 
+#include "api/test_base.hpp"
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
-#include "api/test_base.hpp"
 
 #include <filesystem>
 #include <memory>
 #include <optional>
 
 /// Manages test execution and result aggregation for a specific assignment
-class TestRunner
+class AssignmentTestRunner
 {
 public:
-    TestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer);
+    AssignmentTestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer);
 
     AssignmentResult run_all(std::optional<std::filesystem::path> alternative_path) const;
 

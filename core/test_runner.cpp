@@ -20,11 +20,11 @@
 #include <utility>
 #include <vector>
 
-TestRunner::TestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer)
+AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer)
     : assignment_{&assignment}
     , serializer_{std::move(serializer)} {}
 
-AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
+AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
     // Assignment name -> TestResults
     std::unordered_map<std::string_view, std::vector<TestResult>> result;
     int num_total_requirements = 0;
@@ -58,7 +58,7 @@ AssignmentResult TestRunner::run_all(std::optional<std::filesystem::path> altern
     return res;
 }
 
-TestResult TestRunner::run_one(TestBase& test) const {
+TestResult AssignmentTestRunner::run_one(TestBase& test) const {
     TestContext context(test, Program{assignment_->get_exec_path(), {}});
 
     try {

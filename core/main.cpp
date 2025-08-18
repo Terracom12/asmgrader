@@ -63,7 +63,7 @@ int main(int argc, const char* argv[]) {
         StdoutSink output_sink;
         auto output_serializer =
             std::make_unique<PlainTextSerializer>(output_sink, options.colorize_option, options.verbose);
-        TestRunner runner{*assignment, std::move(output_serializer)};
+        AssignmentTestRunner runner{*assignment, std::move(output_serializer)};
 
 #ifndef PROFESSOR_VERSION
 
