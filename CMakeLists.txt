@@ -44,7 +44,10 @@ add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-DRELE
 add_compile_options("-fconcepts-diagnostics-depth=3")
 
 add_subdirectory(core)
-add_subdirectory(grader)
+
+if(EXISTS "grader/" AND IS_DIRECTORY "grader/")
+    add_subdirectory(grader)
+endif()
 
 option(ENABLE_TESTING "Whether to enable building of unit tests or not" FALSE)
 if (ENABLE_TESTING)
