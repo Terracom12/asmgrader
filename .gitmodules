@@ -1,0 +1,3 @@
+[submodule "cs3b-grader"]
+	path = cs3b-grader
+	url = git@github.com:Terracom12/cs3b-grader.git
