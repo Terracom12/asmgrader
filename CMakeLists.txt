@@ -45,8 +45,8 @@ add_compile_options("-fconcepts-diagnostics-depth=3")
 
 add_subdirectory(core)
 
-if(EXISTS "grader/" AND IS_DIRECTORY "grader/")
-    add_subdirectory(grader)
+if(EXISTS "cs3b-grader/CMakeLists.txt")
+    add_subdirectory(cs3b-grader)
 endif()
 
 option(ENABLE_TESTING "Whether to enable building of unit tests or not" FALSE)
