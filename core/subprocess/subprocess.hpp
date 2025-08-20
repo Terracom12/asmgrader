@@ -1,9 +1,9 @@
 #pragma once
 
-#include "util/class_traits.hpp"
-#include "util/error_types.hpp"
-#include "util/expected.hpp"
-#include "util/linux.hpp"
+#include "common/class_traits.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
+#include "common/linux.hpp"
 
 #include <chrono>
 #include <cstddef>

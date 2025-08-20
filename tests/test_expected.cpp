@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
 #include "logging.hpp"
-#include "util/expected.hpp"
+#include "common/expected.hpp"
 
 #include <cmath>
 #include <string>

@@ -2,9 +2,9 @@
 
 #include "logging.hpp"
 #include "subprocess/tracer_types.hpp"
-#include "util/error_types.hpp"
-#include "util/expected.hpp"
-#include "util/linux.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
+#include "common/linux.hpp"
 
 #include <fmt/ranges.h>
 

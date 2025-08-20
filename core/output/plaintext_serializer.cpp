@@ -5,7 +5,7 @@
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
 #include "user/program_options.hpp"
-#include "util/terminal_checks.hpp"
+#include "common/terminal_checks.hpp"
 
 #include <fmt/color.h>
 #include <fmt/format.h>

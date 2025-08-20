@@ -1,8 +1,8 @@
 #pragma once
 
 #include "subprocess/syscall.hpp"
-#include "util/error_types.hpp"
-#include "util/expected.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
 
 #include <optional>
 #include <variant>
@@ -39,4 +39,4 @@ struct fmt::formatter<SyscallRecord> : DebugFormatter
     }
 };
 
-#include "util/timespec_operator_eq.hpp" // IWYU pragma: keep; To permit default comparison of `SyscallRecord::SyscallArg`
+#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep; To permit default comparison of `SyscallRecord::SyscallArg`

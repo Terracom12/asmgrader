@@ -1,10 +1,10 @@
 #pragma once
 
-#include "util/class_traits.hpp"
+#include "common/class_traits.hpp"
 // clangd isn't good at recognizing/finding template specializations, so just including
 // fmt::formatter specializations here makes my life easier, even if compile times are
 // worse every time it's changed
-#include "util/extra_formatters.hpp" // IWYU pragma: keep
+#include "common/extra_formatters.hpp" // IWYU pragma: keep
 
 // Set log level based on whether we're in DEBUG mode
 // Needs to be done before including spdlog

@@ -2,7 +2,7 @@
 
 #include "app/trace_exception.hpp"
 #include "user/program_options.hpp"
-#include "util/class_traits.hpp"
+#include "common/class_traits.hpp"
 
 #include <optional>
 #include <utility>

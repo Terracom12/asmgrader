@@ -1,7 +1,7 @@
 #pragma once
 
 #include "subprocess/memory/memory_io.hpp"
-#include "util/byte_vector.hpp"
+#include "common/byte_vector.hpp"
 
 #include <cstddef>
 

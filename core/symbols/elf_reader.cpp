@@ -2,7 +2,7 @@
 
 #include "logging.hpp"
 #include "symbols/symbol_table.hpp"
-#include "util/linux.hpp"
+#include "common/linux.hpp"
 
 #include <range/v3/algorithm.hpp>
 

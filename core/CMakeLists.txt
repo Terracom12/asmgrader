@@ -1,6 +1,6 @@
 ##### Dependencies
 
-# Boost for various utilities
+# Boost for various commonities
 CPMAddPackage(
   NAME Boost
   VERSION 1.88.0 # Versions less than 1.85.0 may need patches for installation targets.
@@ -76,17 +76,17 @@ set(
     subprocess/memory/memory_io_serde.hpp
     subprocess/run_result.hpp
 
-    util/class_traits.hpp
-    util/macros.hpp
-    util/linux.hpp
-    util/expected.hpp
-    util/unreachable.hpp
-    util/error_types.hpp
-    util/extra_formatters.hpp
-    util/byte_vector.hpp
-    util/byte_array.hpp
-    util/timespec_operator_eq.hpp
-    util/terminal_checks.hpp
+    common/class_traits.hpp
+    common/macros.hpp
+    common/linux.hpp
+    common/expected.hpp
+    common/unreachable.hpp
+    common/error_types.hpp
+    common/extra_formatters.hpp
+    common/byte_vector.hpp
+    common/byte_array.hpp
+    common/timespec_operator_eq.hpp
+    common/terminal_checks.hpp
 
     meta/always_false.hpp
     meta/functional_traits.hpp
@@ -203,7 +203,7 @@ set(
     subprocess/memory/ptrace_memory_io.cpp
     subprocess/run_result.cpp
 
-    util/terminal_checks.cpp
+    common/terminal_checks.cpp
 
     output/plaintext_serializer.cpp
     output/stdout_sink.cpp

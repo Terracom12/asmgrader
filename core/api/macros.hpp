@@ -6,7 +6,7 @@
 #include "logging.hpp"
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
 #include "test_context.hpp"
-#include "util/macros.hpp"
+#include "common/macros.hpp"
 
 // Some macros to substantially simplify test case development
 

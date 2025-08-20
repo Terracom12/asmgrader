@@ -1,8 +1,8 @@
 #pragma once
 
 #include "subprocess/memory/non_terminated_str.hpp"
-#include "util/byte_vector.hpp"
-#include "util/error_types.hpp"
+#include "common/byte_vector.hpp"
+#include "common/error_types.hpp"
 
 #include <concepts>
 #include <cstddef>

@@ -5,7 +5,7 @@
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "api/asm_data.hpp"
-#include "util/error_types.hpp"
+#include "common/error_types.hpp"
 
 #include <cstdint>
 #include <optional>

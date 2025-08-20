@@ -4,8 +4,8 @@
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
-#include "util/error_types.hpp"
-#include "util/macros.hpp"
+#include "common/error_types.hpp"
+#include "common/macros.hpp"
 
 #include <concepts>
 #include <cstdint>

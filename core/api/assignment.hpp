@@ -1,7 +1,7 @@
 #pragma once
 
 #include "api/test_base.hpp"
-#include "util/class_traits.hpp"
+#include "common/class_traits.hpp"
 
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/conversion.hpp>

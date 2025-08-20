@@ -9,7 +9,7 @@
 #include "api/asm_buffer.hpp"
 #include "api/asm_function.hpp"
 #include "api/asm_symbol.hpp"
-#include "util/error_types.hpp"
+#include "common/error_types.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>

@@ -5,7 +5,7 @@
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
-#include "util/expected.hpp"
+#include "common/expected.hpp"
 #include "version.hpp"
 
 #include <argparse/argparse.hpp>

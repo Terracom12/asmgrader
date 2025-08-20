@@ -1,4 +1,4 @@
-#include "util/terminal_checks.hpp"
+#include "common/terminal_checks.hpp"
 
 #include <range/v3/algorithm/any_of.hpp>
 

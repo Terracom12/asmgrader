@@ -3,7 +3,7 @@
 // TODO: Rename this file
 
 #include "exceptions.hpp"
-#include "util/extra_formatters.hpp"
+#include "common/extra_formatters.hpp"
 
 #include <fmt/base.h>
 #include <gsl/util>

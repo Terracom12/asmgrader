@@ -1,7 +1,7 @@
 #include "subprocess/memory/ptrace_memory_io.hpp"
 
-#include "util/byte_vector.hpp"
-#include "util/linux.hpp"
+#include "common/byte_vector.hpp"
+#include "common/linux.hpp"
 
 #include <cstddef>
 

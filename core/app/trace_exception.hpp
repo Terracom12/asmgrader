@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/extra_formatters.hpp" // IWYU pragma: keep
+#include "common/extra_formatters.hpp" // IWYU pragma: keep
 
 #include <boost/stacktrace/stacktrace.hpp>
 #include <fmt/base.h>

@@ -2,11 +2,11 @@
 
 /// Types primarily to wrap Linux result info for use with ref``Tracer``
 
-#include "util/class_traits.hpp"
-#include "util/error_types.hpp"
-#include "util/expected.hpp"
-#include "util/extra_formatters.hpp"
-#include "util/linux.hpp"
+#include "common/class_traits.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
+#include "common/extra_formatters.hpp"
+#include "common/linux.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>

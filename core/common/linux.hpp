@@ -2,7 +2,7 @@
 
 #include "expected.hpp"
 #include "logging.hpp"
-#include "util/extra_formatters.hpp"
+#include "common/extra_formatters.hpp"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>

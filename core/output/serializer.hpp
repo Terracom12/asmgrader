@@ -2,7 +2,7 @@
 
 #include "grading_session.hpp"
 #include "output/sink.hpp"
-#include "util/class_traits.hpp"
+#include "common/class_traits.hpp"
 
 class Serializer : util::NonCopyable
 {

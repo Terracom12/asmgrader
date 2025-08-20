@@ -7,8 +7,8 @@
 #include "subprocess/run_result.hpp"
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer_types.hpp"
-#include "util/error_types.hpp"
-#include "util/unreachable.hpp"
+#include "common/error_types.hpp"
+#include "common/unreachable.hpp"
 
 #include <fmt/format.h>
 

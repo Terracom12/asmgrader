@@ -5,8 +5,8 @@
 #include "subprocess/subprocess.hpp"
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/traced_subprocess.hpp"
-#include "util/error_types.hpp"
-#include "util/timespec_operator_eq.hpp"
+#include "common/error_types.hpp"
+#include "common/timespec_operator_eq.hpp"
 
 #include <fmt/ranges.h>
 

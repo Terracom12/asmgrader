@@ -3,8 +3,8 @@
 #include "asm_data.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/memory_io_base.hpp"
-#include "util/byte_array.hpp"
-#include "util/macros.hpp"
+#include "common/byte_array.hpp"
+#include "common/macros.hpp"
 
 #include <range/v3/algorithm/fill.hpp>
 #include <range/v3/range/conversion.hpp>

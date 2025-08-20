@@ -3,8 +3,8 @@
 #include "logging.hpp"
 #include "subprocess/memory/memory_io_base.hpp"
 #include "subprocess/memory/memory_io_serde.hpp"
-#include "util/byte_vector.hpp"
-#include "util/timespec_operator_eq.hpp" // operator==(timespec, timespec)
+#include "common/byte_vector.hpp"
+#include "common/timespec_operator_eq.hpp" // operator==(timespec, timespec)
 
 #include <range/v3/algorithm.hpp>
 

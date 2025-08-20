@@ -8,10 +8,10 @@
 #include "subprocess/syscall_record.hpp"
 #include "api/asm_buffer.hpp"
 #include "api/test_base.hpp"
-#include "util/byte_array.hpp"
-#include "util/error_types.hpp"
-#include "util/macros.hpp"
-#include "util/unreachable.hpp"
+#include "common/byte_array.hpp"
+#include "common/error_types.hpp"
+#include "common/macros.hpp"
+#include "common/unreachable.hpp"
 
 #include <fmt/color.h>
 #include <fmt/format.h>

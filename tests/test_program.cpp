@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
 #include "program/program.hpp"
-#include "util/error_types.hpp"
+#include "common/error_types.hpp"
 
 #include <cstdint>
 

@@ -6,9 +6,9 @@
 #include "subprocess/traced_subprocess.hpp"
 #include "subprocess/tracer.hpp"
 #include "symbols/symbol_table.hpp"
-#include "util/class_traits.hpp"
-#include "util/error_types.hpp"
-#include "util/expected.hpp"
+#include "common/class_traits.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
 
 #include <fmt/format.h>
 

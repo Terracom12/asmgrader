@@ -9,8 +9,8 @@
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
-#include "util/expected.hpp"
-#include "util/extra_formatters.hpp" // IWYU pragma: keep
+#include "common/expected.hpp"
+#include "common/extra_formatters.hpp" // IWYU pragma: keep
 
 #include <gsl/util>
 #include <range/v3/algorithm/count_if.hpp>

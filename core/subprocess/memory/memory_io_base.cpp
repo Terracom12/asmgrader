@@ -1,7 +1,7 @@
 #include "subprocess/memory/memory_io_base.hpp"
 
 #include "logging.hpp"
-#include "util/byte_vector.hpp"
+#include "common/byte_vector.hpp"
 
 util::Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
                                                   const std::function<bool(std::byte)>& predicate) {

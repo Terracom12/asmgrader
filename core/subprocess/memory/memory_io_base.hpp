@@ -2,8 +2,8 @@
 
 #include "meta/remove_all_pointers.hpp"
 #include "subprocess/memory/concepts.hpp"
-#include "util/byte_vector.hpp"
-#include "util/error_types.hpp"
+#include "common/byte_vector.hpp"
+#include "common/error_types.hpp"
 
 #include <cstddef>
 #include <cstdint>

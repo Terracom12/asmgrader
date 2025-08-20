@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/error_types.hpp"
-#include "util/extra_formatters.hpp"
+#include "common/error_types.hpp"
+#include "common/extra_formatters.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>

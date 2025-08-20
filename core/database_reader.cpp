@@ -2,7 +2,7 @@
 
 #include "grading_session.hpp"
 #include "logging.hpp"
-#include "util/expected.hpp"
+#include "common/expected.hpp"
 
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/split.hpp>
