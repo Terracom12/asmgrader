@@ -4,8 +4,11 @@ set -e
 
 if [[ $1 == "tests" || $1 == "t" ]]; then
     # Tell catch2 to break upon failure, allowing gdb to attach
-    EXEC="./build/test/tests"
+    EXEC="./build/tests/asmgrader_tests"
     EXEC_ARGS=(--break)
+    shift
+elif [[ $1 == "prof" || $1 == "p" ]]; then
+    EXEC="./build/grader/profgrader"
     shift
 else
     EXEC="./build/grader/grader"
