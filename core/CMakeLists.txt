@@ -50,10 +50,13 @@ CPMAddPackage(
   OPTIONS "GSL_MSVC_STATIC_ANALYZER=OFF"
 )
 
-# TODO: Probably want to statically link...
-find_package(PkgConfig REQUIRED)
-# libelf for reading symbols from an ELF
-pkg_check_modules(LIBELF REQUIRED libelf)
+# ELFIO for reading symbols from an ELF
+CPMAddPackage(
+  NAME elfio
+  GITHUB_REPOSITORY serge1/ELFIO
+  GIT_TAG Release_3.12
+  PATCHES "elfio-system.patch"
+)
 
 ##### Project configuration
 # For now, just substitutes version numbers as defined in root CMake project() decl
@@ -190,6 +193,7 @@ set(
     Boost::stacktrace
     range-v3
     Microsoft.GSL::GSL
+    elfio::elfio
 )
 
 set(
@@ -283,11 +287,6 @@ function(create_targets  basename)
             boost_stacktrace_from_exception
         )
     endif ()
-
-    # libelf options
-    target_include_directories(${basename}_interface INTERFACE ${LIBELF_INCLUDE_DIRS})
-    target_link_libraries(${basename}_interface INTERFACE ${LIBELF_LIBRARIES})
-    target_compile_options(${basename}_interface INTERFACE ${LIBELF_CFLAGS_OTHER})
 
     #### Core library
 

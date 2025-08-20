@@ -17,7 +17,7 @@ Diagnostics:
 
 Style:
     #QuotedHeaders: "core/.*"
-    AngledHeaders: "(range|boost|fmt|catch2|nlohmann|argparse|gsl)/.*"
+    AngledHeaders: "(range|boost|fmt|catch2|nlohmann|argparse|gsl|elfio)/.*"
 
 Completion:
     AllScopes: Yes

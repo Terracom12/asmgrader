@@ -1,70 +1,58 @@
 #include "symbols/elf_reader.hpp"
 
 #include "logging.hpp"
+#include "symbols/symbol.hpp"
 #include "symbols/symbol_table.hpp"
-#include "common/linux.hpp"
 
-#include <range/v3/algorithm.hpp>
+#include <elfio/elf_types.hpp>
+#include <elfio/elfio_section.hpp>
+#include <elfio/elfio_symbols.hpp>
+#include <fmt/format.h>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/transform.hpp>
+
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #include <elf.h>
 #include <fcntl.h>
 #include <gelf.h>
 #include <libelf.h>
 
-// TODO: Replace usages of size_t with uintptr_t
-
 // If condition is true, print out the elf error and exit
 #define ELF_ERROR(cond, msg) ASSERT(!(cond), "libelf error: " #msg " ({})", elf_errmsg(-1))
 
 ElfReader::ElfReader(const std::string& file_path) {
-    if (!is_elf_init) {
-        ELF_ERROR(elf_version(EV_CURRENT) == EV_NONE, "Failed to init version");
+    if (!elffile_.load(file_path)) {
+        throw std::invalid_argument(fmt::format("Failed to load Elf file {}", file_path));
     }
-    is_elf_init = true;
-
-    if (auto res = util::linux::open(file_path, O_RDONLY)) {
-        fd_ = res.value();
-    } else {
-        LOG_ERROR("Elf file {} does not exist", file_path);
-    }
-
-    elf_ = elf_begin(fd_, ELF_C_READ, nullptr);
-
-    ELF_ERROR(elf_ == nullptr, "Failed to init elf descriptor");
-
-    ELF_ERROR(elf_getshdrstrndx(elf_, &shdr_string_table_idx_) != 0, "elf_getshdrstrndx failed");
 }
 
-ElfReader::~ElfReader() {
-    elf_end(elf_);
-}
-
-// FIXME: Should probably only need to call this once, and just cache or smth
 std::vector<std::string> ElfReader::get_section_names() const {
-    auto sections = get_all_sections();
-    std::vector<std::string> result(sections.size());
-
-    ranges::transform(sections, result.begin(), [this](SectionHandle sect) -> std::string {
-        const char* name = elf_strptr(elf_, shdr_string_table_idx_, sect.shdr.sh_name);
-        return name;
-    });
-
-    return result;
+    return elffile_.sections                                     //
+           | ranges::views::transform(&ELFIO::section::get_name) //
+           | ranges::to<std::vector>();
 }
 
 std::vector<Symbol> ElfReader::get_symbols() const {
-    auto load_sym = [this](const GElf_Shdr& shdr, const GElf_Sym& sym, Symbol& result) {
-        const char* name = elf_strptr(elf_, shdr.sh_link, sym.st_name);
+    auto to_symbol_struct = [](Symbol& result, const ELFIO::symbol_section_accessor& accessor, unsigned int idx) {
+        std::string name;
+        ELFIO::Elf64_Addr value = 0;
+        ELFIO::Elf_Xword size = 0;
+        unsigned char bind = 0;
+        unsigned char type = 0;
+        ELFIO::Elf_Half section_index = 0;
+        unsigned char other = 0;
 
-        if (name == nullptr) {
-            LOG_DEBUG("NULL symbol name!");
-        }
+        // Read symbol properties
+        accessor.get_symbol(idx, name, value, size, bind, type, section_index, other);
 
         result.name = name;
 
-        result.address = sym.st_value;
+        result.address = value;
 
-        switch (GELF_ST_BIND(sym.st_info)) {
+        switch (bind) {
         case STB_LOCAL:
             result.binding = Symbol::Local;
             break;
@@ -83,36 +71,27 @@ std::vector<Symbol> ElfReader::get_symbols() const {
 
     std::vector<Symbol> result;
 
-    auto sections = get_all_sections();
-
     // Keep track of whether we encountered any symbol sections for logging purposes
     bool found_sym_sect = false;
 
     // Iterate through every dynsym and symtab section
-    for (const auto& sect : sections) {
-        if (sect.shdr.sh_type != SHT_SYMTAB && sect.shdr.sh_type != SHT_DYNSYM) {
-            continue;
-        }
-
-        found_sym_sect = true;
-
-        Elf_Data* data = elf_getdata(sect.scn, nullptr);
-        ELF_ERROR(data == nullptr, "elf_getdata failed");
-
-        const auto num_entries = sect.shdr.sh_size / sect.shdr.sh_entsize;
+    for (const auto& sect : elffile_.sections) {
+        // Adapted from: ELFIO/examples/tutorial
 
         Symbol symbol{};
-        if (sect.shdr.sh_type == SHT_SYMTAB) {
+        if (sect->get_type() == SHT_SYMTAB) {
             symbol.kind = Symbol::Static;
-        } else if (sect.shdr.sh_type == SHT_DYNSYM) {
+        } else if (sect->get_type() == SHT_DYNSYM) {
             symbol.kind = Symbol::Dynamic;
+        } else {
+            continue;
         }
+        found_sym_sect = true;
 
-        for (std::size_t i = 0; i < num_entries; i++) {
-            GElf_Sym sym{};
-            ELF_ERROR(gelf_getsym(data, static_cast<int>(i), &sym) == nullptr, "gelf_getsym failed");
+        const ELFIO::symbol_section_accessor symbols(elffile_, sect.get());
 
-            load_sym(sect.shdr, sym, symbol);
+        for (unsigned int i = 0; i < symbols.get_symbols_num(); i++) {
+            to_symbol_struct(symbol, symbols, i);
 
             result.push_back(symbol);
         }
@@ -129,18 +108,4 @@ std::vector<Symbol> ElfReader::get_symbols() const {
 
 SymbolTable ElfReader::get_symbol_table() const {
     return SymbolTable{get_symbols()};
-}
-
-std::vector<ElfReader::SectionHandle> ElfReader::get_all_sections() const {
-    std::vector<ElfReader::SectionHandle> result;
-
-    // Iterate through all sections with `scn`
-    for (Elf_Scn* scn = elf_nextscn(elf_, nullptr); scn != nullptr; scn = elf_nextscn(elf_, scn)) {
-        GElf_Shdr shdr{};
-        ELF_ERROR(gelf_getshdr(scn, &shdr) == nullptr, "gelf_getshdr failed");
-
-        result.push_back({.scn = scn, .shdr = shdr});
-    }
-
-    return result;
 }
