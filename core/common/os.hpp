@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/endian.hpp>
+#include <boost/endian/detail/order.hpp>
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 enum class ProcessorKind { Aarch64, x86_64 };
 
@@ -13,3 +16,11 @@ constexpr auto SYSTEM_PROCESSOR =
 #else
 #error "Unsupported system architecture!"
 #endif
+
+enum class EndiannessKind { Little, Big };
+
+constexpr auto ENDIANNESS = (                                    //
+    boost::endian::order::native == boost::endian::order::little //
+        ?                                                        //
+        EndiannessKind::Little
+        : EndiannessKind::Big);
