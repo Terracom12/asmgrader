@@ -20,9 +20,9 @@
 #include <utility>
 #include <vector>
 
-AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer)
+AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer)
     : assignment_{&assignment}
-    , serializer_{std::move(serializer)} {}
+    , serializer_{serializer} {}
 
 AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
     // Assignment name -> TestResults

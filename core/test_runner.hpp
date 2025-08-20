@@ -12,7 +12,7 @@
 class AssignmentTestRunner
 {
 public:
-    AssignmentTestRunner(Assignment& assignment, std::unique_ptr<Serializer> serializer);
+    AssignmentTestRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer);
 
     AssignmentResult run_all(std::optional<std::filesystem::path> alternative_path) const;
 
@@ -20,5 +20,5 @@ private:
     TestResult run_one(TestBase& test) const;
 
     Assignment* assignment_;
-    std::unique_ptr<Serializer> serializer_;
+    std::shared_ptr<Serializer> serializer_;
 };

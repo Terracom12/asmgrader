@@ -1,5 +1,6 @@
 #pragma once
 
+#include "grading_session.hpp"
 #include "util/expected.hpp"
 
 #include <filesystem>
@@ -14,18 +15,7 @@ class DatabaseReader
 public:
     explicit DatabaseReader(std::filesystem::path path);
 
-    struct NameEntry
-    {
-        std::string first_name;
-        std::string last_name;
-    };
-
-    struct ReadResult
-    {
-        std::vector<NameEntry> entries;
-    };
-
-    util::Expected<ReadResult, std::string> read() const;
+    util::Expected<std::vector<StudentInfo>, std::string> read() const;
 
 private:
     std::filesystem::path path_;

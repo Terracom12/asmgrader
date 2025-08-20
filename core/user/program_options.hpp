@@ -24,4 +24,5 @@ struct ProgramOptions
     // PROFESSOR_VERSION only
     std::string file_matcher;
     std::optional<std::filesystem::path> database_path;
+    std::filesystem::path search_path = ".";
 };

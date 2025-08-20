@@ -13,7 +13,6 @@
 
 #include <memory>
 #include <optional>
-#include <utility>
 
 int StudentApp::run_impl() {
     LOG_TRACE("Registered tests: {::}", GlobalRegistrar::get().for_each_assignment([](const Assignment& assignment) {
@@ -25,10 +24,11 @@ int StudentApp::run_impl() {
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
 
     using enum ProgramOptions::VerbosityLevel;
+
     StdoutSink output_sink;
-    auto output_serializer =
-        std::make_unique<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity > Quiet);
-    AssignmentTestRunner runner{*assignment, std::move(output_serializer)};
+    std::shared_ptr output_serializer =
+        std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity > Quiet);
+    AssignmentTestRunner runner{*assignment, output_serializer};
 
     AssignmentResult res = runner.run_all(OPTS.file_name);
 

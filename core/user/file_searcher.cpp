@@ -4,6 +4,7 @@
 
 #include <range/v3/algorithm/replace.hpp>
 
+#include <cstddef>
 #include <filesystem>
 #include <map>
 #include <regex>
@@ -36,7 +37,16 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
 
     std::regex regex{subst_args()};
 
+    LOG_DEBUG("Searching with ReGex string: {}", subst_args());
+
+#ifdef DEBUG
+    std::size_t search_counter = 0;
+#endif
     for (auto iter = fs::recursive_directory_iterator{base}; iter != fs::recursive_directory_iterator{}; ++iter) {
+#ifdef DEBUG
+        search_counter++;
+#endif
+
         if (!iter->is_regular_file()) {
             continue;
         }
@@ -51,6 +61,8 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
             result.push_back(path);
         }
     }
+
+    LOG_DEBUG("Searched through {} files", search_counter);
 
     return result;
 }
@@ -67,5 +79,6 @@ std::string FileSearcher::subst_args() const {
 }
 
 bool FileSearcher::does_match(const std::regex& expr, std::string_view filename) {
+    LOG_TRACE("Attempting to match filename: {:?}", filename);
     return std::regex_match(filename.begin(), filename.end(), expr);
 }

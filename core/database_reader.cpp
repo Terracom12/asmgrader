@@ -1,5 +1,6 @@
 #include "database_reader.hpp"
 
+#include "grading_session.hpp"
 #include "logging.hpp"
 #include "util/expected.hpp"
 
@@ -8,6 +9,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,40 +17,41 @@
 DatabaseReader::DatabaseReader(std::filesystem::path path)
     : path_{std::move(path)} {}
 
-util::Expected<DatabaseReader::ReadResult, std::string> DatabaseReader::read() const {
+util::Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() const {
     std::ifstream in_file{path_};
 
     if (not in_file.is_open()) {
-        return "Failed to open database file";
+        return "Failed to open database";
     }
 
-    ReadResult result;
+    std::vector<StudentInfo> result;
 
     std::string line;
     while (std::getline(in_file, line)) {
         // Skip empty lines with a warning
         if (line.empty()) {
-            LOG_WARN("Skipping empty line in database file");
+            LOG_INFO("Skipping empty line");
             continue;
         }
 
         std::vector values = line | ranges::views::split(',') | ranges::to<std::vector<std::string>>;
 
         if (values.size() < 2) {
-            return "Too few values in name entry in database";
+            return "Too few values in name entry";
         }
 
         if (values.size() > 2) {
-            return "Too many values in name entry in database";
+            return "Too many values in name entry";
         }
 
-        NameEntry entry = {.first_name = values[1], .last_name = values[0]};
+        StudentInfo entry = {
+            .first_name = values[1], .last_name = values[0], .names_known = true, .assignment_path = std::nullopt};
 
-        result.entries.push_back(std::move(entry));
+        result.push_back(std::move(entry));
     }
 
     if (in_file.bad()) {
-        return "IO error in reading database file";
+        return "IO error in reading";
     }
 
     return result;

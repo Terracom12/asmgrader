@@ -5,8 +5,9 @@ CPMAddPackage(
   NAME Boost
   VERSION 1.88.0 # Versions less than 1.85.0 may need patches for installation targets.
   URL https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.tar.xz
+  URL_HASH SHA256=f48b48390380cfb94a629872346e3a81370dc498896f16019ade727ab72eb1ec
+
   PATCHES "boost-pfr-system.patch"   # Make the compiler think that Boost is a system lib as to not emit warnings
-  #URL_HASH SHA256=3621533e820dcab1e8012afd583c0c73cf0f77694952b81352bf38c1488f9cb4
   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
           "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace" # Note the escapes!
 )
@@ -126,6 +127,7 @@ set(
     app/trace_exception.hpp
 
     test_runner.hpp
+    multi_student_runner.hpp
 
     grading_session.hpp
 
@@ -209,6 +211,7 @@ set(
     registrars/global_registrar.cpp
 
     test_runner.cpp
+    multi_student_runner.cpp
 
     symbols/elf_reader.cpp
     symbols/symbol_table.cpp

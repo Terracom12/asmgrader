@@ -12,6 +12,7 @@
 #include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <source_location>
@@ -98,6 +99,10 @@ struct StudentInfo
 {
     std::string first_name;
     std::string last_name;
+    bool names_known; // whether the names are known (i.e., obtained from a database) or inferred based on filename
+
+    std::optional<std::filesystem::path> assignment_path;
+
     // TODO: ids for students with the same names?
 };
 

@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <string_view>
 #include <tuple>
-#include <utility>
 
 auto THIS_DIR = std::filesystem::path{__FILE__}.parent_path();
 
@@ -25,7 +24,7 @@ TEST_CASE("Read small database") {
         {"Pope", "Francis"},
     });
 
-    for (const auto& [expected_name, read_name] : ranges::views::zip(EXPECTED_NAMES, res->entries)) {
+    for (const auto& [expected_name, read_name] : ranges::views::zip(EXPECTED_NAMES, *res)) {
         REQUIRE(std::tie(read_name.first_name, read_name.last_name) == expected_name);
     }
 }

@@ -4,24 +4,25 @@
 #include "grading_session.hpp"
 #include "user/file_searcher.hpp"
 
+#include <filesystem>
 #include <string>
-#include <utility>
+#include <vector>
 
-class AssignmentFileSearcher : public FileSearcher
+class AssignmentFileSearcher : protected FileSearcher
 {
 public:
-    static constexpr auto DEFAULT_REGEX = R"(`lastname``firstname`_`base`-\d+\.`ext`)";
+    static constexpr auto DEFAULT_REGEX = R"(`lastname``firstname`_`base`(-\d+)?\.`ext`)";
+    static constexpr auto DEFAULT_SEARCH_DEPTH = 10;
 
     /// Unknown student name; search for any word in place of `lastname``firstname`
-    explicit AssignmentFileSearcher(const Assignment& assignment,
-                                    const StudentInfo& student_info = {.first_name = "\\w", .last_name = ""},
-                                    std::string var_regex = DEFAULT_REGEX)
-        : FileSearcher{std::move(var_regex)} {
-        const auto base_split = assignment.get_exec_path().string().find_last_of('.');
+    explicit AssignmentFileSearcher(const Assignment& assignment, std::string var_regex = DEFAULT_REGEX);
 
-        set_arg("base", var_regex.substr(0, base_split));
-        set_arg("ext", var_regex.substr(base_split));
-        set_arg("firstname", student_info.first_name);
-        set_arg("lastname", student_info.last_name);
-    }
+    bool search_recursive(StudentInfo& student, const std::filesystem::path& base,
+                          int max_depth = DEFAULT_SEARCH_DEPTH);
+
+    /// Search for all potential student submissions for the given assignment
+    std::vector<StudentInfo> search_recursive(const std::filesystem::path& base, int max_depth = DEFAULT_SEARCH_DEPTH);
+
+private:
+    static StudentInfo infer_student_names_from_file(const std::filesystem::path& path);
 };
