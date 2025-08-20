@@ -1,11 +1,11 @@
 #pragma once
 
+#include "common/error_types.hpp"
+#include "common/macros.hpp"
 #include "fmt/base.h"
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
-#include "common/error_types.hpp"
-#include "common/macros.hpp"
 
 #include <concepts>
 #include <cstdint>
@@ -21,7 +21,7 @@ public:
     std::uintptr_t get_address() const { return address_; }
 
     /// Get the value currently present in the asm program
-    virtual T get_value() const;
+    virtual util::Result<T> get_value() const;
 
     /// Set the value of type ``T`` in the asm program
     ///
@@ -41,7 +41,7 @@ public:
         requires(MemoryWriteSupported<T>);
 
 protected:
-    T get_value_impl() const;
+    util::Result<T> get_value_impl() const;
 
     Program& get_program() const { return *prog_; }
 
@@ -56,7 +56,7 @@ template <typename T>
 template <MemoryIOCompatible<T> U>
     requires(MemoryWriteSupported<U>)
 T AsmData<T>::set_value(const U& val) const {
-    auto prev = get_value();
+    auto prev = TRY_OR_THROW(get_value(), "could not read previous data value");
 
     MemoryIOBase& mio = prog_->get_subproc().get_tracer().get_memory_io();
     TRY_OR_THROW(mio.write(address_, val), "could not set data value");
@@ -78,15 +78,15 @@ T AsmData<T>::zero() const
 
 template <typename T>
     requires(MemoryReadSupported<T>)
-T AsmData<T>::get_value_impl() const {
+util::Result<T> AsmData<T>::get_value_impl() const {
     MemoryIOBase& mio = prog_->get_subproc().get_tracer().get_memory_io();
 
-    return TRY_OR_THROW(mio.read<T>(address_), "failed to read data value");
+    return mio.read<T>(address_);
 }
 
 template <typename T>
     requires(MemoryReadSupported<T>)
-T AsmData<T>::get_value() const {
+util::Result<T> AsmData<T>::get_value() const {
     auto value = get_value_impl();
 
     std::string val_str = "<unformattable>";

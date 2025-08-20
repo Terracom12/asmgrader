@@ -1,10 +1,10 @@
 #pragma once
 
 #include "asm_data.hpp"
-#include "program/program.hpp"
-#include "subprocess/memory/memory_io_base.hpp"
 #include "common/byte_array.hpp"
 #include "common/macros.hpp"
+#include "program/program.hpp"
+#include "subprocess/memory/memory_io_base.hpp"
 
 #include <range/v3/algorithm/fill.hpp>
 #include <range/v3/range/conversion.hpp>
@@ -39,7 +39,7 @@ std::size_t AsmBuffer<NumBytes>::size() const {
 
 template <std::size_t NumBytes>
 ByteArray<NumBytes> AsmBuffer<NumBytes>::fill(std::byte byte) const {
-    auto prev = AsmData<ByteArray<NumBytes>>::get_value();
+    auto prev = TRY_OR_THROW(AsmData<ByteArray<NumBytes>>::get_value(), "could not read previous data value");
 
     ByteArray<NumBytes> buf;
     ranges::fill(buf, byte);
