@@ -8,7 +8,7 @@ function(git_version_tag version_major_var version_minor_var version_patch_var)
     )
 
     if (GIT_TAG STREQUAL "")
-        message(WARNING "Git repo does not have a tag to pull version from! Using 0.0.0")
+        message(WARNING "Git repo does not have a tag to pull version from! Defaulting to v0.0.0")
         set(${version_major_var} 0 PARENT_SCOPE)
         set(${version_minor_var} 0 PARENT_SCOPE)
         set(${version_patch_var} 0 PARENT_SCOPE)
