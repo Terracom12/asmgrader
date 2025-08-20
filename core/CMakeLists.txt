@@ -90,6 +90,7 @@ set(
     common/byte_array.hpp
     common/timespec_operator_eq.hpp
     common/terminal_checks.hpp
+    common/os.hpp
 
     meta/always_false.hpp
     meta/functional_traits.hpp

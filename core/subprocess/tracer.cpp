@@ -1,16 +1,17 @@
 #include "tracer.hpp"
 
-#include "logging.hpp"
-#include "subprocess/memory/ptrace_memory_io.hpp"
-#include "subprocess/run_result.hpp"
-#include "subprocess/syscall_record.hpp"
-#include "subprocess/tracer_types.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
 #include "common/extra_formatters.hpp"
 #include "common/linux.hpp"
+#include "common/os.hpp"
 #include "common/unreachable.hpp"
+#include "logging.hpp"
+#include "subprocess/memory/ptrace_memory_io.hpp"
+#include "subprocess/run_result.hpp"
+#include "subprocess/syscall_record.hpp"
+#include "subprocess/tracer_types.hpp"
 
 #include <fmt/base.h>
 #include <fmt/color.h>
@@ -183,9 +184,9 @@ void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_inf
 
 util::Result<void> Tracer::jump_to(std::uintptr_t address) {
     auto regs = TRY(get_registers());
-#ifdef __aarch64__
+#if defined(ASMGRADER_ARM64)
     regs.pc = address;
-#else
+#elif defined(ASMGRADER_X86_64)
     regs.rip = address;
 #endif
     TRY(set_registers(regs));
@@ -236,7 +237,7 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     // NOLINTBEGIN(readability-magic-numbers) : they're instr opcodes, hex is alright as long as there are comments
 
     // See syscall(2) for arguments order and registers
-#ifdef __aarch64__
+#if defined(ASMGRADER_ARM64)
     // syscall args are x0-x5
     ranges::copy(args, new_regs.regs);
     // syscall nr is x8
@@ -251,7 +252,7 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     ByteVector new_instrs = ByteVector::from<std::uint32_t, std::uint32_t>(0xD4000001, //
                                                                            0xD503201F);
     TRY(memory_io_->write(instr_ptr, new_instrs));
-#else
+#elif defined(ASMGRADER_X86_64)
     // syscall args are rdi, rsi, rdx, r10, r8, r9
     new_regs.rdi = args[0];
     new_regs.rsi = args[1];
@@ -281,9 +282,9 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     // Restore original instructions and program state
     TRY(set_registers(orig_regs));
 
-#ifdef __aarch64__
+#if defined(ASMGRADER_ARM64)
     TRY(memory_io_->write(orig_regs.pc, orig_instrs));
-#else
+#elif defined(ASMGRADER_X86_64)
     TRY(memory_io_->write(orig_regs.rip, orig_instrs));
 #endif
 
@@ -348,7 +349,7 @@ util::Result<RunResult> Tracer::run() {
         // trapped by a signal (such as by a SEGFAULT)
         if (waitid_data.type == CLD_TRAPPED) {
             // FIXME: better macro, or abstracted registers
-#ifndef __aarch64__
+#ifndef ASMGRADER_ARM64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
                       util::fmt_or_unknown(get_registers()));
 #endif
@@ -372,7 +373,7 @@ util::Result<void> Tracer::setup_function_return() {
     user_regs_struct regs = TRY(get_registers());
 
     // NOLINTBEGIN(readability-magic-numbers)
-#ifdef __aarch64__
+#if defined(ASMGRADER_ARM64)
     // Instructions must be 4-byte aligned
     // TODO: Create helper for writing aligned data
     constexpr std::size_t ALIGNMENT = 4;
@@ -391,7 +392,7 @@ util::Result<void> Tracer::setup_function_return() {
         0xD503201F                                                //
     );
 
-#else // x86_64 assumed
+#elif defined(ASMGRADER_X86_64)
     const std::uintptr_t return_loc = mmaped_address_ + mmaped_used_amt_;
     // return address placed on stack
     regs.rsp -= 8; // FIXME: Should it not be 16-byte aligned?
