@@ -1,20 +1,19 @@
-# CS3B Autograder
+# AsmGrader
 
 An application that automatically grades students' labs for Prof. Eaton's CS3B course at Saddleback College.
 
 ## Dependencies
 
 ```console
-sudo apt install cmake libboost-all-dev libelf-dev
+sudo apt install cmake libelf-dev
 ```
 
 ## Project Structure
 
 ```
 core/
-    action/             - DEPRECATED
     meta/               - Template metaprogramming utilities
-    program/            - 
+    program/
     registrars/
     subprocess/
     symbols/            - (ELF only) Symbol loading + address resolution
@@ -24,7 +23,7 @@ core/
 
 test/                   - Project unit tests
 
-autograder/             - RENAME; Assignment/lab "graders"
+cs3b-grader/             - Submodule; Assignment/lab "graders"
 
 cmake/                  - CPM downloader + Cross-compilation rules (- soon)
 ```
