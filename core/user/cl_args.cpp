@@ -10,6 +10,7 @@
 #include <argparse/argparse.hpp>
 #include <fmt/base.h>
 #include <fmt/color.h>
+#include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
@@ -22,6 +23,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
     : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
@@ -78,10 +80,56 @@ void CommandLineArgs::setup_parser() {
         })
         .help("prints version information and exits");
 
-    arg_parser_.add_argument("-v", "--verbose")
+    auto& verbose_quiet_mutex = arg_parser_.add_mutually_exclusive_group();
+
+    using VerbosityUnderlyingT = std::underlying_type_t<ProgramOptions::VerbosityLevel>;
+
+    {
+    // Block to reduce scope of `using enum`
+
+    using enum ProgramOptions::VerbosityLevel;
+
+    constexpr auto DEFAULT_VERBOSITY_VALUE = static_cast<VerbosityUnderlyingT>(DEFAULT_VERBOSITY_LEVEL);
+    constexpr auto MAX_VERBOSITY_VALUE = static_cast<VerbosityUnderlyingT>(Max);
+    constexpr auto MIN_VERBOSITY_VALUE = static_cast<VerbosityUnderlyingT>(Silent);
+
+    constexpr auto MAX_VERBOSITY_INCREASE = MAX_VERBOSITY_VALUE - DEFAULT_VERBOSITY_VALUE;
+    constexpr auto MAX_VERBOSITY_DECREASE = DEFAULT_VERBOSITY_VALUE - MIN_VERBOSITY_VALUE;
+
+    verbose_quiet_mutex.add_argument("-v", "--verbose")
         .flag()
-        .store_into(opts_buffer_.verbose)
-        .help("Output with more verbosity");
+        .action([this] (const std::string& /*unused*/) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                static auto& verbosity_ref = reinterpret_cast<VerbosityUnderlyingT&>(opts_buffer_.verbosity);
+
+                verbosity_ref++;
+
+                if (verbosity_ref > MAX_VERBOSITY_VALUE) {
+                    throw std::invalid_argument("Verbosity specification exceeds max level");
+                }
+            })
+        .append()
+        .help(fmt::format("Output with more verbosity (up to {}x)", MAX_VERBOSITY_INCREASE));
+
+    verbose_quiet_mutex.add_argument("-q", "--quiet")
+        .flag()
+        .action([this] (const std::string& /*unused*/) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                static auto& verbosity_ref = reinterpret_cast<VerbosityUnderlyingT&>(opts_buffer_.verbosity);
+
+                verbosity_ref--;
+
+                if (verbosity_ref < MIN_VERBOSITY_VALUE) {
+                    throw std::invalid_argument("Verbosity \"quietness\" specification is lower than min level");
+                }
+            })
+        .append()
+        .help(fmt::format("Output with less verbosity (up to {}x)", MAX_VERBOSITY_DECREASE));
+
+    opts_buffer_.verbosity = DEFAULT_VERBOSITY_LEVEL;
+
+    }
+
 
     arg_parser_.add_argument("--stop")
         .choices("never", "first", "each")

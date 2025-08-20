@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 /// Just a wrapper around argparse for now
@@ -41,6 +42,9 @@ private:
     ProgramOptions opts_buffer_ = {};
 
     bool parse_successful_ = false;
+
+    static constexpr auto DEFAULT_VERBOSITY_LEVEL = ProgramOptions::VerbosityLevel::Summary;
+    using VerbosityLevelUnderlyingT = std::underlying_type_t<ProgramOptions::VerbosityLevel>;
 };
 
 ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code = 1) noexcept;

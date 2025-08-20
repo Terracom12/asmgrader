@@ -7,6 +7,7 @@
 #include "output/stdout_sink.hpp"
 #include "registrars/global_registrar.hpp"
 #include "test_runner.hpp"
+#include "user/program_options.hpp"
 
 #include <fmt/format.h>
 
@@ -23,8 +24,10 @@ int StudentApp::run_impl() {
 
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
 
+    using enum ProgramOptions::VerbosityLevel;
     StdoutSink output_sink;
-    auto output_serializer = std::make_unique<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbose);
+    auto output_serializer =
+        std::make_unique<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity > Quiet);
     AssignmentTestRunner runner{*assignment, std::move(output_serializer)};
 
     AssignmentResult res = runner.run_all(OPTS.file_name);
