@@ -13,6 +13,7 @@
 #include <concepts>
 #include <ctime>
 #include <exception>
+#include <filesystem>
 #include <optional>
 #include <source_location>
 #include <string>
@@ -67,6 +68,14 @@ struct fmt::formatter<std::exception> : formatter<std::string>
         std::string str = fmt::format("{}: '{}'", boost::typeindex::type_id_runtime(from).pretty_name(), from.what());
 
         return formatter<std::string>::format(str, ctx);
+    }
+};
+
+template <>
+struct fmt::formatter<std::filesystem::path> : formatter<std::string>
+{
+    auto format(const std::filesystem::path& from, fmt::format_context& ctx) const {
+        return formatter<std::string>::format(from.string(), ctx);
     }
 };
 
