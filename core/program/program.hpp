@@ -8,6 +8,7 @@
 #include "symbols/symbol_table.hpp"
 #include "util/class_traits.hpp"
 #include "util/error_types.hpp"
+#include "util/expected.hpp"
 
 #include <fmt/format.h>
 
@@ -51,9 +52,9 @@ public:
     // TODO: Proper allocation (and deallocation!!)
     std::uintptr_t alloc_mem(std::size_t amt);
 
-private:
-    void check_is_elf() const;
+    static util::Expected<void, std::string> check_is_elf(const std::filesystem::path& path);
 
+private:
     std::filesystem::path path_;
     std::vector<std::string> args_;
 

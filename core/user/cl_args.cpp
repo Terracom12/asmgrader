@@ -1,6 +1,7 @@
 #include "cl_args.hpp"
 
 #include "api/assignment.hpp"
+#include "program/program.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
@@ -34,12 +35,23 @@ CommandLineArgs::CommandLineArgs(std::span<const char*> args)
 
 namespace {
 
-void ensure_regular_file(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
+void ensure_file_exists(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
     if (!std::filesystem::exists(path)) {
         throw std::invalid_argument(fmt::format(fmt, path.string()) + " does not exist");
     }
+}
+
+void ensure_is_regular_file(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
+    ensure_file_exists(path, fmt);
     if (!std::filesystem::is_regular_file(path)) {
         throw std::invalid_argument(fmt::format(fmt, path.string()) + " is not a regular file");
+    }
+}
+
+[[maybe_unused]] void ensure_is_directory(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
+    ensure_file_exists(path, fmt);
+    if (!std::filesystem::is_directory(path)) {
+        throw std::invalid_argument(fmt::format(fmt, path.string()) + " is not a directory");
     }
 }
 
@@ -188,17 +200,33 @@ void CommandLineArgs::setup_parser() {
         .nargs(1)
         .metavar("FILE")
         .action([this] (const std::string& opt) {
-                ensure_regular_file(opt, "Database file {:?}");
+                ensure_is_regular_file(opt, "Database file {:?}");
 
                 opts_buffer_.database_path = opt;
         })
         .help("CSV database file with student names. If not specified, "
               "will attempt to find student submissions recursively using heuristics.\nSee docs for format spec.");
+
+    arg_parser_.add_argument("-p", "--search-path")
+        .default_value(std::string{"."})
+        .nargs(1)
+        .metavar("PATH")
+        .action([this] (const std::string& opt) {
+                ensure_is_directory(opt, "Search path {:?}");
+
+                opts_buffer_.search_path = opt;
+        })
+        .help("File to run tests on");
 #else // PROFESSOR_VERSION
     arg_parser_.add_argument("-f", "--file")
         .metavar("FILE")
         .action([this] (const std::string& opt) {
-                ensure_regular_file(opt, "File to run tests on {:?}");
+                ensure_is_regular_file(opt, "File to run tests on {:?}");
+
+                if (auto is_elf = Program::check_is_elf(opt); not is_elf) {
+                    throw std::runtime_error(is_elf.error());
+                }
+
                 opts_buffer_.file_name = opt;
         })
         .help("File to run tests on");

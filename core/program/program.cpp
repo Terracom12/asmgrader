@@ -1,16 +1,30 @@
 #include "program/program.hpp"
 
+#include "logging.hpp"
+#include "subprocess/run_result.hpp"
 #include "subprocess/traced_subprocess.hpp"
+#include "subprocess/tracer.hpp"
 #include "symbols/elf_reader.hpp"
+#include "symbols/symbol_table.hpp"
+#include "util/error_types.hpp"
+#include "util/expected.hpp"
 
+#include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 Program::Program(std::filesystem::path path, std::vector<std::string> args)
@@ -22,7 +36,9 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
         throw std::runtime_error("Program file does not exist");
     }
 
-    check_is_elf();
+    if (auto is_elf = check_is_elf(path_); not is_elf) {
+        throw std::runtime_error(is_elf.error());
+    }
 
     auto elf_reader = ElfReader(path_.string());
     symtab_ = std::make_unique<SymbolTable>(elf_reader.get_symbol_table());
@@ -31,22 +47,24 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
     std::ignore = subproc_->start();
 }
 
-void Program::check_is_elf() const {
-    std::ifstream file(path_);
+util::Expected<void, std::string> Program::check_is_elf(const std::filesystem::path& path) {
+    std::ifstream file(path);
     std::array<char, 4> first_4_bytes{};
     file.read(first_4_bytes.data(), first_4_bytes.size());
 
     constexpr std::array<char, 4> EXPECTED_BYTES = {0x7F, 'E', 'L', 'F'};
-    if (first_4_bytes != EXPECTED_BYTES) {
-        LOG_ERROR("File {:?} does not match ELF spec (first 4 bytes are {:?})", path_.string(),
-                  std::string{first_4_bytes.begin(), first_4_bytes.end()});
-        throw std::runtime_error("Program file is not an ELF");
+    if (first_4_bytes == EXPECTED_BYTES) {
+        return {};
     }
+
+    return fmt::format("File {:?} does not match ELF spec (first 4 bytes are {:?})", path.string(),
+                       std::string_view{first_4_bytes.begin(), first_4_bytes.end()});
 }
 
 TracedSubprocess& Program::get_subproc() {
     return *subproc_;
 }
+
 const TracedSubprocess& Program::get_subproc() const {
     return *subproc_;
 }
@@ -54,6 +72,7 @@ const TracedSubprocess& Program::get_subproc() const {
 SymbolTable& Program::get_symtab() {
     return *symtab_;
 }
+
 const SymbolTable& Program::get_symtab() const {
     return *symtab_;
 }
