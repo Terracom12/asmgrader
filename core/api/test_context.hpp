@@ -1,15 +1,16 @@
 #pragma once
 
+#include "api/asm_buffer.hpp"
+#include "api/asm_function.hpp"
+#include "api/asm_symbol.hpp"
+#include "api/registers_state.hpp"
+#include "common/error_types.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/syscall_record.hpp"
-#include "api/asm_buffer.hpp"
-#include "api/asm_function.hpp"
-#include "api/asm_symbol.hpp"
-#include "common/error_types.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>
@@ -72,7 +73,7 @@ public:
     const std::vector<SyscallRecord>& get_syscall_records() const;
 
     /// Get the current register state of the program
-    user_regs_struct get_registers() const;
+    RegistersState get_registers() const;
 
     /// Get any **new** stdout from the program since the last call to this function
     void send_stdin(const std::string& input);

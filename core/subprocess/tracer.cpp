@@ -184,7 +184,7 @@ void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_inf
 
 util::Result<void> Tracer::jump_to(std::uintptr_t address) {
     auto regs = TRY(get_registers());
-#if defined(ASMGRADER_ARM64)
+#if defined(ASMGRADER_AARCH64)
     regs.pc = address;
 #elif defined(ASMGRADER_X86_64)
     regs.rip = address;
@@ -237,7 +237,7 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     // NOLINTBEGIN(readability-magic-numbers) : they're instr opcodes, hex is alright as long as there are comments
 
     // See syscall(2) for arguments order and registers
-#if defined(ASMGRADER_ARM64)
+#if defined(ASMGRADER_AARCH64)
     // syscall args are x0-x5
     ranges::copy(args, new_regs.regs);
     // syscall nr is x8
@@ -282,7 +282,7 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     // Restore original instructions and program state
     TRY(set_registers(orig_regs));
 
-#if defined(ASMGRADER_ARM64)
+#if defined(ASMGRADER_AARCH64)
     TRY(memory_io_->write(orig_regs.pc, orig_instrs));
 #elif defined(ASMGRADER_X86_64)
     TRY(memory_io_->write(orig_regs.rip, orig_instrs));
@@ -349,7 +349,7 @@ util::Result<RunResult> Tracer::run() {
         // trapped by a signal (such as by a SEGFAULT)
         if (waitid_data.type == CLD_TRAPPED) {
             // FIXME: better macro, or abstracted registers
-#ifndef ASMGRADER_ARM64
+#ifndef ASMGRADER_AARCH64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
                       util::fmt_or_unknown(get_registers()));
 #endif
@@ -373,7 +373,7 @@ util::Result<void> Tracer::setup_function_return() {
     user_regs_struct regs = TRY(get_registers());
 
     // NOLINTBEGIN(readability-magic-numbers)
-#if defined(ASMGRADER_ARM64)
+#if defined(ASMGRADER_AARCH64)
     // Instructions must be 4-byte aligned
     // TODO: Create helper for writing aligned data
     constexpr std::size_t ALIGNMENT = 4;

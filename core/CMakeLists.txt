@@ -9,7 +9,7 @@ CPMAddPackage(
 
   PATCHES "boost-pfr-system.patch"   # Make the compiler think that Boost is a system lib as to not emit warnings
   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace" # Note the escapes!
+          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace\\\;preprocessor" # Note the escapes!
 )
 
 # spdlog for logging
@@ -91,11 +91,13 @@ set(
     common/timespec_operator_eq.hpp
     common/terminal_checks.hpp
     common/os.hpp
+    common/aliases.hpp
 
     meta/always_false.hpp
     meta/functional_traits.hpp
     meta/count_if.hpp
     meta/remove_all_pointers.hpp
+    meta/integer.hpp
 
     logging.hpp
 
@@ -125,6 +127,7 @@ set(
     api/metadata.hpp
     api/test_context.hpp
     api/macros.hpp
+    api/registers_state.hpp
     api.hpp
 
     app/app.hpp
@@ -192,6 +195,7 @@ set(
     Boost::pfr
     Boost::describe
     Boost::stacktrace
+    Boost::preprocessor
     range-v3
     Microsoft.GSL::GSL
     elfio::elfio
@@ -227,6 +231,7 @@ set(
 
     api/assignment.cpp
     api/test_context.cpp
+    api/registers_state.cpp
 
     database_reader.cpp
 )

@@ -1,17 +1,18 @@
 #include "test_context.hpp"
 
+#include "api/asm_buffer.hpp"
+#include "api/registers_state.hpp"
+#include "api/test_base.hpp"
+#include "common/byte_array.hpp"
+#include "common/error_types.hpp"
+#include "common/macros.hpp"
+#include "common/unreachable.hpp"
 #include "exceptions.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/syscall_record.hpp"
-#include "api/asm_buffer.hpp"
-#include "api/test_base.hpp"
-#include "common/byte_array.hpp"
-#include "common/error_types.hpp"
-#include "common/macros.hpp"
-#include "common/unreachable.hpp"
 
 #include <fmt/color.h>
 #include <fmt/format.h>
@@ -154,6 +155,9 @@ std::size_t TestContext::flush_stdin() {
 #endif
 }
 
-user_regs_struct TestContext::get_registers() const {
-    return TRY_OR_THROW(prog_.get_subproc().get_tracer().get_registers(), "failed to get registers");
+RegistersState TestContext::get_registers() const {
+    auto regs = TRY_OR_THROW(prog_.get_subproc().get_tracer().get_registers(), "failed to get registers");
+    auto fp_regs = TRY_OR_THROW(prog_.get_subproc().get_tracer().get_fp_registers(), "failed to get registers");
+
+    return RegistersState::from(regs, fp_regs);
 }

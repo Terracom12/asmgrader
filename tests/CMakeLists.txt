@@ -20,6 +20,7 @@ add_executable(
     test_memory_io.cpp
     test_program.cpp
     test_database_reader.cpp
+    test_registers_state.cpp
 
     catch_main.cpp
 )
