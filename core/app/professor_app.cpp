@@ -1,5 +1,7 @@
 #include "app/professor_app.hpp"
 
+#include "common/expected.hpp"
+#include "common/extra_formatters.hpp" // IWYU pragma: keep
 #include "database_reader.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
@@ -9,8 +11,6 @@
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
-#include "common/expected.hpp"
-#include "common/extra_formatters.hpp" // IWYU pragma: keep
 
 #include <gsl/util>
 #include <range/v3/algorithm/count_if.hpp>
@@ -33,7 +33,7 @@ int ProfessorApp::run_impl() {
     auto assignment = GlobalRegistrar::get().get_assignment(OPTS.assignment_name);
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
 
-    AssignmentFileSearcher file_searcher{*assignment};
+    AssignmentFileSearcher file_searcher{*assignment, OPTS.file_matcher};
     std::vector<StudentInfo> students;
 
     if (student_names.has_value()) {
