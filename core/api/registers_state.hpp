@@ -1,24 +1,41 @@
 #pragma once
 
+#include "boost/preprocessor/repetition/repeat_from_to.hpp"
 #include "common/aliases.hpp"
+#include "common/expected.hpp"
 #include "common/os.hpp"
+#include "common/static_string.hpp"
 #include "meta/integer.hpp"
 
 #include <boost/preprocessor.hpp>
 #include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/repetition/limits/repeat_256.hpp>
 #include <boost/preprocessor/repetition/repeat.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <gsl/util>
+#include <range/v3/action/insert.hpp>
 #include <range/v3/algorithm/copy.hpp>
+#include <range/v3/algorithm/equal.hpp>
+#include <range/v3/range/concepts.hpp>
+#include <range/v3/view/set_algorithm.hpp>
+#include <range/v3/view/subrange.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include <array>
 #include <bit>
 #include <concepts>
 #include <cstdint>
+#include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <sys/user.h> // user_regs_struct, ([x86_64] user_fpregs_struct | [aarch64] user_fpsimd_struct)
+
+/// All header only as this is relatively low level and we want operations to be fast (inlinable)
 
 namespace detail {
 
@@ -44,15 +61,20 @@ struct RegisterBaseImpl
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         return *reinterpret_cast<const IntType*>(&value);
     }
+
+    constexpr auto operator<=>(const RegisterBaseImpl<BaseType>& rhs) const = default;
 };
 
 } // namespace detail
 
 /// General Purpose Register
-struct GeneralRegister : detail::RegisterBaseImpl<std::uint64_t>
+struct GeneralRegister : detail::RegisterBaseImpl<u64>
 {
-    /*implicit*/ constexpr operator u64() const { return value; } // NOLINT(google-explicit-constructor)
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    /*implicit*/ constexpr operator u64() const { return value; }
 };
+
+static_assert(sizeof(GeneralRegister) == sizeof(u64));
 
 struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
 {
@@ -76,6 +98,8 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
     }
 };
 
+static_assert(sizeof(FloatingPointRegister) == sizeof(u128));
+
 struct RegistersState
 {
 
@@ -96,8 +120,7 @@ struct RegistersState
     // General registers (x0-x30)
     std::array<GeneralRegister, NUM_GEN_REGISTERS> regs;
 
-#define DEF_gen_register(z, num, _)                                                                                    \
-    DEF_getter(x##num, regs[num]) DEF_getter(w##num, GeneralRegister{regs[num].as<u32>()})
+#define DEF_gen_register(z, num, _) DEF_getter(x##num, regs[num]) DEF_getter(w##num, static_cast<u32>(regs[num]))
     BOOST_PP_REPEAT(NUM_GEN_REGISTERS, DEF_gen_register, ~);
 #undef DEF_gen_register
 
@@ -125,9 +148,8 @@ struct RegistersState
     std::array<FloatingPointRegister, NUM_FP_REGISTERS> vregs;
 
 #define DEF_fp_register(z, num, _)                                                                                     \
-    DEF_getter(q##num, vregs[num]) DEF_getter(d##num, FloatingPointRegister{vregs[num].as<u64>()})                     \
-        DEF_getter(s##num, FloatingPointRegister{vregs[num].as<u32>()})                                                \
-            DEF_getter(h##num, FloatingPointRegister{vregs[num].as<u16>()})
+    DEF_getter(q##num, vregs[num]) DEF_getter(d##num, vregs[num].as<u64>()) DEF_getter(s##num, vregs[num].as<u32>())   \
+        DEF_getter(h##num, vregs[num].as<u16>())
     BOOST_PP_REPEAT(NUM_FP_REGISTERS, DEF_fp_register, ~);
 #undef DEF_fp_register
 
@@ -214,6 +236,41 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
 
     return result;
 }
+
+inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
+                                                                     const RegistersState& after_call) noexcept {
+    // PCS Docs (not official spec):
+    //   https://developer.arm.com/documentation/102374/0102/Procedure-Call-Standard
+
+    std::vector<std::string_view> err_changed_names;
+
+    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
+        if (before != after) {
+            err_changed_names.push_back(name);
+        }
+    };
+
+#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr(), after_call.pre##nr(), #pre #nr);
+
+    // General purpose regs X[19, 30) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(19, 30, CHECK_reg_nr, x)
+
+    // Floating-point regs D[8, 32) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(8, 32, CHECK_reg_nr, d)
+
+#undef CHECK_reg_nr
+
+    // Stack pointer must be preserved
+    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
+    check_reg(before_call.sp(), after_call.sp(), "sp");
+
+    if (err_changed_names.empty()) {
+        return {};
+    }
+
+    return err_changed_names;
+}
+
 #elif defined(ASMGRADER_X86_64)
 
 // A benefit of using the same names as user_regs_struct
@@ -237,4 +294,41 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
 
 #undef COPY_gen_reg
 #undef REGS_tuple_set
+
+inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
+                                                                     const RegistersState& after_call) noexcept {
+    // Official (old, circa 2012) calling convention source:
+    //   https://web.archive.org/web/20120913114312/http://www.x86-64.org/documentation/abi.pdf:
+
+    std::vector<std::string_view> err_changed_names;
+
+    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
+        if (before != after) {
+            err_changed_names.push_back(name);
+        }
+    };
+
+#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr, after_call.pre##nr, #pre #nr);
+
+    // General purpose regs X[12, 36) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(12, 15, CHECK_reg_nr, r)
+
+    // TODO: Check floating point and vectorized extension registers for x86_64 calling convention check
+
+#undef CHECK_reg_nr
+
+    // Stack pointer must be preserved
+    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
+    check_reg(before_call.rsp, after_call.rsp, "rsp");
+
+    // rbx and rbp must be preserved
+    check_reg(before_call.rbx, after_call.rbx, "rbx");
+    check_reg(before_call.rbp, after_call.rbp, "rbp");
+
+    if (err_changed_names.empty()) {
+        return {};
+    }
+
+    return err_changed_names;
+}
 #endif

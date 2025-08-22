@@ -92,6 +92,7 @@ set(
     common/terminal_checks.hpp
     common/os.hpp
     common/aliases.hpp
+    common/static_string.hpp
 
     meta/always_false.hpp
     meta/functional_traits.hpp
@@ -231,7 +232,6 @@ set(
 
     api/assignment.cpp
     api/test_context.cpp
-    api/registers_state.cpp
 
     database_reader.cpp
 )
