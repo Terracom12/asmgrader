@@ -3,21 +3,29 @@
 #include "boost/preprocessor/repetition/repeat_from_to.hpp"
 #include "common/aliases.hpp"
 #include "common/expected.hpp"
+#include "common/formatters/debug.hpp"
 #include "common/os.hpp"
-#include "common/static_string.hpp"
 #include "meta/integer.hpp"
 
-#include <boost/preprocessor.hpp>
+#include <boost/preprocessor/arithmetic/sub.hpp>
 #include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/repetition/limits/repeat_256.hpp>
 #include <boost/preprocessor/repetition/repeat.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/stringize.hpp>
+#include <boost/preprocessor/tuple/to_seq.hpp>
+#include <fmt/base.h>
+#include <fmt/color.h>
+#include <fmt/compile.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <gsl/util>
+#include <gsl/zstring>
 #include <range/v3/action/insert.hpp>
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/equal.hpp>
+#include <range/v3/algorithm/find.hpp>
 #include <range/v3/range/concepts.hpp>
+#include <range/v3/utility/memory.hpp>
 #include <range/v3/view/set_algorithm.hpp>
 #include <range/v3/view/subrange.hpp>
 #include <range/v3/view/transform.hpp>
@@ -25,7 +33,11 @@
 #include <array>
 #include <bit>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -76,6 +88,19 @@ struct GeneralRegister : detail::RegisterBaseImpl<u64>
 
 static_assert(sizeof(GeneralRegister) == sizeof(u64));
 
+template <>
+struct fmt::formatter<GeneralRegister> : DebugFormatter
+{
+    auto format(const GeneralRegister& from, format_context& ctx) const {
+        if (is_debug_format) {
+            return format_to(ctx.out(), "{0:>{1}} | 0x{0:016X} | 0b{0:064B}", from.value,
+                             std::numeric_limits<decltype(from.value)>::digits10);
+        }
+
+        return format_to(ctx.out(), "{}", from.value);
+    }
+};
+
 struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
 {
     template </*std::floating_point*/ typename FPType>
@@ -89,8 +114,10 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
     // NOLINTNEXTLINE(google-explicit-constructor)
     /*implicit*/ constexpr operator double() const { return std::bit_cast<double>(static_cast<u64>(value)); }
 
-    template </*std::floating_point*/ typename FPType>
-    /*implicit*/ constexpr FPType as() const {
+    using detail::RegisterBaseImpl<u128>::as;
+
+    template <std::floating_point FPType>
+    constexpr FPType as() const {
         using IntType = meta::sized_uint_t<sizeof(FPType)>;
         auto int_val = detail::RegisterBaseImpl<u128>::as<IntType>();
 
@@ -100,14 +127,188 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
 
 static_assert(sizeof(FloatingPointRegister) == sizeof(u128));
 
+template <>
+struct fmt::formatter<FloatingPointRegister> : DebugFormatter
+{
+    auto format(const FloatingPointRegister& from, format_context& ctx) const {
+        if (is_debug_format) {
+            return format_to(ctx.out(), "{}", double{from});
+        }
+
+        const auto max_sz = formatted_size("{}", std::numeric_limits<double>::min());
+        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.value);
+    }
+};
+
+struct FlagsRegister : detail::RegisterBaseImpl<u64>
+{
+    constexpr bool negative_set() const {
+#if defined(ASMGRADER_AARCH64)
+        return (nzcv() & NEGATIVE_FLAG_BIT) != 0U;
+#elif defined(ASMGRADER_X86_64)
+        return (value & SIGN_FLAG_BIT) != 0U;
+#endif
+    }
+
+    constexpr bool zero_set() const {
+#if defined(ASMGRADER_AARCH64)
+        return (nzcv() & ZERO_FLAG_BIT) != 0U;
+#elif defined(ASMGRADER_X86_64)
+        return (value & ZERO_FLAG_BIT) != 0U;
+#endif
+    }
+
+    constexpr bool carry_set() const {
+#if defined(ASMGRADER_AARCH64)
+        return (nzcv() & CARRY_FLAG_BIT) != 0U;
+#elif defined(ASMGRADER_X86_64)
+        return (value & CARRY_FLAG_BIT) != 0U;
+#endif
+    }
+
+    constexpr bool overflow_set() const {
+#if defined(ASMGRADER_AARCH64)
+        return (nzcv() & OVERFLOW_FLAG_BIT) != 0U;
+#elif defined(ASMGRADER_X86_64)
+        return (value & OVERFLOW_FLAG_BIT) != 0U;
+#endif
+    }
+
+#if defined(ASMGRADER_AARCH64)
+    // Specification of pstate (for nzcv) obtained from:
+    //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
+    static constexpr u64 NEGATIVE_FLAG_BIT = 0b1000;
+    static constexpr u64 ZERO_FLAG_BIT = 0b0100;
+    static constexpr u64 CARRY_FLAG_BIT = 0b0010;
+    static constexpr u64 OVERFLOW_FLAG_BIT = 0b0001;
+
+    constexpr u64 nzcv() const {
+        constexpr u64 NZCV_BIT_OFF = 28;
+        constexpr u64 NZCV_BIT_MASK = 0xF;
+
+        return (value >> NZCV_BIT_OFF) & NZCV_BIT_MASK;
+    }
+
+#elif defined(ASMGRADER_X86_64)
+    // Specification of eflags obtained from:
+    //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+    //   Volume 1 - 3.4.3.1 Status Flags
+    static constexpr u64 CARRY_FLAG_BIT = 0b1 << 0;
+    static constexpr u64 ZERO_FLAG_BIT = 0b1 << 6;
+    static constexpr u64 SIGN_FLAG_BIT = 0b1 << 7;
+    static constexpr u64 OVERFLOW_FLAG_BIT = 0b1 << 11;
+#endif
+};
+
+static_assert(sizeof(FlagsRegister) == sizeof(u64));
+
+template <>
+struct fmt::formatter<FlagsRegister> : DebugFormatter
+{
+    std::size_t bin_labels_offset{};
+
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        const auto* it = DebugFormatter::parse(ctx);
+        const auto* end = ctx.end();
+
+        const auto* closing_brace_iter = ranges::find(it, end, '}');
+
+        if (closing_brace_iter == end) {
+            return it;
+        }
+
+        if (closing_brace_iter - it == 0) {
+            return ctx.end();
+        }
+
+        if (*it < '0' || *it > '9') {
+            throw fmt::format_error("invalid format - offset spec is not an integer");
+        }
+
+        int offset_spec = detail::parse_nonnegative_int(it, closing_brace_iter, -1);
+
+        if (offset_spec < 0) {
+            throw fmt::format_error("invalid format - offset spec is not a valid integer");
+        }
+
+        bin_labels_offset = static_cast<std::size_t>(offset_spec);
+
+        return it;
+    }
+
+    static std::string get_short_flags_str(const FlagsRegister& flags) {
+        std::vector<char> set_flags;
+
+        if (flags.carry_set()) {
+            set_flags.push_back('C');
+        }
+        if (flags.zero_set()) {
+            set_flags.push_back('Z');
+        }
+        if (flags.negative_set()) {
+#if defined(ASMGRADER_AARCH64)
+            set_flags.push_back('V');
+#elif defined(ASMGRADER_X86_64)
+            set_flags.push_back('S');
+#endif
+        }
+        if (flags.overflow_set()) {
+            set_flags.push_back('O');
+        }
+
+        return fmt::format("{}", fmt::join(set_flags, "|"));
+    }
+
+#if defined(ASMGRADER_AARCH64)
+    auto format(const FlagsRegister& from, format_context& ctx) const {
+        std::string short_flags_str = get_short_flags_str(from);
+
+        if (is_debug_format) {
+            // See:
+            //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
+            std::string flags_bin = fmt::format("0b{:032b}", from.value);
+
+            // len('0b')
+            constexpr auto LABEL_INIT_OFFSET = 2;
+
+            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
+            std::string labels = "NZCV";
+
+            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+        } else {
+            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+        }
+
+        return ctx.out();
+    }
+#elif defined(ASMGRADER_X86_64)
+    auto format(const FlagsRegister& from, format_context& ctx) const {
+        std::string short_flags_str = get_short_flags_str(from);
+
+        if (is_debug_format) {
+            // See:
+            //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+            //   Volume 1 - 3.4.3.1 Status Flags
+            std::string flags_bin = fmt::format("0b{:032b}", from.value);
+
+            // 32 bits - starting bit# of labels + len('0b')
+            constexpr auto LABEL_INIT_OFFSET = 32 - std::bit_width(FlagsRegister::OVERFLOW_FLAG_BIT) + 2;
+
+            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
+            std::string labels = "O   SZ     C";
+
+            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+        } else {
+            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+        }
+
+        return ctx.out();
+    }
+#endif
+};
+
 struct RegistersState
 {
-
-    constexpr bool negative_set() const;
-    constexpr bool zero_set() const;
-    constexpr bool carry_set() const;
-    constexpr bool overflow_set() const;
-
 #if defined(ASMGRADER_AARCH64)
 #define DEF_getter(name, expr)                                                                                         \
     constexpr auto name() const { return expr; }
@@ -124,25 +325,12 @@ struct RegistersState
     BOOST_PP_REPEAT(NUM_GEN_REGISTERS, DEF_gen_register, ~);
 #undef DEF_gen_register
 
+    DEF_getter(fp, x29()); // frame pointer
     DEF_getter(lr, x30()); // link register
     u64 sp;                // stack pointer
     u64 pc;                // program counter
 
-    u64 pstate;
-
-    // Specification of pstate (for nzcv) obtained from:
-    //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
-    static constexpr u64 NEGATIVE_FLAG_BIT = 0b1000;
-    static constexpr u64 ZERO_FLAG_BIT = 0b0100;
-    static constexpr u64 CARRY_FLAG_BIT = 0b0010;
-    static constexpr u64 OVERFLOW_FLAG_BIT = 0b0001;
-
-    constexpr u64 nzcv() const {
-        constexpr u64 NZCV_BIT_OFF = 28;
-        constexpr u64 NZCV_BIT_MASK = 0xF;
-
-        return (pstate >> NZCV_BIT_OFF) & NZCV_BIT_MASK;
-    }
+    FlagsRegister pstate;
 
     // Floating-point registers (Q0-Q31)
     std::array<FloatingPointRegister, NUM_FP_REGISTERS> vregs;
@@ -171,53 +359,101 @@ struct RegistersState
     u64 rip; // instruction pointer
     u64 rsp; // stack pointer
 
-    u64 eflags; // flags register
-
-    // Specification of eflags obtained from:
-    //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
-    //   Volume 1 - 3.4.3.1 Status Flags
-    static constexpr u64 CARRY_FLAG_BIT = 0b1 << 0;
-    static constexpr u64 ZERO_FLAG_BIT = 0b1 << 6;
-    static constexpr u64 SIGN_FLAG_BIT = 0b1 << 7;
-    static constexpr u64 OVERFLOW_FLAG_BIT = 0b1 << 11;
+    FlagsRegister eflags;
 
     static constexpr RegistersState from(const user_regs_struct& regs, const user_fpregs_struct& fp_regs);
 #endif
 };
 
-constexpr bool RegistersState::negative_set() const {
 #if defined(ASMGRADER_AARCH64)
-    return (nzcv() & NEGATIVE_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-    return (eflags & SIGN_FLAG_BIT) != 0U;
-#endif
-}
+template <>
+struct fmt::formatter<RegistersState> : DebugFormatter
+{
+    auto format(const RegistersState& from, format_context& ctx) const {
+        constexpr std::size_t TAB_WIDTH = 4; // for debug format field sep
+        std::string field_sep;
 
-constexpr bool RegistersState::zero_set() const {
-#if defined(ASMGRADER_AARCH64)
-    return (nzcv() & ZERO_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-    return (eflags & ZERO_FLAG_BIT) != 0U;
-#endif
-}
+        constexpr std::size_t MAX_NAME_LEN = 8; // "x29 [fp]" | "x30 [lr]"
 
-constexpr bool RegistersState::carry_set() const {
-#if defined(ASMGRADER_AARCH64)
-    return (nzcv() & CARRY_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-    return (eflags & CARRY_FLAG_BIT) != 0U;
-#endif
-}
+        if (is_debug_format) {
+            ctx.advance_to(fmt::format_to(ctx.out(), "RegistersState{{\n{}", std::string(TAB_WIDTH, ' ')));
 
-constexpr bool RegistersState::overflow_set() const {
-#if defined(ASMGRADER_AARCH64)
-    return (nzcv() & OVERFLOW_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-    return (eflags & OVERFLOW_FLAG_BIT) != 0U;
-#endif
-}
+            field_sep = ",\n" + std::string(TAB_WIDTH, ' ');
+        } else {
+            ctx.out()++ = '{';
 
-#if defined(ASMGRADER_AARCH64)
+            field_sep = ", ";
+        }
+
+        static constexpr auto LEN = [](gsl::czstring str) { return std::string_view{str}.size(); };
+
+        auto print_named_field = [this, &ctx, field_sep, MAX_NAME_LEN](std::string_view name, const auto& what,
+                                                                       bool print_sep = true) {
+            if (is_debug_format) {
+                ctx.advance_to(format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
+            } else {
+                ctx.advance_to(format_to(ctx.out(), "{}", name));
+            }
+
+            ctx.advance_to(format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
+        };
+
+        auto print_reg = [this, print_named_field](std::string_view name, const auto& reg) {
+            if (is_debug_format) {
+                print_named_field(name, fmt::format("{:?}", reg));
+            } else {
+                print_named_field(name, fmt::format("{}", reg));
+            }
+        };
+
+        auto print_uint_field = [this, print_named_field]<std::unsigned_integral UIntType>(std::string_view name,
+                                                                                           const UIntType& field) {
+            constexpr auto ALIGN = std::numeric_limits<UIntType>::digits10;
+
+            const std::string str = fmt::format("0x{:X}", field);
+            if (is_debug_format) {
+                print_named_field(name, fmt::format("{:>{}}", str, ALIGN));
+            } else {
+                print_named_field(name, str);
+            }
+        };
+
+#define PRINT_gen_reg(z, num, base) print_reg("x" #num, (base).x##num());
+        // omit x29 and x30 to do custom formatting
+        BOOST_PP_REPEAT(BOOST_PP_SUB(NUM_GEN_REGISTERS, 2), PRINT_gen_reg, from);
+#undef PRINT_gen_reg
+
+        print_reg("x29 [fp]", from.fp());
+        print_reg("x30 [fp]", from.lr());
+
+#define PRINT_fp_reg(z, num, base) print_reg((is_debug_format ? "q" #num : "d" #num), (base).q##num());
+        BOOST_PP_REPEAT(NUM_FP_REGISTERS, PRINT_fp_reg, from);
+#undef PRINT_fp_reg
+
+        print_uint_field("fpsr", from.fpsr);
+        print_uint_field("fpcr", from.fpcr);
+
+        print_uint_field("sp", from.sp);
+        print_uint_field("pc", from.pc);
+
+        if (is_debug_format) {
+            constexpr std::size_t PRE_WIDTH = LEN("pstate = ") + TAB_WIDTH;
+            const std::string pstate_fmt_spec = fmt::format("{{:?{}}}", PRE_WIDTH);
+            print_named_field("pstate", vformat(pstate_fmt_spec, make_format_args(from.pstate)), false);
+        } else {
+            print_named_field("pstate", from.pstate, false);
+        }
+
+        if (is_debug_format) {
+            ctx.advance_to(fmt::format_to(ctx.out(), "\n}}"));
+        } else {
+            ctx.out()++ = '}';
+        }
+
+        return ctx.out();
+    }
+};
+
 constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpsimd_struct& fpsimd_regs) {
     RegistersState result{};
 
@@ -226,7 +462,7 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
 
     result.sp = regs.sp;
     result.pc = regs.pc;
-    result.pstate = regs.pstate;
+    result.pstate.value = regs.pstate;
 
     ranges::copy(fpsimd_regs.vregs | ranges::views::transform([](auto value) { return FloatingPointRegister{value}; }),
                  result.vregs.begin());
@@ -262,7 +498,7 @@ inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const Regis
 
     // Stack pointer must be preserved
     // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
-    check_reg(before_call.sp(), after_call.sp(), "sp");
+    check_reg(before_call.sp, after_call.sp, "sp");
 
     if (err_changed_names.empty()) {
         return {};
@@ -272,6 +508,83 @@ inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const Regis
 }
 
 #elif defined(ASMGRADER_X86_64)
+
+template <>
+struct fmt::formatter<RegistersState> : DebugFormatter
+{
+    auto format(const RegistersState& from, format_context& ctx) const {
+        constexpr std::size_t TAB_WIDTH = 4; // for debug format field sep
+        std::string field_sep;
+
+        constexpr std::size_t MAX_NAME_LEN = 6; // "eflags"
+
+        if (is_debug_format) {
+            ctx.advance_to(fmt::format_to(ctx.out(), "RegistersState{{\n{}", std::string(TAB_WIDTH, ' ')));
+
+            field_sep = ",\n" + std::string(TAB_WIDTH, ' ');
+        } else {
+            ctx.out()++ = '{';
+
+            field_sep = ", ";
+        }
+
+        static constexpr auto LEN = [](gsl::czstring str) { return std::string_view{str}.size(); };
+
+        auto print_named_field = [this, &ctx, field_sep, MAX_NAME_LEN](std::string_view name, const auto& what,
+                                                                       bool print_sep = true) {
+            if (is_debug_format) {
+                ctx.advance_to(format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
+            } else {
+                ctx.advance_to(format_to(ctx.out(), "{}", name));
+            }
+
+            ctx.advance_to(format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
+        };
+
+        auto print_gen_reg = [this, print_named_field](std::string_view name, const auto& reg) {
+            if (is_debug_format) {
+                print_named_field(name, fmt::format("{:?}", reg));
+            } else {
+                print_named_field(name, fmt::format("{}", reg));
+            }
+        };
+
+        auto print_u64_field = [this, print_named_field](std::string_view name, const u64& field) {
+            constexpr auto ALIGN = std::numeric_limits<u64>::digits10;
+
+            const std::string str = fmt::format("0x{:X}", field);
+            if (is_debug_format) {
+                print_named_field(name, fmt::format("{:>{}}", str, ALIGN));
+            } else {
+                print_named_field(name, str);
+            }
+        };
+
+#define PRINT_gen_reg(r, base, elem) print_gen_reg(BOOST_PP_STRINGIZE(elem), (base).elem);
+
+        BOOST_PP_SEQ_FOR_EACH(PRINT_gen_reg, from, REGS_tuple_set);
+#undef PRINT_gen_reg
+
+        print_u64_field("rip", from.rip);
+        print_u64_field("rsp", from.rip);
+
+        if (is_debug_format) {
+            constexpr std::size_t PRE_WIDTH = LEN("eflags = ") + TAB_WIDTH;
+            const std::string eflags_fmt_spec = fmt::format("{{:?{}}}", PRE_WIDTH);
+            print_named_field("eflags", vformat(eflags_fmt_spec, make_format_args(from.eflags)), false);
+        } else {
+            print_named_field("eflags", from.eflags, false);
+        }
+
+        if (is_debug_format) {
+            ctx.advance_to(fmt::format_to(ctx.out(), "\n}}"));
+        } else {
+            ctx.out()++ = '}';
+        }
+
+        return ctx.out();
+    }
+};
 
 // A benefit of using the same names as user_regs_struct
 #define COPY_gen_reg(r, base, elem) base.elem.value = regs.elem;
@@ -284,7 +597,7 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
     result.rip = regs.rip;
     result.rsp = regs.rsp;
 
-    result.eflags = regs.eflags;
+    result.eflags.value = regs.eflags;
 
     // TODO: Support floating point on x86_64
     std::ignore = fp_regs;
@@ -331,4 +644,5 @@ inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const Regis
 
     return err_changed_names;
 }
+
 #endif
