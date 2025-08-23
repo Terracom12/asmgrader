@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <fmt/base.h>
+#include <fmt/compile.h>
 #include <range/v3/algorithm/copy_n.hpp>
 
 #include <array>
@@ -76,3 +78,18 @@ StaticString(const char (&input)[N]) -> StaticString<N - 1>;
 
 static_assert(StaticString("abc") == "abc");
 static_assert("abc" == StaticString("abc"));
+
+template <StaticString Fmt, fmt::formattable auto... Args>
+consteval auto format_static() {
+    constexpr auto COMPILED_FMT = FMT_COMPILE(Fmt.data.begin());
+    constexpr std::size_t SIZE = fmt::formatted_size(COMPILED_FMT, Args...);
+
+    StaticString<SIZE> result;
+
+    fmt::format_to(result.data.begin(), COMPILED_FMT, Args...);
+
+    return result;
+}
+
+static_assert(format_static<"{0} + {0} = {1}", 1, 2>() == "1 + 1 = 2");
+static_assert(format_static<"", 1, 2>() == "");
