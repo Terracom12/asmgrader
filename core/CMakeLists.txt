@@ -72,6 +72,7 @@ set(
     subprocess/tracer.hpp
     subprocess/tracer_types.hpp
     subprocess/syscall.hpp
+    subprocess/syscall_record.hpp
     subprocess/memory/concepts.hpp
     subprocess/memory/memory_io.hpp
     subprocess/memory/memory_io_base.hpp
@@ -93,12 +94,22 @@ set(
     common/os.hpp
     common/aliases.hpp
     common/static_string.hpp
+    common/formatters/debug.hpp
+    common/formatters/generic_impl.hpp
+    common/formatters/unknown.hpp
+    common/formatters/enum.hpp
+    common/formatters/detail.hpp
+    common/formatters/std.hpp
+    common/formatters/formatters.hpp
+    common/formatters/aggregate.hpp
 
+    meta/compatible_function_args.hpp
     meta/always_false.hpp
     meta/functional_traits.hpp
     meta/count_if.hpp
     meta/remove_all_pointers.hpp
     meta/integer.hpp
+    meta/tuple_matcher.hpp
 
     logging.hpp
 
@@ -118,6 +129,7 @@ set(
 
     user/cl_args.hpp
     user/file_searcher.hpp
+    user/program_options.hpp
 
     api/asm_function.hpp
     api/asm_symbol.hpp

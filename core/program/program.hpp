@@ -1,14 +1,14 @@
 #pragma once
 
+#include "common/class_traits.hpp"
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
 #include "meta/functional_traits.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/traced_subprocess.hpp"
 #include "subprocess/tracer.hpp"
 #include "symbols/symbol_table.hpp"
-#include "common/class_traits.hpp"
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
 
 #include <fmt/format.h>
 

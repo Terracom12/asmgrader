@@ -57,7 +57,7 @@ public:
     void restart_program();
 
     // Low-level exececutor of an arbitrary syscall
-    util::Result<SyscallRecord> exec_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
+    util::Result<SyscallRecord> exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get any **new** stdout from the program since the last call to this function
     std::string get_stdout();

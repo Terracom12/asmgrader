@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/aliases.hpp"
+
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -43,10 +45,10 @@ struct SyscallEntry
         if constexpr (std::is_void_v<T>) {
             return VoidPtr;
         }
-        TC(std::int32_t, Int32)
-        TC(std::int64_t, Int64)
-        TC(std::uint32_t, Uint32)
-        TC(std::uint64_t, Uint64)
+        TC(i32, Int32)
+        TC(i64, Int64)
+        TC(u32, Uint32)
+        TC(u64, Uint64)
 
 #undef TC
     }();
@@ -84,6 +86,7 @@ struct SyscallEntry
 
     /// Human-readable name of the syscall (e.g., openat, getpid)
     constexpr std::string_view name() const { return {name_buffer_.begin(), name_buffer_.end()}; }
+
     constexpr auto parameters() const { return std::span{params_buffer_.begin(), num_params_}; }
 
     Type ret_type{};

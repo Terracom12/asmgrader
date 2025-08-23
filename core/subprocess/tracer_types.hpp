@@ -2,6 +2,7 @@
 
 /// Types primarily to wrap Linux result info for use with ref``Tracer``
 
+#include "common/aliases.hpp"
 #include "common/class_traits.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
@@ -143,9 +144,9 @@ struct TracedWaitid
             return result;
         }
 
-        constexpr std::uint64_t SIG_MASK = 0x7f;
-        constexpr std::uint64_t SYSCALL_TRAP_MASK = 0x80;
-        std::uint32_t signal_bits = siginfo.si_status;
+        constexpr u64 SIG_MASK = 0x7f;
+        constexpr u64 SYSCALL_TRAP_MASK = 0x80;
+        u32 signal_bits = siginfo.si_status;
 
         // actual signal will be in first 7 bits
         result.signal_num = signal_bits & SIG_MASK;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "subprocess/syscall.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
+#include "subprocess/syscall.hpp"
 
 #include <optional>
 #include <variant>
@@ -13,15 +13,15 @@ struct SyscallRecord
     /// An arbitrary syscall argument
     /// void* is a catch-all for any pointer type
     using SyscallArg =
-        std::variant<std::int32_t, std::int64_t, std::uint32_t, std::uint64_t, util::Result<std::string>,
+        std::variant<i32, std::int64_t, std::uint32_t, std::uint64_t, util::Result<std::string>,
                      util::Result<std::vector<util::Result<std::string>>>, void*, util::Result<std::timespec>>;
 
-    std::uint64_t num;
+    u64 num;
     std::vector<SyscallArg> args;
-    std::optional<util::Expected<std::int64_t>> ret;
+    std::optional<util::Expected<i64>> ret;
 
-    std::uint64_t instruction_pointer;
-    std::uint64_t stack_pointer;
+    u64 instruction_pointer;
+    u64 stack_pointer;
 };
 
 template <>

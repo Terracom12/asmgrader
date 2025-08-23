@@ -1,11 +1,10 @@
 #pragma once
 
-#include "boost/mp11/integral.hpp"
-
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/detail/mp_append.hpp>
 #include <boost/mp11/detail/mp_list.hpp>
 #include <boost/mp11/detail/mp_rename.hpp>
+#include <boost/mp11/integral.hpp>
 #include <boost/mp11/list.hpp>
 
 #include <concepts>

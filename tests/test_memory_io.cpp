@@ -43,10 +43,10 @@ TEST_CASE("Read and write arithmetic types and pointers") {
     auto mio = make_memory();
 
     SECTION("Signed integers") {
-        std::int8_t a = 123;
-        std::int16_t b = 0xABC;
-        std::int32_t c = -32;
-        std::int64_t d = -999999;
+        i8 a = 123;
+        i16 b = 0xABC;
+        i32 c = -32;
+        i64 d = -999999;
 
         std::ignore = mio->write(0, a);
         std::ignore = mio->write(1, b);
@@ -54,21 +54,21 @@ TEST_CASE("Read and write arithmetic types and pointers") {
         std::ignore = mio->write(4, c);
         std::ignore = mio->write(8, d);
 
-        REQUIRE(mio->read<std::int8_t>(0) == a);
-        REQUIRE(mio->read<std::int16_t>(2) == b);
-        REQUIRE(mio->read<std::int32_t>(4) == c);
-        REQUIRE(mio->read<std::int64_t>(8) == d);
+        REQUIRE(mio->read<i8>(0) == a);
+        REQUIRE(mio->read<i16>(2) == b);
+        REQUIRE(mio->read<i32>(4) == c);
+        REQUIRE(mio->read<i64>(8) == d);
     }
 
     SECTION("Unsigned integers") {
-        std::uint64_t f = 0x0123456789ABCDEF;
-        std::uint8_t g = 0xFF;
+        u64 f = 0x0123456789ABCDEF;
+        u8 g = 0xFF;
 
         std::ignore = mio->write(3, f);
         std::ignore = mio->write(2, g);
 
-        REQUIRE(mio->read<std::uint64_t>(3) == f);
-        REQUIRE(mio->read<std::uint8_t>(2) == g);
+        REQUIRE(mio->read<u64>(3) == f);
+        REQUIRE(mio->read<u8>(2) == g);
     }
 
     SECTION("Floating point numbers") {

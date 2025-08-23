@@ -14,8 +14,8 @@ namespace meta {
 namespace detail {
 namespace mp = boost::mp11;
 
-using sized_uint_map = mp::mp_list<std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t>;
-using sized_int_map = mp::mp_list<std::int8_t, std::int16_t, std::int32_t, std::int64_t>;
+using sized_uint_map = mp::mp_list<u8, std::uint16_t, std::uint32_t, std::uint64_t>;
+using sized_int_map = mp::mp_list<i8, std::int16_t, std::int32_t, std::int64_t>;
 
 template <std::size_t I>
 using sized_int_impl = mp::mp_at<sized_int_map, mp::mp_int<I>>;

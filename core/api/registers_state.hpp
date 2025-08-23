@@ -1,6 +1,5 @@
 #pragma once
 
-#include "boost/preprocessor/repetition/repeat_from_to.hpp"
 #include "common/aliases.hpp"
 #include "common/expected.hpp"
 #include "common/formatters/debug.hpp"
@@ -10,6 +9,7 @@
 #include <boost/preprocessor/arithmetic/sub.hpp>
 #include <boost/preprocessor/repetition/for.hpp>
 #include <boost/preprocessor/repetition/repeat.hpp>
+#include <boost/preprocessor/repetition/repeat_from_to.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/tuple/to_seq.hpp>
@@ -65,7 +65,7 @@ struct RegisterBaseImpl
             constexpr auto ALL_BITS = static_cast<IntType>(-1);
 
             // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
-            constexpr auto MASK = static_cast<std::uint64_t>(ALL_BITS);
+            constexpr auto MASK = static_cast<u64>(ALL_BITS);
 
             return static_cast<IntType>(MASK & value);
         }

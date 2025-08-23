@@ -1,14 +1,16 @@
 #pragma once
 
+#include "common/aliases.hpp"
+#include "common/error_types.hpp"
+#include "common/unreachable.hpp"
 #include "meta/count_if.hpp"
 #include "meta/tuple_matcher.hpp"
 #include "subprocess/memory/concepts.hpp"
 #include "subprocess/memory/memory_io.hpp"
 #include "subprocess/run_result.hpp"
+#include "subprocess/syscall.hpp"
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer_types.hpp"
-#include "common/error_types.hpp"
-#include "common/unreachable.hpp"
 
 #include <fmt/format.h>
 
@@ -55,7 +57,7 @@ public:
     util::Result<RunResult> run();
 
     /// Executes a syscall with the given arguments as the stopped tracee
-    util::Result<SyscallRecord> execute_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args);
+    util::Result<SyscallRecord> execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get the general purpose registers of the stopped tracee
     /// IMPORTANT: this is (obviously) architecture-dependent
@@ -111,7 +113,7 @@ private:
 
     /// Returns: value that should be written to the nth register
     template <typename Arg>
-    util::Result<std::uint64_t> setup_function_param(const Arg& arg);
+    util::Result<u64> setup_function_param(const Arg& arg);
     template <std::floating_point Arg>
     auto setup_function_param(const Arg& arg);
 
@@ -135,9 +137,9 @@ private:
     void get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_info* exit) const;
 
     // template <typename T>
-    // T from_raw_value(std::uint64_t value) const;
+    // T from_raw_value(u64 value) const;
 
-    SyscallRecord::SyscallArg from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const;
+    SyscallRecord::SyscallArg from_syscall_value(u64 value, SyscallEntry::Type type) const;
 
     pid_t pid_ = -1;
 
@@ -236,12 +238,12 @@ util::Result<void> Tracer::setup_function_call(Args&&... args) {
 }
 
 template <typename Arg>
-util::Result<std::uint64_t> Tracer::setup_function_param(const Arg& arg) {
+util::Result<u64> Tracer::setup_function_param(const Arg& arg) {
     if constexpr (std::integral<Arg>) {
-        return static_cast<std::uint64_t>(arg);
+        return static_cast<u64>(arg);
     } else if constexpr (std::is_pointer_v<Arg>) {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        return reinterpret_cast<std::uint64_t>(arg);
+        return reinterpret_cast<u64>(arg);
     } else {
         std::uintptr_t loc = mmaped_address_ + mmaped_used_amt_;
         std::size_t num_bytes = TRY(memory_io_->write(loc, arg));
@@ -274,9 +276,9 @@ util::Result<Ret> Tracer::process_function_ret() {
     } else {
         user_regs_struct int_regs = TRY(get_registers());
 #ifdef __aarch64__
-        std::uint64_t ret = int_regs.regs[0];
+        u64 ret = int_regs.regs[0];
 #else // x86_64 assumed
-        std::uint64_t ret = int_regs.rax;
+        u64 ret = int_regs.rax;
 #endif
 
         if constexpr (std::integral<Ret>) {

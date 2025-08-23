@@ -2,10 +2,11 @@
 
 #include "common/error_types.hpp"
 #include "common/macros.hpp"
-#include "fmt/base.h"
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/memory/concepts.hpp"
+
+#include <fmt/base.h>
 
 #include <concepts>
 #include <cstdint>

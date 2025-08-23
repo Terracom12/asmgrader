@@ -84,7 +84,7 @@ void TestContext::restart_program() {
     TRY_OR_THROW(prog_.get_subproc().restart(), "failed to restart program");
 }
 
-util::Result<SyscallRecord> TestContext::exec_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args) {
+util::Result<SyscallRecord> TestContext::exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
     return prog_.get_subproc().get_tracer().execute_syscall(sys_nr, args);
 }
 

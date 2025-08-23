@@ -1,7 +1,8 @@
 #pragma once
 
-#include "boost/mp11/list.hpp"
+#include "common/aliases.hpp"
 
+#include <boost/mp11/list.hpp>
 #include <gsl/assert>
 #include <gsl/util>
 #include <range/v3/algorithm/copy.hpp>
@@ -11,7 +12,6 @@
 #include <range/v3/range/traits.hpp>
 
 #include <cstddef>
-#include <cstdint>
 #include <initializer_list>
 #include <span>
 #include <type_traits>
@@ -53,6 +53,7 @@ public:
         : data_{count, std::byte{value}} {}
 
     std::byte& operator[](size_t idx) { return data_[idx]; }
+
     const std::byte& operator[](size_t idx) const { return data_[idx]; }
 
     template <ranges::input_iterator It>
@@ -65,6 +66,7 @@ public:
     void push_back(ByteLike value) {
         data_.push_back(value);
     }
+
     template <typename ByteLike>
         requires requires(ByteLike value) { static_cast<std::byte>(value); }
     void emplace_back(ByteLike value) {
@@ -72,14 +74,19 @@ public:
     }
 
     auto begin() { return data_.begin(); }
+
     auto begin() const { return data_.begin(); }
+
     auto cbegin() const { return data_.cend(); }
 
     auto end() { return data_.end(); }
+
     auto end() const { return data_.end(); }
+
     auto cend() const { return data_.cend(); }
 
     auto data() { return data_.data(); }
+
     auto data() const { return data_.data(); }
 
     size_t size() const { return data_.size(); }
@@ -87,7 +94,7 @@ public:
     void resize(std::size_t new_size) { data_.resize(new_size); }
 
     // Extra ctors to convert from byte-like types (e.g., uint8_t)
-    ByteVector(std::initializer_list<std::uint8_t> init)
+    ByteVector(std::initializer_list<u8> init)
         : data_{init.size()} {
         init_range_to_bytes(init);
     }
@@ -149,7 +156,7 @@ private:
     void init_range_to_bytes(const Range& range) {
         Expects(size() == ranges::size(range));
 
-        ranges::transform(range, this->begin(), [](std::uint8_t value) { return std::byte{value}; });
+        ranges::transform(range, this->begin(), [](u8 value) { return std::byte{value}; });
     }
 
     std::vector<std::byte> data_;

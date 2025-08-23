@@ -3,9 +3,10 @@
 #include "api/asm_data.hpp"
 #include "common/error_types.hpp"
 #include "exceptions.hpp"
-#include "fmt/base.h"
 #include "logging.hpp"
 #include "program/program.hpp"
+
+#include <fmt/base.h>
 
 #include <cstdint>
 #include <optional>

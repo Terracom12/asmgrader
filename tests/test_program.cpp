@@ -5,11 +5,11 @@
 
 #include <cstdint>
 
-using sum = std::uint64_t(std::uint64_t, std::uint64_t);
-using sum_and_write = void(std::uint64_t, std::uint64_t);
+using sum = u64(std::uint64_t, std::uint64_t);
+using sum_and_write = void(u64, std::uint64_t);
 using timeout_fn = void();
 using segfaulting_fn = void();
-using exiting_fn = void(std::uint64_t);
+using exiting_fn = void(u64);
 
 TEST_CASE("Try to call functions that don't exist") {
     Program prog(ASM_TESTS_EXEC, {});
@@ -25,7 +25,7 @@ TEST_CASE("Try to call functions that don't exist") {
 
 TEST_CASE("Call sum function") {
     Program prog(ASM_TESTS_EXEC, {});
-    util::Result<std::uint64_t> res;
+    util::Result<u64> res;
 
     res = prog.call_function<sum>("sum", 0, 0);
     REQUIRE(res == 0ull);
@@ -35,7 +35,7 @@ TEST_CASE("Call sum function") {
 
     // unsigned, but overflow with 2's complement gives values as we would expect
     res = prog.call_function<sum>("sum", -1, -12);
-    REQUIRE(res == static_cast<std::uint64_t>(-13));
+    REQUIRE(res == static_cast<u64>(-13));
 }
 
 TEST_CASE("Call sum_and_write function") {

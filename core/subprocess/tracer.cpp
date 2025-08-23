@@ -81,7 +81,7 @@ util::Result<void> Tracer::begin(pid_t pid) {
                                                            /*fd=*/static_cast<unsigned long>(-1),
                                                            /*offset=*/0}));
 
-    mmaped_address_ = static_cast<std::uint64_t>(mmap_syscall_res.ret->value());
+    mmaped_address_ = static_cast<u64>(mmap_syscall_res.ret->value());
 
     LOG_DEBUG("mmaped address: {:#X}", mmaped_address_);
 
@@ -170,7 +170,7 @@ void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_inf
     // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access) : necessary as return from ptrace(2)
 
     // Get info (retcode/error) from syscall exit
-    std::int64_t ret_val = exit->exit.rval;
+    i64 ret_val = exit->exit.rval;
 
     rec.ret = [&]() -> decltype(SyscallRecord::ret) {
         if (exit->exit.is_error) {
@@ -230,7 +230,7 @@ util::Result<void> Tracer::set_fp_registers(user_fpregs_struct regs) const {
     return {};
 }
 
-util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::array<std::uint64_t, 6> args) {
+util::Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
     auto orig_regs = TRY(get_registers());
     auto new_regs = orig_regs;
 
@@ -242,14 +242,14 @@ util::Result<SyscallRecord> Tracer::execute_syscall(std::uint64_t sys_nr, std::a
     ranges::copy(args, new_regs.regs);
     // syscall nr is x8
     new_regs.regs[8] = sys_nr;
-    std::uint64_t instr_ptr = orig_regs.pc;
+    u64 instr_ptr = orig_regs.pc;
 
     auto orig_instrs = TRY(memory_io_->read_bytes(instr_ptr, 8));
 
     // Encoding for:
     //   svc 0         - d4000001
     //   nop           - d503201f
-    ByteVector new_instrs = ByteVector::from<std::uint32_t, std::uint32_t>(0xD4000001, //
+    ByteVector new_instrs = ByteVector::from<u32, std::uint32_t>(0xD4000001, //
                                                                            0xD503201F);
     TRY(memory_io_->write(instr_ptr, new_instrs));
 #elif defined(ASMGRADER_X86_64)
@@ -387,7 +387,7 @@ util::Result<void> Tracer::setup_function_return() {
     //   brk 0x1234    - d4224680
     //   nop           - d503201f
     // 32-bit alignment is required
-    auto instrs = ByteVector::from<std::uint32_t, std::uint32_t>( //
+    auto instrs = ByteVector::from<u32, std::uint32_t>( //
         0xD4224680,                                               //
         0xD503201F                                                //
     );
@@ -485,7 +485,7 @@ util::Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds t
 }
 
 // FIXME: Parse fixed-length strings seperately
-SyscallRecord::SyscallArg Tracer::from_syscall_value(std::uint64_t value, SyscallEntry::Type type) const {
+SyscallRecord::SyscallArg Tracer::from_syscall_value(u64 value, SyscallEntry::Type type) const {
     using enum SyscallEntry::Type;
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -493,13 +493,13 @@ SyscallRecord::SyscallArg Tracer::from_syscall_value(std::uint64_t value, Syscal
 
     switch (type) {
     case Int32:
-        return convert(std::int32_t{});
+        return convert(i32{});
     case Int64:
-        return convert(std::int64_t{});
+        return convert(i64{});
     case Uint32:
-        return convert(std::uint32_t{});
+        return convert(u32{});
     case Uint64:
-        return convert(std::uint64_t{});
+        return convert(u64{});
     case VoidPtr:
         return convert(static_cast<void*>(nullptr));
 
