@@ -222,12 +222,12 @@ template <ProcessorKind Arch>
 struct fmt::formatter<FloatingPointRegister<Arch>> : DebugFormatter
 {
     auto format(const FloatingPointRegister<Arch>& from, format_context& ctx) const {
-        if (is_debug_format) {
+        if (!is_debug_format) {
             return format_to(ctx.out(), "{}", double{from});
         }
 
         const auto max_sz = formatted_size("{}", std::numeric_limits<double>::min());
-        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.value);
+        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.get_value());
     }
 };
 
@@ -537,15 +537,17 @@ struct fmt::formatter<RegistersState> : DebugFormatter
 constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpsimd_struct& fpsimd_regs) {
     RegistersState result{};
 
-    ranges::copy(regs.regs | ranges::views::transform([](auto value) { return GeneralRegister{value}; }),
-                 result.regs.begin());
+    auto writable_regs_view =
+        result.regs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
+    ranges::copy(regs.regs, ranges::begin(writable_regs_view));
 
     result.sp = regs.sp;
     result.pc = regs.pc;
     result.pstate.get_value() = regs.pstate;
 
-    ranges::copy(fpsimd_regs.vregs,
-                 result.vregs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); }));
+    auto writable_vregs_view =
+        result.vregs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
+    ranges::copy(fpsimd_regs.vregs, ranges::begin(writable_vregs_view));
 
     result.fpsr = fpsimd_regs.fpsr;
     result.fpcr = fpsimd_regs.fpcr;
@@ -621,7 +623,7 @@ struct fmt::formatter<RegistersState> : DebugFormatter
             ctx.advance_to(format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
         };
 
-        auto print_gen_reg = [this, print_named_field](std::string_view name, const auto& reg) {
+        auto print_reg = [this, print_named_field](std::string_view name, const auto& reg) {
             if (is_debug_format) {
                 print_named_field(name, fmt::format("{:?}", reg));
             } else {
@@ -629,24 +631,13 @@ struct fmt::formatter<RegistersState> : DebugFormatter
             }
         };
 
-        auto print_u64_field = [this, print_named_field](std::string_view name, const u64& field) {
-            constexpr auto ALIGN = std::numeric_limits<u64>::digits10;
-
-            const std::string str = fmt::format("0x{:X}", field);
-            if (is_debug_format) {
-                print_named_field(name, fmt::format("{:>{}}", str, ALIGN));
-            } else {
-                print_named_field(name, str);
-            }
-        };
-
-#define PRINT_gen_reg(r, base, elem) print_gen_reg(BOOST_PP_STRINGIZE(elem), (base).elem);
+#define PRINT_gen_reg(r, base, elem) print_reg(BOOST_PP_STRINGIZE(elem), (base).elem);
 
         BOOST_PP_SEQ_FOR_EACH(PRINT_gen_reg, from, REGS_tuple_set);
 #undef PRINT_gen_reg
 
-        print_u64_field("rip", from.rip);
-        print_u64_field("rsp", from.rip);
+        print_reg("rip", from.rip);
+        print_reg("rsp", from.rip);
 
         if (is_debug_format) {
             constexpr std::size_t PRE_WIDTH = LEN("eflags = ") + TAB_WIDTH;

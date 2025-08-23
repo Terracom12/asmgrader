@@ -48,7 +48,7 @@ using sized_uint_t = detail::sized_uint_impl<std::bit_width(NumBits) - 1>;
 /// that IntType can represent is `digits10` + 1
 template <typename IntType>
     requires std::integral<std::decay_t<IntType>>
-constexpr std::size_t digits10_max_count = std::numeric_limits<IntType>::digits10 + 1;
+constexpr std::size_t digits10_max_count = std::numeric_limits<std::decay_t<IntType>>::digits10 + 1;
 
 static_assert(digits10_max_count<i8> == 3);
 static_assert(digits10_max_count<u8> == 3);
