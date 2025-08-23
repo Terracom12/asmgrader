@@ -4,6 +4,7 @@
 #include "common/expected.hpp"
 #include "common/formatters/debug.hpp"
 #include "common/os.hpp"
+#include "logging.hpp"
 #include "meta/integer.hpp"
 
 #include <boost/preprocessor/arithmetic/sub.hpp>
@@ -26,6 +27,7 @@
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/range/concepts.hpp>
 #include <range/v3/utility/memory.hpp>
+#include <range/v3/view/map.hpp>
 #include <range/v3/view/set_algorithm.hpp>
 #include <range/v3/view/subrange.hpp>
 #include <range/v3/view/transform.hpp>
@@ -38,6 +40,7 @@
 #include <cstring>
 #include <iterator>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -51,10 +54,31 @@
 
 namespace detail {
 
-template <typename BaseType>
-struct RegisterBaseImpl
+/// CRTP (or is it CRTTP in this case?) is used to pass an arch alternative.
+/// See gh#21 for details.
+template <template <ProcessorKind> typename Derived, typename BaseType, ProcessorKind Arch>
+struct RegisterBaseImpl;
+
+template <template <ProcessorKind> typename Derived, typename BaseType, ProcessorKind Arch>
+    requires(Arch == SYSTEM_PROCESSOR)
+struct RegisterBaseImpl<Derived, BaseType, Arch>
 {
-    BaseType value;
+    constexpr RegisterBaseImpl() = default;
+
+    template <ProcessorKind OtherArch>
+    constexpr explicit RegisterBaseImpl(const Derived<OtherArch>* /*arch_alternative*/) {}
+
+    constexpr explicit RegisterBaseImpl(BaseType value)
+        : value_{value} {}
+
+    constexpr auto& operator=(BaseType rhs) {
+        value_ = rhs;
+        return *static_cast<Derived<Arch>*>(this);
+    }
+
+    constexpr BaseType& get_value() { return value_; }
+
+    constexpr const BaseType& get_value() const { return value_; }
 
     template <std::integral IntType>
     constexpr IntType as() const {
@@ -67,70 +91,137 @@ struct RegisterBaseImpl
             // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
             constexpr auto MASK = static_cast<u64>(ALL_BITS);
 
-            return static_cast<IntType>(MASK & value);
+            return static_cast<IntType>(MASK & value_);
         }
 
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        return *reinterpret_cast<const IntType*>(&value);
+        return *reinterpret_cast<const IntType*>(&value_);
     }
 
-    constexpr auto operator<=>(const RegisterBaseImpl<BaseType>& rhs) const = default;
+    constexpr auto operator<=>(const RegisterBaseImpl<Derived, BaseType, Arch>& rhs) const = default;
+
+private:
+    BaseType value_{};
+};
+
+template <template <ProcessorKind> typename Derived, typename BaseType, ProcessorKind Arch>
+    requires(Arch != SYSTEM_PROCESSOR)
+struct RegisterBaseImpl<Derived, BaseType, Arch>
+{
+    constexpr RegisterBaseImpl() = default;
+
+    template <ProcessorKind OtherArch>
+    constexpr explicit RegisterBaseImpl(Derived<OtherArch>* arch_alternative)
+        : alternative{arch_alternative} {}
+
+    constexpr explicit RegisterBaseImpl(BaseType /*value*/) {}
+
+    constexpr auto& operator=(BaseType rhs) {
+        get_value() = rhs;
+        return *this;
+    }
+
+    /// This isn't exactly a general solution, but I don't think that this library will
+    /// ever support more than 2 architectures
+    Derived<SYSTEM_PROCESSOR>* alternative{};
+
+    void check_log_alternative() const {
+        if (alternative == nullptr) {
+            constexpr auto MSG = "Attempting to access non-native register without a native alternative";
+            LOG_ERROR(MSG);
+            throw std::runtime_error(MSG);
+        }
+
+        LOG_WARN("Attempting to access non-native register. Defaulting to a native alternative");
+    }
+
+    constexpr decltype(auto) get_value() const {
+        check_log_alternative();
+        return alternative->get_value();
+    }
+
+    template <std::integral IntType>
+    constexpr IntType as() const {
+        check_log_alternative();
+        return alternative->template as<IntType>();
+    }
+
+    constexpr auto operator<=>(const RegisterBaseImpl<Derived, BaseType, Arch>& rhs) const = default;
 };
 
 } // namespace detail
 
 /// General Purpose Register
-struct GeneralRegister : detail::RegisterBaseImpl<u64>
+template <ProcessorKind Arch = SYSTEM_PROCESSOR>
+struct IntRegister : detail::RegisterBaseImpl<IntRegister, u64, Arch>
 {
+    using detail::RegisterBaseImpl<IntRegister, u64, Arch>::RegisterBaseImpl;
+    using detail::RegisterBaseImpl<IntRegister, u64, Arch>::operator=;
+
     // NOLINTNEXTLINE(google-explicit-constructor)
-    /*implicit*/ constexpr operator u64() const { return value; }
-};
-
-static_assert(sizeof(GeneralRegister) == sizeof(u64));
-
-template <>
-struct fmt::formatter<GeneralRegister> : DebugFormatter
-{
-    auto format(const GeneralRegister& from, format_context& ctx) const {
-        if (is_debug_format) {
-            return format_to(ctx.out(), "{0:>{1}} | 0x{0:016X} | 0b{0:064B}", from.value,
-                             std::numeric_limits<decltype(from.value)>::digits10);
-        }
-
-        return format_to(ctx.out(), "{}", from.value);
+    /*implicit*/ constexpr operator u64() const {
+        return detail::RegisterBaseImpl<IntRegister, u64, Arch>::get_value();
     }
 };
 
-struct FloatingPointRegister : detail::RegisterBaseImpl<u128>
+static_assert(sizeof(IntRegister<>) == sizeof(u64));
+
+template <ProcessorKind Arch>
+struct fmt::formatter<IntRegister<Arch>> : DebugFormatter
 {
+    auto format(const IntRegister<Arch>& from, format_context& ctx) const {
+        if (is_debug_format) {
+            using IntType = decltype(from.get_value());
+            constexpr auto ALIGN_10 = meta::digits10_max_count<IntType>;
+            constexpr auto ALIGN_16 = sizeof(IntType) * 2;
+            constexpr auto ALIGN_2 = sizeof(IntType) * 8;
+            return format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
+                             ALIGN_2);
+        }
+
+        return format_to(ctx.out(), "{}", from.get_value());
+    }
+};
+
+template <ProcessorKind Arch = SYSTEM_PROCESSOR>
+struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>
+{
+    using detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::RegisterBaseImpl;
+    using detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::operator=;
+
+    // FIXME: floating point trait that supports f128
     template </*std::floating_point*/ typename FPType>
+        requires(Arch == SYSTEM_PROCESSOR)
     static constexpr FloatingPointRegister from(FPType val) {
         using IntType = meta::sized_uint_t<sizeof(FPType)>;
         auto int_val = std::bit_cast<IntType>(val);
 
-        return {int_val};
+        return FloatingPointRegister{int_val};
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    /*implicit*/ constexpr operator double() const { return std::bit_cast<double>(static_cast<u64>(value)); }
+    /*implicit*/ constexpr operator double() const {
+        return std::bit_cast<double>(
+            static_cast<u64>(detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::get_value()));
+    }
 
-    using detail::RegisterBaseImpl<u128>::as;
+    using detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::as;
 
     template <std::floating_point FPType>
     constexpr FPType as() const {
         using IntType = meta::sized_uint_t<sizeof(FPType)>;
-        auto int_val = detail::RegisterBaseImpl<u128>::as<IntType>();
+        auto int_val = detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::template as<IntType>();
 
         return std::bit_cast<FPType>(int_val);
     }
 };
 
-static_assert(sizeof(FloatingPointRegister) == sizeof(u128));
+static_assert(sizeof(FloatingPointRegister<>) == sizeof(u128));
 
-template <>
-struct fmt::formatter<FloatingPointRegister> : DebugFormatter
+template <ProcessorKind Arch>
+struct fmt::formatter<FloatingPointRegister<Arch>> : DebugFormatter
 {
-    auto format(const FloatingPointRegister& from, format_context& ctx) const {
+    auto format(const FloatingPointRegister<Arch>& from, format_context& ctx) const {
         if (is_debug_format) {
             return format_to(ctx.out(), "{}", double{from});
         }
@@ -140,70 +231,58 @@ struct fmt::formatter<FloatingPointRegister> : DebugFormatter
     }
 };
 
-struct FlagsRegister : detail::RegisterBaseImpl<u64>
+template <ProcessorKind Arch = SYSTEM_PROCESSOR>
+struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
 {
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
+
     constexpr bool negative_set() const {
-#if defined(ASMGRADER_AARCH64)
-        return (nzcv() & NEGATIVE_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-        return (value & SIGN_FLAG_BIT) != 0U;
-#endif
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & NEGATIVE_FLAG_BIT) != 0U;
     }
 
     constexpr bool zero_set() const {
-#if defined(ASMGRADER_AARCH64)
-        return (nzcv() & ZERO_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-        return (value & ZERO_FLAG_BIT) != 0U;
-#endif
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & ZERO_FLAG_BIT) != 0U;
     }
 
     constexpr bool carry_set() const {
-#if defined(ASMGRADER_AARCH64)
-        return (nzcv() & CARRY_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-        return (value & CARRY_FLAG_BIT) != 0U;
-#endif
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & CARRY_FLAG_BIT) != 0U;
     }
 
     constexpr bool overflow_set() const {
-#if defined(ASMGRADER_AARCH64)
-        return (nzcv() & OVERFLOW_FLAG_BIT) != 0U;
-#elif defined(ASMGRADER_X86_64)
-        return (value & OVERFLOW_FLAG_BIT) != 0U;
-#endif
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & OVERFLOW_FLAG_BIT) != 0U;
     }
 
 #if defined(ASMGRADER_AARCH64)
     // Specification of pstate (for nzcv) obtained from:
     //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
-    static constexpr u64 NEGATIVE_FLAG_BIT = 0b1000;
-    static constexpr u64 ZERO_FLAG_BIT = 0b0100;
-    static constexpr u64 CARRY_FLAG_BIT = 0b0010;
-    static constexpr u64 OVERFLOW_FLAG_BIT = 0b0001;
+    static constexpr u64 NZCV_BASE_OFF = 28;
+    static constexpr u64 NEGATIVE_FLAG_BIT = 1U << (NZCV_BASE_OFF + 3);
+    static constexpr u64 ZERO_FLAG_BIT = 1U << (NZCV_BASE_OFF + 2);
+    static constexpr u64 CARRY_FLAG_BIT = 1U << (NZCV_BASE_OFF + 1);
+    static constexpr u64 OVERFLOW_FLAG_BIT = 1U << (NZCV_BASE_OFF + 0);
 
     constexpr u64 nzcv() const {
-        constexpr u64 NZCV_BIT_OFF = 28;
         constexpr u64 NZCV_BIT_MASK = 0xF;
 
-        return (value >> NZCV_BIT_OFF) & NZCV_BIT_MASK;
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
     }
 
 #elif defined(ASMGRADER_X86_64)
     // Specification of eflags obtained from:
     //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
     //   Volume 1 - 3.4.3.1 Status Flags
-    static constexpr u64 CARRY_FLAG_BIT = 0b1 << 0;
-    static constexpr u64 ZERO_FLAG_BIT = 0b1 << 6;
-    static constexpr u64 SIGN_FLAG_BIT = 0b1 << 7;
-    static constexpr u64 OVERFLOW_FLAG_BIT = 0b1 << 11;
+    static constexpr u64 CARRY_FLAG_BIT = 1U << 0;
+    static constexpr u64 ZERO_FLAG_BIT = 1U << 6;
+    static constexpr u64 NEGATIVE_FLAG_BIT = 1U << 7;
+    static constexpr u64 OVERFLOW_FLAG_BIT = 1U << 11;
 #endif
 };
 
-static_assert(sizeof(FlagsRegister) == sizeof(u64));
+static_assert(sizeof(FlagsRegister<>) == sizeof(u64));
 
-template <>
-struct fmt::formatter<FlagsRegister> : DebugFormatter
+template <ProcessorKind Arch>
+struct fmt::formatter<FlagsRegister<Arch>> : DebugFormatter
 {
     std::size_t bin_labels_offset{};
 
@@ -236,7 +315,7 @@ struct fmt::formatter<FlagsRegister> : DebugFormatter
         return it;
     }
 
-    static std::string get_short_flags_str(const FlagsRegister& flags) {
+    static std::string get_short_flags_str(const FlagsRegister<Arch>& flags) {
         std::vector<char> set_flags;
 
         if (flags.carry_set()) {
@@ -260,13 +339,13 @@ struct fmt::formatter<FlagsRegister> : DebugFormatter
     }
 
 #if defined(ASMGRADER_AARCH64)
-    auto format(const FlagsRegister& from, format_context& ctx) const {
+    auto format(const FlagsRegister<Arch>& from, format_context& ctx) const {
         std::string short_flags_str = get_short_flags_str(from);
 
         if (is_debug_format) {
             // See:
             //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
-            std::string flags_bin = fmt::format("0b{:032b}", from.value);
+            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
 
             // len('0b')
             constexpr auto LABEL_INIT_OFFSET = 2;
@@ -282,17 +361,17 @@ struct fmt::formatter<FlagsRegister> : DebugFormatter
         return ctx.out();
     }
 #elif defined(ASMGRADER_X86_64)
-    auto format(const FlagsRegister& from, format_context& ctx) const {
+    auto format(const FlagsRegister<Arch>& from, format_context& ctx) const {
         std::string short_flags_str = get_short_flags_str(from);
 
         if (is_debug_format) {
             // See:
             //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
             //   Volume 1 - 3.4.3.1 Status Flags
-            std::string flags_bin = fmt::format("0b{:032b}", from.value);
+            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
 
             // 32 bits - starting bit# of labels + len('0b')
-            constexpr auto LABEL_INIT_OFFSET = 32 - std::bit_width(FlagsRegister::OVERFLOW_FLAG_BIT) + 2;
+            constexpr auto LABEL_INIT_OFFSET = 32 - std::bit_width(FlagsRegister<Arch>::OVERFLOW_FLAG_BIT) + 2;
 
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "O   SZ     C";
@@ -309,7 +388,9 @@ struct fmt::formatter<FlagsRegister> : DebugFormatter
 
 struct RegistersState
 {
-#if defined(ASMGRADER_AARCH64)
+    //
+    // ##################### Aarch64
+    //
 #define DEF_getter(name, expr)                                                                                         \
     constexpr auto name() const { return expr; }
 
@@ -319,21 +400,21 @@ struct RegistersState
 #define NUM_FP_REGISTERS 32
 
     // General registers (x0-x30)
-    std::array<GeneralRegister, NUM_GEN_REGISTERS> regs;
+    std::array<IntRegister<ProcessorKind::Aarch64>, NUM_GEN_REGISTERS> regs;
 
 #define DEF_gen_register(z, num, _) DEF_getter(x##num, regs[num]) DEF_getter(w##num, static_cast<u32>(regs[num]))
     BOOST_PP_REPEAT(NUM_GEN_REGISTERS, DEF_gen_register, ~);
 #undef DEF_gen_register
 
-    DEF_getter(fp, x29()); // frame pointer
-    DEF_getter(lr, x30()); // link register
-    u64 sp;                // stack pointer
-    u64 pc;                // program counter
+    DEF_getter(fp, x29());                  // frame pointer
+    DEF_getter(lr, x30());                  // link register
+    IntRegister<ProcessorKind::Aarch64> sp; // stack pointer
+    IntRegister<ProcessorKind::Aarch64> pc; // program counter
 
-    FlagsRegister pstate;
+    FlagsRegister<ProcessorKind::Aarch64> pstate{&eflags};
 
     // Floating-point registers (Q0-Q31)
-    std::array<FloatingPointRegister, NUM_FP_REGISTERS> vregs;
+    std::array<FloatingPointRegister<ProcessorKind::Aarch64>, NUM_FP_REGISTERS> vregs;
 
 #define DEF_fp_register(z, num, _)                                                                                     \
     DEF_getter(q##num, vregs[num]) DEF_getter(d##num, vregs[num].as<u64>()) DEF_getter(s##num, vregs[num].as<u32>())   \
@@ -341,26 +422,37 @@ struct RegistersState
     BOOST_PP_REPEAT(NUM_FP_REGISTERS, DEF_fp_register, ~);
 #undef DEF_fp_register
 
-    u32 fpsr; // Floating-point status register
-    u32 fpcr; // Floating-point control register
+    /// Actually a u32, but I can't imagine a scenario where that would matter,
+    /// so I don't think it's worth a couple more class templates.
+    IntRegister<ProcessorKind::Aarch64> fpsr; // Floating-point status register
+
+    /// Actually a u32, but I can't imagine a scenario where that would matter,
+    /// so I don't think it's worth a couple more class templates.
+    IntRegister<ProcessorKind::Aarch64> fpcr; // Floating-point control register
 
 #undef DEF_getter
 
+#ifdef ASMGRADER_AARCH64
     static constexpr RegistersState from(const user_regs_struct& regs, const user_fpsimd_struct& fpsimd_regs);
-#elif defined(ASMGRADER_X86_64)
+#endif
+
+    //
+    // ##################### x86_64
+    //
 
     // TODO: Different access modes for general registers (eax, ax, al, ah, etc.)
 #define REGS_tuple_set                                                                                                 \
     BOOST_PP_TUPLE_TO_SEQ(15, (r15, r14, r13, r12, rbp, rbx, r11, r10, r9, r8, rax, rcx, rdx, rsi, rdi))
-#define DEF_gen_register(r, _, elem) GeneralRegister elem;
+#define DEF_gen_register(r, _, elem) IntRegister<ProcessorKind::x86_64> elem;
     BOOST_PP_SEQ_FOR_EACH(DEF_gen_register, _, REGS_tuple_set)
 #undef DEF_gen_register
 
-    u64 rip; // instruction pointer
-    u64 rsp; // stack pointer
+    IntRegister<ProcessorKind::x86_64> rip; // instruction pointer
+    IntRegister<ProcessorKind::x86_64> rsp; // stack pointer
 
-    FlagsRegister eflags;
+    FlagsRegister<ProcessorKind::x86_64> eflags;
 
+#ifdef ASMGRADER_X86_64
     static constexpr RegistersState from(const user_regs_struct& regs, const user_fpregs_struct& fp_regs);
 #endif
 };
@@ -406,35 +498,23 @@ struct fmt::formatter<RegistersState> : DebugFormatter
             }
         };
 
-        auto print_uint_field = [this, print_named_field]<std::unsigned_integral UIntType>(std::string_view name,
-                                                                                           const UIntType& field) {
-            constexpr auto ALIGN = std::numeric_limits<UIntType>::digits10;
-
-            const std::string str = fmt::format("0x{:X}", field);
-            if (is_debug_format) {
-                print_named_field(name, fmt::format("{:>{}}", str, ALIGN));
-            } else {
-                print_named_field(name, str);
-            }
-        };
-
 #define PRINT_gen_reg(z, num, base) print_reg("x" #num, (base).x##num());
         // omit x29 and x30 to do custom formatting
         BOOST_PP_REPEAT(BOOST_PP_SUB(NUM_GEN_REGISTERS, 2), PRINT_gen_reg, from);
 #undef PRINT_gen_reg
 
         print_reg("x29 [fp]", from.fp());
-        print_reg("x30 [fp]", from.lr());
+        print_reg("x30 [lr]", from.lr());
 
 #define PRINT_fp_reg(z, num, base) print_reg((is_debug_format ? "q" #num : "d" #num), (base).q##num());
         BOOST_PP_REPEAT(NUM_FP_REGISTERS, PRINT_fp_reg, from);
 #undef PRINT_fp_reg
 
-        print_uint_field("fpsr", from.fpsr);
-        print_uint_field("fpcr", from.fpcr);
+        print_reg("fpsr", from.fpsr);
+        print_reg("fpcr", from.fpcr);
 
-        print_uint_field("sp", from.sp);
-        print_uint_field("pc", from.pc);
+        print_reg("sp", from.sp);
+        print_reg("pc", from.pc);
 
         if (is_debug_format) {
             constexpr std::size_t PRE_WIDTH = LEN("pstate = ") + TAB_WIDTH;
@@ -462,10 +542,10 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
 
     result.sp = regs.sp;
     result.pc = regs.pc;
-    result.pstate.value = regs.pstate;
+    result.pstate.get_value() = regs.pstate;
 
-    ranges::copy(fpsimd_regs.vregs | ranges::views::transform([](auto value) { return FloatingPointRegister{value}; }),
-                 result.vregs.begin());
+    ranges::copy(fpsimd_regs.vregs,
+                 result.vregs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); }));
 
     result.fpsr = fpsimd_regs.fpsr;
     result.fpcr = fpsimd_regs.fpcr;
@@ -587,9 +667,9 @@ struct fmt::formatter<RegistersState> : DebugFormatter
 };
 
 // A benefit of using the same names as user_regs_struct
-#define COPY_gen_reg(r, base, elem) base.elem.value = regs.elem;
 
 constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpregs_struct& fp_regs) {
+#define COPY_gen_reg(r, base, elem) base.elem.get_value() = regs.elem;
     RegistersState result{};
 
     BOOST_PP_SEQ_FOR_EACH(COPY_gen_reg, result, REGS_tuple_set);
@@ -597,15 +677,15 @@ constexpr RegistersState RegistersState::from(const user_regs_struct& regs, cons
     result.rip = regs.rip;
     result.rsp = regs.rsp;
 
-    result.eflags.value = regs.eflags;
+    result.eflags.get_value() = regs.eflags;
 
     // TODO: Support floating point on x86_64
     std::ignore = fp_regs;
 
     return result;
+#undef COPY_gen_reg
 }
 
-#undef COPY_gen_reg
 #undef REGS_tuple_set
 
 inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
