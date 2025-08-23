@@ -8,10 +8,10 @@ if [[ $1 == "tests" || $1 == "t" ]]; then
     EXEC_ARGS=(--break)
     shift
 elif [[ $1 == "prof" || $1 == "p" ]]; then
-    EXEC="./build/grader/profgrader"
+    EXEC="./build/cs3b-grader/profgrader"
     shift
 else
-    EXEC="./build/grader/grader"
+    EXEC="./build/cs3b-grader/grader"
     EXEC_ARGS=()
 fi
 
