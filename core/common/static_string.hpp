@@ -52,9 +52,27 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     consteval /*implicit*/ operator std::string_view() const { return {data.begin(), N}; }
 
+    template <std::size_t OtherSize>
+    consteval auto operator<=>(const StaticString<OtherSize>& rhs) const {
+        return std::string_view{*this} <=> std::string_view{rhs};
+    }
+
+    // Support comparison with string_view-convertable objects
+    constexpr auto operator<=>(std::string_view rhs) const { return std::string_view{*this} <=> rhs; }
+
+    template <std::size_t OtherSize>
+    consteval bool operator==(const StaticString<OtherSize>& rhs) const {
+        return std::string_view{*this} == std::string_view{rhs};
+    }
+
+    // Support comparison with string_view-convertable objects
+    consteval bool operator==(std::string_view rhs) const { return std::string_view{*this} == rhs; }
 };
 
 // Deduction guide
 template <std::size_t N>
 // NOLINTNEXTLINE(*-avoid-c-arrays)
 StaticString(const char (&input)[N]) -> StaticString<N - 1>;
+
+static_assert(StaticString("abc") == "abc");
+static_assert("abc" == StaticString("abc"));
