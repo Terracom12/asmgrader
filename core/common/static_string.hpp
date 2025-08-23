@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iterator>
 #include <string_view>
 
 /// A fully compile-time capable string type
@@ -36,20 +37,21 @@ template <std::size_t N>
 class StaticString
 {
 public:
+    consteval StaticString() = default;
+
     // NOLINTNEXTLINE(google-explicit-constructor,*-avoid-c-arrays)
     consteval /*implicit*/ StaticString(const char (&input)[N + 1]) {
         if (input[N] != '\0') {
             throw;
         }
-        ranges::copy_n(input, N + 1, data.begin());
+        ranges::copy_n(std::data(input), N + 1, data.begin());
     }
 
-    //            ^- rational for implicit - no runtime cost
+    std::array<char, N + 1> data{};
 
     // NOLINTNEXTLINE(google-explicit-constructor)
     consteval /*implicit*/ operator std::string_view() const { return {data.begin(), N}; }
 
-    std::array<char, N + 1> data;
 };
 
 // Deduction guide
