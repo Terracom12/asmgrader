@@ -21,6 +21,7 @@
 #include <range/v3/view/map.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -70,7 +71,11 @@ int ProfessorApp::run_impl() {
     auto num_students_failed =
         ranges::count_if(res.results, [](const StudentResult& sres) { return !sres.result.all_passed(); });
 
-    return gsl::narrow_cast<int>(num_students_failed);
+    if (OPTS.verbosity == ProgramOptions::VerbosityLevel::Silent) {
+        return gsl::narrow_cast<int>(num_students_failed);
+    }
+
+    return EXIT_SUCCESS;
 }
 
 std::optional<std::vector<StudentInfo>> ProfessorApp::get_student_names() const {

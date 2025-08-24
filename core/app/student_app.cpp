@@ -11,6 +11,7 @@
 
 #include <fmt/format.h>
 
+#include <cstdlib>
 #include <memory>
 #include <optional>
 
@@ -32,5 +33,9 @@ int StudentApp::run_impl() {
 
     AssignmentResult res = runner.run_all(OPTS.file_name);
 
-    return res.num_tests_failed();
+    if (OPTS.verbosity == ProgramOptions::VerbosityLevel::Silent) {
+        return res.num_tests_failed();
+    }
+
+    return EXIT_SUCCESS;
 }
