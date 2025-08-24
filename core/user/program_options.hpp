@@ -6,9 +6,8 @@
 
 struct ProgramOptions
 {
-    /// Names are mostly self-explanatory
-    ///   not entirely sure what "Max" will do yet, but it's there if needed
-    enum class VerbosityLevel { Silent, Quiet, Summary, FailsOnly, All, ExtraInfo, Max } verbosity;
+    /// Levels are explained in `verbosity.hpp`
+    enum class VerbosityLevel { Silent, Quiet, Summary, FailsOnly, All, Extra, Max } verbosity;
     std::string assignment_name;
 
     /// Never = stop only on fatal errors

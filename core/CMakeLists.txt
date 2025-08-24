@@ -120,6 +120,7 @@ set(
     output/serializer.hpp
     output/sink.hpp
     output/stdout_sink.hpp
+    output/verbosity.hpp
 
     symbols/elf_reader.hpp
     symbols/symbol.hpp
