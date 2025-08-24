@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/app.hpp"
 #include "common/macros.hpp"
 
 #include <fmt/compile.h>
@@ -33,3 +34,12 @@ consteval unsigned int get_version() {
     return ASMGRADER_VERSION_MAJOR * MAJOR_MULTIPLIER + ASMGRADER_VERSION_MAJOR * MINOR_MULTIPLIER +
            ASMGRADER_VERSION_PATCH;
 }
+
+enum class AppMode { Student, Professor };
+
+constexpr auto APP_MODE =
+#ifdef PROFESSOR_VERSION
+    AppMode::Professor;
+#else
+    AppMode::Student;
+#endif
