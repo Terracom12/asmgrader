@@ -3,6 +3,7 @@
 #include "api/asm_buffer.hpp"
 #include "api/registers_state.hpp"
 #include "api/test_base.hpp"
+#include "common/aliases.hpp"
 #include "common/byte_array.hpp"
 #include "common/error_types.hpp"
 #include "common/macros.hpp"
@@ -23,6 +24,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,14 +35,16 @@
 #include <sys/user.h>
 #include <unistd.h>
 
-TestContext::TestContext(TestBase& test, Program program) noexcept
+TestContext::TestContext(TestBase& test, Program program,
+                         std::function<void(const RequirementResult&)> on_requirement) noexcept
     : associated_test_{&test}
     , prog_{std::move(program)}
     , result_{.name = std::string{test.get_name()},
               .requirement_results = {},
               .num_passed = 0,
               .num_total = 0,
-              .error = {}} {}
+              .error = {}}
+    , on_requirement_{std::move(on_requirement)} {}
 
 TestResult TestContext::finalize() {
     result_.num_passed = static_cast<int>(
@@ -57,6 +61,9 @@ bool TestContext::require(bool condition, RequirementResult::DebugInfo debug_inf
 bool TestContext::require(bool condition, std::string msg, RequirementResult::DebugInfo debug_info) {
     result_.requirement_results.emplace_back(/*.passed =*/condition, /*.msg =*/std::move(msg),
                                              /*.debug_info =*/debug_info);
+
+    on_requirement_(result_.requirement_results.back());
+
     return condition;
 }
 

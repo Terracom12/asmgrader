@@ -4,7 +4,9 @@
 #include "api/asm_function.hpp"
 #include "api/asm_symbol.hpp"
 #include "api/registers_state.hpp"
+#include "common/aliases.hpp"
 #include "common/error_types.hpp"
+#include "common/functional.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "program/program.hpp"
@@ -18,6 +20,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -34,7 +37,8 @@ class TestBase;
 class TestContext
 {
 public:
-    explicit TestContext(TestBase& test, Program program) noexcept;
+    explicit TestContext(TestBase& test, Program program,
+                         std::function<void(const RequirementResult&)> on_requirement = common::noop) noexcept;
 
     bool require(bool condition, std::string msg,
                  RequirementResult::DebugInfo debug_info = RequirementResult::DebugInfo{});
@@ -100,6 +104,11 @@ private:
 
     /// Mutable result_. Not useful for output until ``finalize`` is called
     TestResult result_;
+
+    // ########### Callbacks
+
+    /// Run when a requirement is done being evaluated (whether pass or fail)
+    std::function<void(const RequirementResult&)> on_requirement_;
 };
 
 template <std::size_t NumBytes>

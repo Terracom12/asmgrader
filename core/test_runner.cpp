@@ -59,7 +59,10 @@ AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::pa
 }
 
 TestResult AssignmentTestRunner::run_one(TestBase& test) const {
-    TestContext context(test, Program{assignment_->get_exec_path(), {}});
+    TestContext context(test, Program{assignment_->get_exec_path(), {}},
+                        [this](const RequirementResult& res) { serializer_->on_requirement_result(res); });
+
+    serializer_->on_test_begin(test.get_name());
 
     try {
         test.run(context);
