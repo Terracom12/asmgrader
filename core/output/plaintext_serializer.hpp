@@ -16,9 +16,11 @@
 class PlainTextSerializer : public Serializer
 {
 public:
-    PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option, bool verbose);
+    PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
+                        ProgramOptions::VerbosityLevel verbosity);
 
     void on_requirement_result(const RequirementResult& data) override;
+    void on_test_begin(std::string_view test_name) override;
     void on_test_result(const TestResult& data) override;
     void on_assignment_result(const AssignmentResult& data) override;
     void on_metadata() override;
@@ -68,7 +70,6 @@ private:
     static const inline auto LINE_DIVIDER = MAKE_LINE_DIVIDER('-');
 
     bool do_colorize_;
-    bool verbose_;
 };
 
 template <fmt::formattable T>

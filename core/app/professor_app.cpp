@@ -61,7 +61,7 @@ int ProfessorApp::run_impl() {
 
     StdoutSink output_sink;
     std::shared_ptr output_serializer =
-        std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity > Quiet);
+        std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity);
 
     MultiStudentRunner runner{*assignment, output_serializer};
 

@@ -1,13 +1,15 @@
 #include "output/plaintext_serializer.hpp"
 
+#include "common/terminal_checks.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
+#include "output/verbosity.hpp"
 #include "user/program_options.hpp"
-#include "common/terminal_checks.hpp"
 
 #include <fmt/color.h>
+#include <fmt/compile.h>
 #include <fmt/format.h>
 
 #include <cstddef>
@@ -16,14 +18,15 @@
 
 #include <unistd.h>
 
-PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option, bool verbose)
-    : Serializer{sink}
-    , do_colorize_{process_colorize_opt(colorize_option)}
-    , verbose_{verbose} {}
+using enum ProgramOptions::VerbosityLevel;
+
+PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
+                                         ProgramOptions::VerbosityLevel verbosity)
+    : Serializer{sink, verbosity}
+    , do_colorize_{process_colorize_opt(colorize_option)} {}
 
 void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
-    // Don't output successful requirements if not in verbose mode
-    if (data.passed && !verbose_) {
+    if (!should_output_requirement(verbosity_, data.passed)) {
         return;
     }
 
@@ -40,23 +43,31 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     sink_.write(out);
 }
 
-void PlainTextSerializer::on_test_result(const TestResult& data) {
-    // Don't output success results if not in verbose mode
-    if (data.passed() && !verbose_) {
+void PlainTextSerializer::on_test_begin(std::string_view test_name) {
+    if (!should_output_test(verbosity_)) {
         return;
     }
 
     std::string header_msg =
-        fmt::format("{0}\nTest Case: {1}\n{0}\n", LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
-
-    if (data.num_total == 0) {
-        header_msg += "No test requirements.\n";
-    }
+        fmt::format("{0}\nTest Case: {1}\n{0}\n", LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH), test_name);
 
     sink_.write(header_msg);
+}
 
-    for (const RequirementResult& req : data.requirement_results) {
-        on_requirement_result(req);
+void PlainTextSerializer::on_test_result(const TestResult& data) {
+    if (!should_output_test(verbosity_)) {
+        return;
+    }
+
+    // Potentially output a msg for an empty test
+    if (data.num_total == 0) {
+        sink_.write("No test requirements.\n");
+    }
+
+    // Potentially output a msg hidden passing requirements
+    if (data.num_passed > 0 && !should_output_requirement(verbosity_, /*passed=*/true)) {
+        std::string hidden_reqs_msg = fmt::format("{} hidden passing requirements.\n", data.num_passed);
+        sink_.write(hidden_reqs_msg);
     }
 
     // Extra newline to seperate tests
@@ -64,6 +75,10 @@ void PlainTextSerializer::on_test_result(const TestResult& data) {
 }
 
 void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
+    if (!should_output_student_summary(verbosity_)) {
+        return;
+    }
+
     std::string out =
         fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
 

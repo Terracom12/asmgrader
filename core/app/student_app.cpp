@@ -27,7 +27,7 @@ int StudentApp::run_impl() {
 
     StdoutSink output_sink;
     std::shared_ptr output_serializer =
-        std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity > Quiet);
+        std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity);
     AssignmentTestRunner runner{*assignment, output_serializer};
 
     AssignmentResult res = runner.run_all(OPTS.file_name);
