@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 AssignmentFileSearcher::AssignmentFileSearcher(const Assignment& assignment, std::string var_regex)
     : FileSearcher{std::move(var_regex)} {
     const std::string assignment_path = assignment.get_exec_path().string();
@@ -75,3 +77,5 @@ StudentInfo AssignmentFileSearcher::infer_student_names_from_file(const std::fil
 
     return {.first_name = name_field, .last_name = "", .names_known = false, .assignment_path = path};
 }
+
+} // namespace asmgrader

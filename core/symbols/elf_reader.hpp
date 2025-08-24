@@ -11,6 +11,8 @@
 #include <gelf.h>
 #include <libelf.h>
 
+namespace asmgrader {
+
 /// Adaptor to (a few) libelf functions
 class ElfReader
 {
@@ -28,3 +30,5 @@ public:
 private:
     ELFIO::elfio elffile_;
 };
+
+} // namespace asmgrader

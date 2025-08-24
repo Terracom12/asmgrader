@@ -28,6 +28,8 @@
 
 #include <sys/user.h>
 
+namespace asmgrader {
+
 class TestBase;
 
 /// User-facing API for use within an assignment test case for:
@@ -61,7 +63,7 @@ public:
     void restart_program();
 
     // Low-level exececutor of an arbitrary syscall
-    util::Result<SyscallRecord> exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
+    Result<SyscallRecord> exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get any **new** stdout from the program since the last call to this function
     std::string get_stdout();
@@ -126,7 +128,7 @@ AsmSymbol<T> TestContext::find_symbol(std::string_view name) {
 
     if (!symbol) {
         LOG_DEBUG("Could not resolve symbol {:?}", name);
-        return {prog_, std::string{name}, util::ErrorKind::UnresolvedSymbol};
+        return {prog_, std::string{name}, ErrorKind::UnresolvedSymbol};
     }
 
     return {prog_, std::string{name}, symbol->address};
@@ -137,8 +139,10 @@ AsmFunction<Func> TestContext::find_function(std::string name) {
     auto loc = prog_.get_symtab().find(name);
 
     if (!loc) {
-        return {prog_, std::move(name), util::ErrorKind::UnresolvedSymbol};
+        return {prog_, std::move(name), ErrorKind::UnresolvedSymbol};
     }
 
     return {prog_, std::move(name), loc->address};
 }
+
+} // namespace asmgrader

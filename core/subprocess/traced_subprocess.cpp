@@ -7,6 +7,8 @@
 
 #include <chrono>
 
+namespace asmgrader {
+
 TracedSubprocess::~TracedSubprocess() {
     using namespace std::chrono_literals;
 
@@ -27,7 +29,7 @@ TracedSubprocess::~TracedSubprocess() {
     }
 }
 
-util::Result<void> TracedSubprocess::init_child() {
+Result<void> TracedSubprocess::init_child() {
     TRY(Subprocess::init_child());
 
     TRY(Tracer::init_child());
@@ -35,7 +37,7 @@ util::Result<void> TracedSubprocess::init_child() {
     return {};
 }
 
-util::Result<void> TracedSubprocess::init_parent() {
+Result<void> TracedSubprocess::init_parent() {
     TRY(Subprocess::init_parent());
 
     TRY(tracer_.begin(get_pid()));
@@ -43,10 +45,12 @@ util::Result<void> TracedSubprocess::init_parent() {
     return {};
 }
 
-util::Result<RunResult> TracedSubprocess::run() {
+Result<RunResult> TracedSubprocess::run() {
     return tracer_.run();
 }
 
-util::Result<int> TracedSubprocess::wait_for_exit(std::chrono::microseconds /*timeout*/) {
+Result<int> TracedSubprocess::wait_for_exit(std::chrono::microseconds /*timeout*/) {
     UNIMPLEMENTED("TracedSubprocess::wait_for_exit is not implemented; use TracedSubprocess::run instead.");
 }
+
+} // namespace asmgrader

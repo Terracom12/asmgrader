@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+namespace asmgrader {
+
 class AssignmentFileSearcher : protected FileSearcher
 {
 public:
@@ -26,3 +28,5 @@ public:
 private:
     static StudentInfo infer_student_names_from_file(const std::filesystem::path& path);
 };
+
+} // namespace asmgrader

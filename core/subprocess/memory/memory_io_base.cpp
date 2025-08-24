@@ -1,9 +1,11 @@
 #include "subprocess/memory/memory_io_base.hpp"
 
-#include "logging.hpp"
 #include "common/byte_vector.hpp"
+#include "logging.hpp"
 
-util::Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
+namespace asmgrader {
+
+Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
                                                   const std::function<bool(std::byte)>& predicate) {
     ByteVector result;
 
@@ -23,7 +25,8 @@ util::Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
 
     return result;
 }
-util::Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
+
+Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
                                                   const std::function<bool(std::span<const std::byte>)>& predicate,
                                                   std::size_t block_size) {
     ASSERT(block_size > 0);
@@ -42,3 +45,5 @@ util::Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
 
     return result;
 }
+
+} // namespace asmgrader

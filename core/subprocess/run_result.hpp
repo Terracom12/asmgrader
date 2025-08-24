@@ -1,5 +1,7 @@
 #pragma once
 
+namespace asmgrader {
+
 class RunResult
 {
 public:
@@ -18,3 +20,5 @@ private:
     Kind kind_;
     int code_;
 };
+
+} // namespace asmgrader

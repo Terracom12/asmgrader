@@ -1,8 +1,8 @@
 #include "database_reader.hpp"
 
+#include "common/expected.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
-#include "common/expected.hpp"
 
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/split.hpp>
@@ -14,10 +14,12 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 DatabaseReader::DatabaseReader(std::filesystem::path path)
     : path_{std::move(path)} {}
 
-util::Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() const {
+Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() const {
     std::ifstream in_file{path_};
 
     if (not in_file.is_open()) {
@@ -56,3 +58,5 @@ util::Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() con
 
     return result;
 }
+
+} // namespace asmgrader

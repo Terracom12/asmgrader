@@ -2,21 +2,29 @@
 
 #include "common/aliases.hpp"
 
+#include <boost/mp11/detail/mp_list.hpp>
 #include <boost/mp11/list.hpp>
 #include <gsl/assert>
 #include <gsl/util>
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/iterator/concepts.hpp>
+#include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
+#include <range/v3/range/primitives.hpp>
 #include <range/v3/range/traits.hpp>
 
+#include <array>
 #include <cstddef>
 #include <initializer_list>
+#include <memory>
 #include <span>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace asmgrader {
 
 static_assert(ranges::input_iterator<const std::byte*>);
 
@@ -161,3 +169,5 @@ private:
 
     std::vector<std::byte> data_;
 };
+
+} // namespace asmgrader

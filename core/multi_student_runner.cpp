@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 MultiStudentRunner::MultiStudentRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer)
     : assignment_{&assignment}
     , serializer_{serializer} {}
@@ -28,3 +30,5 @@ MultiStudentResult MultiStudentRunner::run_all_students(const std::vector<Studen
 
     return result;
 }
+
+} // namespace asmgrader

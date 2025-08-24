@@ -7,12 +7,16 @@
 #include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
 #include <range/v3/range/primitives.hpp>
+#include <range/v3/range/traits.hpp>
 
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <span>
 #include <type_traits>
 #include <utility>
+
+namespace asmgrader {
 
 template <std::size_t Size>
 class ByteArray
@@ -51,11 +55,15 @@ public:
     //
 
     auto begin() { return data.begin(); }
+
     auto begin() const { return data.begin(); }
+
     auto cbegin() const { return data.cend(); }
 
     auto end() { return data.end(); }
+
     auto end() const { return data.end(); }
+
     auto cend() const { return data.cend(); }
 
     std::size_t size() const { return data.size(); }
@@ -140,3 +148,5 @@ private:
 };
 
 static_assert(std::is_aggregate_v<ByteArray<1>>);
+
+} // namespace asmgrader

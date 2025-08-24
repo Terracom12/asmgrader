@@ -52,6 +52,7 @@
 
 /// All header only as this is relatively low level and we want operations to be fast (inlinable)
 
+namespace asmgrader {
 namespace detail {
 
 /// CRTP (or is it CRTTP in this case?) is used to pass an arch alternative.
@@ -166,23 +167,6 @@ struct IntRegister : detail::RegisterBaseImpl<IntRegister, u64, Arch>
 
 static_assert(sizeof(IntRegister<>) == sizeof(u64));
 
-template <ProcessorKind Arch>
-struct fmt::formatter<IntRegister<Arch>> : DebugFormatter
-{
-    auto format(const IntRegister<Arch>& from, format_context& ctx) const {
-        if (is_debug_format) {
-            using IntType = decltype(from.get_value());
-            constexpr auto ALIGN_10 = meta::digits10_max_count<IntType>;
-            constexpr auto ALIGN_16 = sizeof(IntType) * 2;
-            constexpr auto ALIGN_2 = sizeof(IntType) * 8;
-            return format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
-                             ALIGN_2);
-        }
-
-        return format_to(ctx.out(), "{}", from.get_value());
-    }
-};
-
 template <ProcessorKind Arch = SYSTEM_PROCESSOR>
 struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>
 {
@@ -193,7 +177,7 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u
     template </*std::floating_point*/ typename FPType>
         requires(Arch == SYSTEM_PROCESSOR)
     static constexpr FloatingPointRegister from(FPType val) {
-        using IntType = meta::sized_uint_t<sizeof(FPType)>;
+        using IntType = sized_uint_t<sizeof(FPType)>;
         auto int_val = std::bit_cast<IntType>(val);
 
         return FloatingPointRegister{int_val};
@@ -209,7 +193,7 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u
 
     template <std::floating_point FPType>
     constexpr FPType as() const {
-        using IntType = meta::sized_uint_t<sizeof(FPType)>;
+        using IntType = sized_uint_t<sizeof(FPType)>;
         auto int_val = detail::RegisterBaseImpl<FloatingPointRegister, u128, Arch>::template as<IntType>();
 
         return std::bit_cast<FPType>(int_val);
@@ -217,19 +201,6 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u
 };
 
 static_assert(sizeof(FloatingPointRegister<>) == sizeof(u128));
-
-template <ProcessorKind Arch>
-struct fmt::formatter<FloatingPointRegister<Arch>> : DebugFormatter
-{
-    auto format(const FloatingPointRegister<Arch>& from, format_context& ctx) const {
-        if (!is_debug_format) {
-            return format_to(ctx.out(), "{}", double{from});
-        }
-
-        const auto max_sz = formatted_size("{}", std::numeric_limits<double>::min());
-        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.get_value());
-    }
-};
 
 template <ProcessorKind Arch = SYSTEM_PROCESSOR>
 struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
@@ -280,111 +251,6 @@ struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
 };
 
 static_assert(sizeof(FlagsRegister<>) == sizeof(u64));
-
-template <ProcessorKind Arch>
-struct fmt::formatter<FlagsRegister<Arch>> : DebugFormatter
-{
-    std::size_t bin_labels_offset{};
-
-    constexpr auto parse(fmt::format_parse_context& ctx) {
-        const auto* it = DebugFormatter::parse(ctx);
-        const auto* end = ctx.end();
-
-        const auto* closing_brace_iter = ranges::find(it, end, '}');
-
-        if (closing_brace_iter == end) {
-            return it;
-        }
-
-        if (closing_brace_iter - it == 0) {
-            return ctx.end();
-        }
-
-        if (*it < '0' || *it > '9') {
-            throw fmt::format_error("invalid format - offset spec is not an integer");
-        }
-
-        int offset_spec = detail::parse_nonnegative_int(it, closing_brace_iter, -1);
-
-        if (offset_spec < 0) {
-            throw fmt::format_error("invalid format - offset spec is not a valid integer");
-        }
-
-        bin_labels_offset = static_cast<std::size_t>(offset_spec);
-
-        return it;
-    }
-
-    static std::string get_short_flags_str(const FlagsRegister<Arch>& flags) {
-        std::vector<char> set_flags;
-
-        if (flags.carry_set()) {
-            set_flags.push_back('C');
-        }
-        if (flags.zero_set()) {
-            set_flags.push_back('Z');
-        }
-        if (flags.negative_set()) {
-#if defined(ASMGRADER_AARCH64)
-            set_flags.push_back('V');
-#elif defined(ASMGRADER_X86_64)
-            set_flags.push_back('S');
-#endif
-        }
-        if (flags.overflow_set()) {
-            set_flags.push_back('O');
-        }
-
-        return fmt::format("{}", fmt::join(set_flags, "|"));
-    }
-
-#if defined(ASMGRADER_AARCH64)
-    auto format(const FlagsRegister<Arch>& from, format_context& ctx) const {
-        std::string short_flags_str = get_short_flags_str(from);
-
-        if (is_debug_format) {
-            // See:
-            //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
-            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
-
-            // len('0b')
-            constexpr auto LABEL_INIT_OFFSET = 2;
-
-            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
-            std::string labels = "NZCV";
-
-            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
-        } else {
-            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
-        }
-
-        return ctx.out();
-    }
-#elif defined(ASMGRADER_X86_64)
-    auto format(const FlagsRegister<Arch>& from, format_context& ctx) const {
-        std::string short_flags_str = get_short_flags_str(from);
-
-        if (is_debug_format) {
-            // See:
-            //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
-            //   Volume 1 - 3.4.3.1 Status Flags
-            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
-
-            // 32 bits - starting bit# of labels + len('0b')
-            constexpr auto LABEL_INIT_OFFSET = 32 - std::bit_width(FlagsRegister<Arch>::OVERFLOW_FLAG_BIT) + 2;
-
-            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
-            std::string labels = "O   SZ     C";
-
-            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
-        } else {
-            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
-        }
-
-        return ctx.out();
-    }
-#endif
-};
 
 struct RegistersState
 {
@@ -458,10 +324,268 @@ struct RegistersState
 };
 
 #if defined(ASMGRADER_AARCH64)
-template <>
-struct fmt::formatter<RegistersState> : DebugFormatter
+constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpsimd_struct& fpsimd_regs) {
+    RegistersState result{};
+
+    auto writable_regs_view =
+        result.regs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
+    ranges::copy(regs.regs, ranges::begin(writable_regs_view));
+
+    result.sp = regs.sp;
+    result.pc = regs.pc;
+    result.pstate.get_value() = regs.pstate;
+
+    auto writable_vregs_view =
+        result.vregs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
+    ranges::copy(fpsimd_regs.vregs, ranges::begin(writable_vregs_view));
+
+    result.fpsr = fpsimd_regs.fpsr;
+    result.fpcr = fpsimd_regs.fpcr;
+
+    return result;
+}
+
+inline Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
+                                                               const RegistersState& after_call) noexcept {
+    // PCS Docs (not official spec):
+    //   https://developer.arm.com/documentation/102374/0102/Procedure-Call-Standard
+
+    std::vector<std::string_view> err_changed_names;
+
+    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
+        if (before != after) {
+            err_changed_names.push_back(name);
+        }
+    };
+
+#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr(), after_call.pre##nr(), #pre #nr);
+
+    // General purpose regs X[19, 30) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(19, 30, CHECK_reg_nr, x)
+
+    // Floating-point regs D[8, 32) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(8, 32, CHECK_reg_nr, d)
+
+#undef CHECK_reg_nr
+
+    // Stack pointer must be preserved
+    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
+    check_reg(before_call.sp, after_call.sp, "sp");
+
+    if (err_changed_names.empty()) {
+        return {};
+    }
+
+    return err_changed_names;
+}
+
+#elif defined(ASMGRADER_X86_64)
+
+// A benefit of using the same names as user_regs_struct
+
+constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpregs_struct& fp_regs) {
+#define COPY_gen_reg(r, base, elem) base.elem.get_value() = regs.elem;
+    RegistersState result{};
+
+    BOOST_PP_SEQ_FOR_EACH(COPY_gen_reg, result, REGS_tuple_set);
+
+    result.rip = regs.rip;
+    result.rsp = regs.rsp;
+
+    result.eflags.get_value() = regs.eflags;
+
+    // TODO: Support floating point on x86_64
+    std::ignore = fp_regs;
+
+    return result;
+#undef COPY_gen_reg
+}
+
+inline Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
+                                                               const RegistersState& after_call) noexcept {
+    // Official (old, circa 2012) calling convention source:
+    //   https://web.archive.org/web/20120913114312/http://www.x86-64.org/documentation/abi.pdf:
+
+    std::vector<std::string_view> err_changed_names;
+
+    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
+        if (before != after) {
+            err_changed_names.push_back(name);
+        }
+    };
+
+#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr, after_call.pre##nr, #pre #nr);
+
+    // General purpose regs X[12, 36) must be preserved
+    BOOST_PP_REPEAT_FROM_TO(12, 15, CHECK_reg_nr, r)
+
+    // TODO: Check floating point and vectorized extension registers for x86_64 calling convention check
+
+#undef CHECK_reg_nr
+
+    // Stack pointer must be preserved
+    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
+    check_reg(before_call.rsp, after_call.rsp, "rsp");
+
+    // rbx and rbp must be preserved
+    check_reg(before_call.rbx, after_call.rbx, "rbx");
+    check_reg(before_call.rbp, after_call.rbp, "rbp");
+
+    if (err_changed_names.empty()) {
+        return {};
+    }
+
+    return err_changed_names;
+}
+
+#endif
+
+} // namespace asmgrader
+
+// ################ Formatter Specializations
+
+template <::asmgrader::ProcessorKind Arch>
+struct fmt::formatter<::asmgrader::IntRegister<Arch>> : ::asmgrader::DebugFormatter
 {
-    auto format(const RegistersState& from, format_context& ctx) const {
+    auto format(const ::asmgrader::IntRegister<Arch>& from, format_context& ctx) const {
+        if (is_debug_format) {
+            using IntType = decltype(from.get_value());
+            constexpr auto ALIGN_10 = ::asmgrader::digits10_max_count<IntType>;
+            constexpr auto ALIGN_16 = sizeof(IntType) * 2;
+            constexpr auto ALIGN_2 = sizeof(IntType) * 8;
+            return format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
+                             ALIGN_2);
+        }
+
+        return format_to(ctx.out(), "{}", from.get_value());
+    }
+};
+
+template <::asmgrader::ProcessorKind Arch>
+struct fmt::formatter<::asmgrader::FloatingPointRegister<Arch>> : ::asmgrader::DebugFormatter
+{
+    auto format(const ::asmgrader::FloatingPointRegister<Arch>& from, format_context& ctx) const {
+        if (!is_debug_format) {
+            return format_to(ctx.out(), "{}", double{from});
+        }
+
+        const auto max_sz = formatted_size("{}", std::numeric_limits<double>::min());
+        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.get_value());
+    }
+};
+
+template <::asmgrader::ProcessorKind Arch>
+struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugFormatter
+{
+    std::size_t bin_labels_offset{};
+
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        const auto* it = DebugFormatter::parse(ctx);
+        const auto* end = ctx.end();
+
+        const auto* closing_brace_iter = ranges::find(it, end, '}');
+
+        if (closing_brace_iter == end) {
+            return it;
+        }
+
+        if (closing_brace_iter - it == 0) {
+            return ctx.end();
+        }
+
+        if (*it < '0' || *it > '9') {
+            throw fmt::format_error("invalid format - offset spec is not an integer");
+        }
+
+        int offset_spec = detail::parse_nonnegative_int(it, closing_brace_iter, -1);
+
+        if (offset_spec < 0) {
+            throw fmt::format_error("invalid format - offset spec is not a valid integer");
+        }
+
+        bin_labels_offset = static_cast<std::size_t>(offset_spec);
+
+        return it;
+    }
+
+    static std::string get_short_flags_str(const ::asmgrader::FlagsRegister<Arch>& flags) {
+        std::vector<char> set_flags;
+
+        if (flags.carry_set()) {
+            set_flags.push_back('C');
+        }
+        if (flags.zero_set()) {
+            set_flags.push_back('Z');
+        }
+        if (flags.negative_set()) {
+#if defined(ASMGRADER_AARCH64)
+            set_flags.push_back('V');
+#elif defined(ASMGRADER_X86_64)
+            set_flags.push_back('S');
+#endif
+        }
+        if (flags.overflow_set()) {
+            set_flags.push_back('O');
+        }
+
+        return fmt::format("{}", fmt::join(set_flags, "|"));
+    }
+
+#if defined(ASMGRADER_AARCH64)
+    auto format(const ::asmgrader::FlagsRegister<Arch>& from, format_context& ctx) const {
+        std::string short_flags_str = get_short_flags_str(from);
+
+        if (is_debug_format) {
+            // See:
+            //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
+            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
+
+            // len('0b')
+            constexpr auto LABEL_INIT_OFFSET = 2;
+
+            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
+            std::string labels = "NZCV";
+
+            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+        } else {
+            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+        }
+
+        return ctx.out();
+    }
+#elif defined(ASMGRADER_X86_64)
+    auto format(const ::asmgrader::FlagsRegister<Arch>& from, format_context& ctx) const {
+        std::string short_flags_str = get_short_flags_str(from);
+
+        if (is_debug_format) {
+            // See:
+            //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
+            //   Volume 1 - 3.4.3.1 Status Flags
+            std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
+
+            // 32 bits - starting bit# of labels + len('0b')
+            constexpr auto LABEL_INIT_OFFSET =
+                32 - std::bit_width(::asmgrader::FlagsRegister<Arch>::OVERFLOW_FLAG_BIT) + 2;
+
+            std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
+            std::string labels = "O   SZ     C";
+
+            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+        } else {
+            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+        }
+
+        return ctx.out();
+    }
+#endif
+};
+
+#if defined(ASMGRADER_AARCH64)
+
+template <>
+struct fmt::formatter<::asmgrader::RegistersState> : ::asmgrader::DebugFormatter
+{
+    auto format(const ::asmgrader::RegistersState& from, format_context& ctx) const {
         constexpr std::size_t TAB_WIDTH = 4; // for debug format field sep
         std::string field_sep;
 
@@ -534,67 +658,15 @@ struct fmt::formatter<RegistersState> : DebugFormatter
     }
 };
 
-constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpsimd_struct& fpsimd_regs) {
-    RegistersState result{};
-
-    auto writable_regs_view =
-        result.regs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
-    ranges::copy(regs.regs, ranges::begin(writable_regs_view));
-
-    result.sp = regs.sp;
-    result.pc = regs.pc;
-    result.pstate.get_value() = regs.pstate;
-
-    auto writable_vregs_view =
-        result.vregs | ranges::views::transform([](auto& reg) -> decltype(auto) { return reg.get_value(); });
-    ranges::copy(fpsimd_regs.vregs, ranges::begin(writable_vregs_view));
-
-    result.fpsr = fpsimd_regs.fpsr;
-    result.fpcr = fpsimd_regs.fpcr;
-
-    return result;
-}
-
-inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
-                                                                     const RegistersState& after_call) noexcept {
-    // PCS Docs (not official spec):
-    //   https://developer.arm.com/documentation/102374/0102/Procedure-Call-Standard
-
-    std::vector<std::string_view> err_changed_names;
-
-    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
-        if (before != after) {
-            err_changed_names.push_back(name);
-        }
-    };
-
-#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr(), after_call.pre##nr(), #pre #nr);
-
-    // General purpose regs X[19, 30) must be preserved
-    BOOST_PP_REPEAT_FROM_TO(19, 30, CHECK_reg_nr, x)
-
-    // Floating-point regs D[8, 32) must be preserved
-    BOOST_PP_REPEAT_FROM_TO(8, 32, CHECK_reg_nr, d)
-
-#undef CHECK_reg_nr
-
-    // Stack pointer must be preserved
-    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
-    check_reg(before_call.sp, after_call.sp, "sp");
-
-    if (err_changed_names.empty()) {
-        return {};
-    }
-
-    return err_changed_names;
-}
+#undef NUM_GEN_REGISTERS
+#undef NUM_FP_REGISTERS
 
 #elif defined(ASMGRADER_X86_64)
 
 template <>
-struct fmt::formatter<RegistersState> : DebugFormatter
+struct fmt::formatter<::asmgrader::RegistersState> : ::asmgrader::DebugFormatter
 {
-    auto format(const RegistersState& from, format_context& ctx) const {
+    auto format(const ::asmgrader::RegistersState& from, format_context& ctx) const {
         constexpr std::size_t TAB_WIDTH = 4; // for debug format field sep
         std::string field_sep;
 
@@ -657,63 +729,6 @@ struct fmt::formatter<RegistersState> : DebugFormatter
     }
 };
 
-// A benefit of using the same names as user_regs_struct
-
-constexpr RegistersState RegistersState::from(const user_regs_struct& regs, const user_fpregs_struct& fp_regs) {
-#define COPY_gen_reg(r, base, elem) base.elem.get_value() = regs.elem;
-    RegistersState result{};
-
-    BOOST_PP_SEQ_FOR_EACH(COPY_gen_reg, result, REGS_tuple_set);
-
-    result.rip = regs.rip;
-    result.rsp = regs.rsp;
-
-    result.eflags.get_value() = regs.eflags;
-
-    // TODO: Support floating point on x86_64
-    std::ignore = fp_regs;
-
-    return result;
-#undef COPY_gen_reg
-}
-
 #undef REGS_tuple_set
-
-inline util::Expected<void, std::vector<std::string_view>> valid_pcs(const RegistersState& before_call,
-                                                                     const RegistersState& after_call) noexcept {
-    // Official (old, circa 2012) calling convention source:
-    //   https://web.archive.org/web/20120913114312/http://www.x86-64.org/documentation/abi.pdf:
-
-    std::vector<std::string_view> err_changed_names;
-
-    auto check_reg = [&](const auto& before, const auto& after, std::string_view name) {
-        if (before != after) {
-            err_changed_names.push_back(name);
-        }
-    };
-
-#define CHECK_reg_nr(z, nr, pre) check_reg(before_call.pre##nr, after_call.pre##nr, #pre #nr);
-
-    // General purpose regs X[12, 36) must be preserved
-    BOOST_PP_REPEAT_FROM_TO(12, 15, CHECK_reg_nr, r)
-
-    // TODO: Check floating point and vectorized extension registers for x86_64 calling convention check
-
-#undef CHECK_reg_nr
-
-    // Stack pointer must be preserved
-    // (caller-passed args are READ FROM, NOT POPPED from the stack by the callee)
-    check_reg(before_call.rsp, after_call.rsp, "rsp");
-
-    // rbx and rbp must be preserved
-    check_reg(before_call.rbx, after_call.rbx, "rbx");
-    check_reg(before_call.rbp, after_call.rbp, "rbp");
-
-    if (err_changed_names.empty()) {
-        return {};
-    }
-
-    return err_changed_names;
-}
 
 #endif

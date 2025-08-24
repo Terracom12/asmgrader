@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <vector>
 
+namespace asmgrader {
+
 /// A global singleton registrar. Used with ``Assignment``s for now.
 ///
 /// Construct this class with the assignment we want to register,
@@ -119,3 +121,5 @@ std::vector<std::invoke_result_t<Func, Assignment>> GlobalRegistrar::for_each_as
 
     return result;
 }
+
+} // namespace asmgrader

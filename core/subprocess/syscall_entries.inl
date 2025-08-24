@@ -13,6 +13,8 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 
+namespace asmgrader {
+
 static constexpr int NUM_SYSCALLS = 545;
 
 static constexpr auto SYSCALL_MAP = [] {
@@ -78,3 +80,5 @@ static constexpr auto SYSCALL_MAP = [] {
 
     return syscall_map;
 }();
+
+} // namespace asmgrader

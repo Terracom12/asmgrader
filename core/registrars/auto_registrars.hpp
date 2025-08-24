@@ -9,6 +9,8 @@
 #include <memory>
 #include <string_view>
 
+namespace asmgrader {
+
 // /// Helper class that, whem constructed, automatically registers an assignment to the global registrar
 // class AssignmentAutoRegistrar
 // {
@@ -34,3 +36,5 @@ public:
         assignment.add_test(std::make_unique<TestClass>(std::forward<TestClass>(test)));
     }
 };
+
+} // namespace asmgrader

@@ -13,11 +13,13 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 /// Declaration for the logic and data encapsulating a class assignment
 ///
 /// This includes executable path, all of the tests we want to run,
 /// and any other necessary actions.
-class Assignment : util::NonCopyable
+class Assignment : NonCopyable
 {
 public:
     Assignment(std::string_view name, std::filesystem::path exec_path) noexcept;
@@ -46,3 +48,5 @@ private:
 
     mutable std::vector<std::unique_ptr<TestBase>> tests_;
 };
+
+} // namespace asmgrader

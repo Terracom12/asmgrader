@@ -18,6 +18,8 @@
 
 #include <sys/ptrace.h>
 
+namespace asmgrader {
+
 enum class PtraceEvent {
     Stop = PTRACE_EVENT_STOP,
     Clone = PTRACE_EVENT_CLONE,
@@ -27,45 +29,6 @@ enum class PtraceEvent {
     VFork = PTRACE_EVENT_VFORK,
     VForkDone = PTRACE_EVENT_VFORK_DONE,
     Seccomp = PTRACE_EVENT_SECCOMP
-};
-
-template <>
-struct fmt::formatter<PtraceEvent> : DebugFormatter
-{
-    auto format(const PtraceEvent& from, format_context& ctx) const {
-        auto res = enum_to_str(from);
-
-        if (res) {
-            return format_to(ctx.out(), "{}", *res);
-        }
-
-        return format_to(ctx.out(), "<unknown ({})>", fmt::underlying(from));
-    }
-
-private:
-    static constexpr std::optional<const char*> enum_to_str(const PtraceEvent& from) {
-        using enum PtraceEvent;
-        switch (from) {
-        case Stop:
-            return "stop";
-        case Clone:
-            return "clone";
-        case Exec:
-            return "exec";
-        case Exit:
-            return "exit";
-        case Fork:
-            return "fork";
-        case VFork:
-            return "vfork";
-        case VForkDone:
-            return "vforkdone";
-        case Seccomp:
-            return "seccomp";
-        default:
-            return std::nullopt;
-        }
-    }
 };
 
 struct TracedWaitid
@@ -78,7 +41,7 @@ struct TracedWaitid
     std::optional<int> exit_code;
 
     /// Has value if type is not CLD_EXITED
-    std::optional<util::linux::Signal> signal_num;
+    std::optional<linux::Signal> signal_num;
 
     /// A PTRACE_EVENT_* value if an event was recieved
     std::optional<PtraceEvent> ptrace_event;
@@ -86,8 +49,8 @@ struct TracedWaitid
     /// Whether a system call trape was delivered via ptrace
     bool is_syscall_trap = false;
 
-    static util::Expected<TracedWaitid> waitid(idtype_t idtype, id_t id, int options = WSTOPPED | WEXITED) {
-        auto res = util::linux::waitid(idtype, id, options);
+    static Expected<TracedWaitid> waitid(idtype_t idtype, id_t id, int options = WSTOPPED | WEXITED) {
+        auto res = linux::waitid(idtype, id, options);
 
         if (!res) {
             return res.error();
@@ -96,8 +59,8 @@ struct TracedWaitid
         return TracedWaitid::parse(res.value());
     }
 
-    template <util::ChronoDuration Duration1, util::ChronoDuration Duration2 = std::chrono::microseconds>
-    static util::Result<TracedWaitid> wait_with_timeout(pid_t pid, Duration1 timeout,
+    template <ChronoDuration Duration1, ChronoDuration Duration2 = std::chrono::microseconds>
+    static Result<TracedWaitid> wait_with_timeout(pid_t pid, Duration1 timeout,
                                                         Duration2 poll_period = std::chrono::microseconds{1}) {
         using std::chrono::steady_clock;
 
@@ -107,7 +70,7 @@ struct TracedWaitid
 
         // while elapsed time < timeout
         while (steady_clock::now() - start_time < timeout) {
-            util::Expected<siginfo_t> waitid_res = util::linux::waitid(P_PID, pid, WEXITED | WSTOPPED | WNOHANG);
+            Expected<siginfo_t> waitid_res = linux::waitid(P_PID, pid, WEXITED | WSTOPPED | WNOHANG);
 
             assert_expected(waitid_res);
 
@@ -121,7 +84,7 @@ struct TracedWaitid
         }
 
         LOG_DEBUG("waitid timed out at {}", timeout);
-        return util::ErrorKind::TimedOut;
+        return ErrorKind::TimedOut;
     }
 
     constexpr static TracedWaitid parse(const siginfo_t& siginfo) {
@@ -166,10 +129,51 @@ struct TracedWaitid
     }
 };
 
+} // namespace asmgrader
+
 template <>
-struct fmt::formatter<TracedWaitid> : DebugFormatter
+struct fmt::formatter<::asmgrader::PtraceEvent> : ::asmgrader::DebugFormatter
 {
-    auto format(const TracedWaitid& from, format_context& ctx) const {
+    auto format(const ::asmgrader::PtraceEvent& from, format_context& ctx) const {
+        auto res = enum_to_str(from);
+
+        if (res) {
+            return format_to(ctx.out(), "{}", *res);
+        }
+
+        return format_to(ctx.out(), "<unknown ({})>", fmt::underlying(from));
+    }
+
+private:
+    static constexpr std::optional<const char*> enum_to_str(const ::asmgrader::PtraceEvent& from) {
+        using enum ::asmgrader::PtraceEvent;
+        switch (from) {
+        case Stop:
+            return "stop";
+        case Clone:
+            return "clone";
+        case Exec:
+            return "exec";
+        case Exit:
+            return "exit";
+        case Fork:
+            return "fork";
+        case VFork:
+            return "vfork";
+        case VForkDone:
+            return "vforkdone";
+        case Seccomp:
+            return "seccomp";
+        default:
+            return std::nullopt;
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<::asmgrader::TracedWaitid> : ::asmgrader::DebugFormatter
+{
+    auto format(const ::asmgrader::TracedWaitid& from, format_context& ctx) const {
         auto type_to_str = [](int wait_type) -> std::string {
             switch (wait_type) {
             case CLD_KILLED:

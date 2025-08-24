@@ -11,10 +11,12 @@
 #include <type_traits>
 #include <utility>
 
+namespace asmgrader {
+
 template <typename T>
 class AsmFunction
 {
-    static_assert(util::always_false_v<T>, "AsmFunction is not specialized for non-function types!");
+    static_assert(always_false_v<T>, "AsmFunction is not specialized for non-function types!");
 };
 
 template <typename Ret, typename... Args>
@@ -22,11 +24,11 @@ class AsmFunction<Ret(Args...)>
 {
 public:
     AsmFunction(Program& prog, std::string name, std::uintptr_t address);
-    AsmFunction(Program& prog, std::string name, util::ErrorKind resolution_err);
+    AsmFunction(Program& prog, std::string name, ErrorKind resolution_err);
 
     template <MemoryIOCompatible<Args>... Ts>
         requires(sizeof...(Ts) == sizeof...(Args))
-    util::Result<Ret> operator()(Ts&&... args) {
+    Result<Ret> operator()(Ts&&... args) {
         if (resolution_err_.has_value()) {
             return *resolution_err_;
         }
@@ -49,7 +51,7 @@ private:
 
     std::uintptr_t address_;
     std::string name_;
-    std::optional<util::ErrorKind> resolution_err_;
+    std::optional<ErrorKind> resolution_err_;
 };
 
 template <typename Ret, typename... Args>
@@ -59,8 +61,10 @@ AsmFunction<Ret(Args...)>::AsmFunction(Program& prog, std::string name, std::uin
     , name_{std::move(name)} {}
 
 template <typename Ret, typename... Args>
-AsmFunction<Ret(Args...)>::AsmFunction(Program& prog, std::string name, util::ErrorKind resolution_err)
+AsmFunction<Ret(Args...)>::AsmFunction(Program& prog, std::string name, ErrorKind resolution_err)
     : prog_{&prog}
     , address_{0x0}
     , name_{std::move(name)}
     , resolution_err_{resolution_err} {}
+
+} // namespace asmgrader

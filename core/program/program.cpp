@@ -1,13 +1,13 @@
 #include "program/program.hpp"
 
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
 #include "logging.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/traced_subprocess.hpp"
 #include "subprocess/tracer.hpp"
 #include "symbols/elf_reader.hpp"
 #include "symbols/symbol_table.hpp"
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
 
 #include <fmt/compile.h>
 #include <fmt/format.h>
@@ -26,6 +26,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+namespace asmgrader {
 
 Program::Program(std::filesystem::path path, std::vector<std::string> args)
     : path_{std::move(path)}
@@ -47,7 +49,7 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
     std::ignore = subproc_->start();
 }
 
-util::Expected<void, std::string> Program::check_is_elf(const std::filesystem::path& path) {
+Expected<void, std::string> Program::check_is_elf(const std::filesystem::path& path) {
     std::ifstream file(path);
     std::array<char, 4> first_4_bytes{};
     file.read(first_4_bytes.data(), first_4_bytes.size());
@@ -77,7 +79,7 @@ const SymbolTable& Program::get_symtab() const {
     return *symtab_;
 }
 
-util::Result<RunResult> Program::run() {
+Result<RunResult> Program::run() {
     return subproc_->run();
 }
 
@@ -101,3 +103,5 @@ const std::filesystem::path& Program::get_path() const {
 const std::vector<std::string>& Program::get_args() const {
     return args_;
 }
+
+} // namespace asmgrader

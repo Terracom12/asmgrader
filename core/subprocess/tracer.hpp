@@ -34,6 +34,8 @@
 #include <sys/types.h> // pid_t
 #include <sys/user.h>  // user_regs_struct, user_fpregs_struct (user_fpsimd_struct)
 
+namespace asmgrader {
+
 // HACK: Temporary fix for aarch64
 #ifdef __aarch64__
 using user_fpregs_struct = user_fpsimd_struct;
@@ -51,23 +53,23 @@ public:
     Tracer() = default;
 
     /// Sets up tracing in parent process, then stops child immediately after exec call
-    util::Result<void> begin(pid_t pid);
+    Result<void> begin(pid_t pid);
 
     /// Run the child process. Collect syscall info each time one is executed
-    util::Result<RunResult> run();
+    Result<RunResult> run();
 
     /// Executes a syscall with the given arguments as the stopped tracee
-    util::Result<SyscallRecord> execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
+    Result<SyscallRecord> execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);
 
     /// Get the general purpose registers of the stopped tracee
     /// IMPORTANT: this is (obviously) architecture-dependent
-    util::Result<user_regs_struct> get_registers() const;
-    util::Result<user_fpregs_struct> get_fp_registers() const;
+    Result<user_regs_struct> get_registers() const;
+    Result<user_fpregs_struct> get_fp_registers() const;
 
     /// Set the general purpose registers of the stopped tracee
     /// IMPORTANT: this is (obviously) architecture-dependent
-    util::Result<void> set_registers(user_regs_struct regs) const;
-    util::Result<void> set_fp_registers(user_fpregs_struct regs) const;
+    Result<void> set_registers(user_regs_struct regs) const;
+    Result<void> set_fp_registers(user_fpregs_struct regs) const;
 
     /// Obtain records of syscalls run so far in the child process
     const std::vector<SyscallRecord>& get_records() const { return syscall_records_; }
@@ -79,22 +81,22 @@ public:
     /// Call this within the newly-forked process
     ///
     /// Immediately after a call to this function should be a call to execve.
-    static util::Result<void> init_child();
+    static Result<void> init_child();
 
     /// Set the child process's instruction pointer to `address`
-    util::Result<void> jump_to(std::uintptr_t address);
+    Result<void> jump_to(std::uintptr_t address);
 
     static constexpr auto DEFAULT_TIMEOUT = std::chrono::milliseconds{10};
 
     template <typename... Args>
-    util::Result<void> setup_function_call(Args&&... args);
+    Result<void> setup_function_call(Args&&... args);
 
     /// AFTER a function has been called, inspects register values
     /// (and memory if necessary) to construct the expected return type.
     ///
     /// std::nullopt is returned if it's not possible to construct return type.
     template <typename Ret>
-    util::Result<Ret> process_function_ret();
+    Result<Ret> process_function_ret();
 
     MemoryIOBase& get_memory_io();
 
@@ -109,11 +111,11 @@ private:
     /// that they do not hold
     void assert_invariants() const;
 
-    util::Result<void> setup_function_return();
+    Result<void> setup_function_return();
 
     /// Returns: value that should be written to the nth register
     template <typename Arg>
-    util::Result<u64> setup_function_param(const Arg& arg);
+    Result<u64> setup_function_param(const Arg& arg);
     template <std::floating_point Arg>
     auto setup_function_param(const Arg& arg);
 
@@ -126,11 +128,11 @@ private:
      * @param pred
      * @param request
      */
-    util::Result<TracedWaitid> resume_until(const std::function<bool(TracedWaitid)>& pred,
+    Result<TracedWaitid> resume_until(const std::function<bool(TracedWaitid)>& pred,
                                             std::chrono::microseconds timeout = DEFAULT_TIMEOUT,
                                             int ptrace_request = PTRACE_CONT) const;
 
-    util::Result<SyscallRecord> run_next_syscall(std::chrono::microseconds timeout = DEFAULT_TIMEOUT) const;
+    Result<SyscallRecord> run_next_syscall(std::chrono::microseconds timeout = DEFAULT_TIMEOUT) const;
 
     /// Precondition: child process must be stopped after waitid(2) returned a syscall trap event
     SyscallRecord get_syscall_entry_info(struct ptrace_syscall_info* entry) const;
@@ -155,8 +157,8 @@ private:
 };
 
 template <typename... Args>
-util::Result<void> Tracer::setup_function_call(Args&&... args) {
-    constexpr std::size_t NUM_FP_ARGS = util::count_if_v<std::is_floating_point, Args...>;
+Result<void> Tracer::setup_function_call(Args&&... args) {
+    constexpr std::size_t NUM_FP_ARGS = count_if_v<std::is_floating_point, Args...>;
     constexpr std::size_t NUM_INT_ARGS = sizeof...(Args) - NUM_FP_ARGS;
 
 #ifdef __aarch64__
@@ -222,7 +224,7 @@ util::Result<void> Tracer::setup_function_call(Args&&... args) {
         std::tuple reg_param_vals = std::make_tuple(setup_function_param(std::forward<Args>(args))...);
 
         std::optional first_error =
-            util::tuple_find_first([](const auto& val) { return val.has_error(); }, reg_param_vals);
+            tuple_find_first([](const auto& val) { return val.has_error(); }, reg_param_vals);
 
         if (first_error.has_value()) {
             return std::visit([](const auto& err_val) { return err_val.error(); }, *first_error);
@@ -238,7 +240,7 @@ util::Result<void> Tracer::setup_function_call(Args&&... args) {
 }
 
 template <typename Arg>
-util::Result<u64> Tracer::setup_function_param(const Arg& arg) {
+Result<u64> Tracer::setup_function_param(const Arg& arg) {
     if constexpr (std::integral<Arg>) {
         return static_cast<u64>(arg);
     } else if constexpr (std::is_pointer_v<Arg>) {
@@ -260,7 +262,7 @@ auto setup_function_param(const Arg& arg) {
 }
 
 template <typename Ret>
-util::Result<Ret> Tracer::process_function_ret() {
+Result<Ret> Tracer::process_function_ret() {
     static_assert(std::is_fundamental_v<Ret> || std::is_pointer_v<Ret>,
                   "Non-fundamental and non-pointer types are not yet supported as function return types");
 
@@ -290,3 +292,5 @@ util::Result<Ret> Tracer::process_function_ret() {
         }
     }
 }
+
+} // namespace asmgrader

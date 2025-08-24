@@ -1,13 +1,16 @@
 #include "catch2_custom.hpp"
 
-#include "logging.hpp"
 #include "common/expected.hpp"
+#include "logging.hpp"
 
+#include <array>
 #include <cmath>
 #include <string>
+#include <string_view>
+#include <type_traits>
 
 using namespace std::literals;
-using util::Expected;
+using asmgrader::Expected, asmgrader::AssertionError;
 
 // Simple types
 using Et = Expected<int, std::string>;

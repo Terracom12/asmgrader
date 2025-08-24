@@ -27,6 +27,8 @@
 #include <optional>
 #include <vector>
 
+namespace asmgrader {
+
 int ProfessorApp::run_impl() {
     std::optional student_names = get_student_names();
     LOG_DEBUG("Loaded student names: {}", student_names);
@@ -85,7 +87,7 @@ std::optional<std::vector<StudentInfo>> ProfessorApp::get_student_names() const 
 
     DatabaseReader database_reader{*OPTS.database_path};
 
-    util::Expected res = database_reader.read();
+    Expected res = database_reader.read();
 
     if (not res) {
         LOG_WARN("Error loading database {:?}: {}", OPTS.database_path->string(), res.error());
@@ -94,3 +96,5 @@ std::optional<std::vector<StudentInfo>> ProfessorApp::get_student_names() const 
 
     return *res;
 }
+
+} // namespace asmgrader

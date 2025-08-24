@@ -2,6 +2,8 @@
 
 #include "output/sink.hpp"
 
+namespace asmgrader {
+
 class StdoutSink : public Sink
 {
 public:
@@ -10,3 +12,5 @@ public:
 
     ~StdoutSink() override = default;
 };
+
+} // namespace asmgrader

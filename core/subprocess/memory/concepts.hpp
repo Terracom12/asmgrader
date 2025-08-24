@@ -1,8 +1,8 @@
 #pragma once
 
-#include "subprocess/memory/non_terminated_str.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
+#include "subprocess/memory/non_terminated_str.hpp"
 
 #include <concepts>
 #include <cstddef>
@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+
+namespace asmgrader {
 
 class MemoryIOBase;
 template <typename T>
@@ -19,7 +21,7 @@ struct MemoryIOSerde;
 
 template <typename T>
 concept MemoryReadSupported = requires(std::uintptr_t address, MemoryIOBase& mio) {
-    { MemoryIOSerde<T>::read(address, mio) } -> std::same_as<util::Result<T>>;
+    { MemoryIOSerde<T>::read(address, mio) } -> std::same_as<Result<T>>;
 };
 template <typename T>
 concept MemoryWriteSupported = requires(const T& data) {
@@ -45,6 +47,7 @@ template <CharLike U>
 struct MemoryIOCompatImpl<std::string, U*> : std::true_type
 {
 };
+
 template <CharLike U>
 struct MemoryIOCompatImpl<std::string_view, U*> : std::true_type
 {
@@ -82,3 +85,5 @@ static_assert(MemoryIOCompatible<std::string_view, decltype("Hello")>);
 
 static_assert(MemoryIOCompatible<int*, std::uintptr_t>);
 static_assert(MemoryIOCompatible<const int*, std::uintptr_t>);
+
+} // namespace asmgrader

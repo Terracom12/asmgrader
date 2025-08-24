@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace util {
+namespace asmgrader {
 
 // TODO: Use boost::mp11::mp_count_if instead
 
@@ -29,4 +29,4 @@ static_assert(count_if_v<std::is_floating_point, float, int, double> == 2);
 static_assert(count_if_v<std::is_integral, float, int, double> == 1);
 static_assert(count_if_v<std::is_integral> == 0);
 
-} // namespace util
+} // namespace asmgrader

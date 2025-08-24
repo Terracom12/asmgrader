@@ -18,6 +18,8 @@
 
 #include <unistd.h>
 
+namespace asmgrader {
+
 using enum ProgramOptions::VerbosityLevel;
 
 PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
@@ -151,3 +153,5 @@ std::string PlainTextSerializer::pluralize(std::string_view root, int count, std
 
     return fmt::format("{}{}", root, suffix);
 }
+
+} // namespace asmgrader

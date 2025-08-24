@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 FileSearcher::FileSearcher(std::string expr, std::map<std::string, std::string> args)
     : expr_{std::move(expr)}
     , args_{std::move(args)} {}
@@ -82,3 +84,5 @@ bool FileSearcher::does_match(const std::regex& expr, std::string_view filename)
     LOG_TRACE("Attempting to match filename: {:?}", filename);
     return std::regex_match(filename.begin(), filename.end(), expr);
 }
+
+} // namespace asmgrader

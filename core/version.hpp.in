@@ -20,6 +20,8 @@
 #define ASMGRADER_VERSION_STRING                                                                                       \
     STRINGIFY(ASMGRADER_VERSION_MAJOR) "." STRINGIFY(ASMGRADER_VERSION_MINOR) "." STRINGIFY(ASMGRADER_VERSION_PATCH)
 
+namespace asmgrader {
+
 consteval unsigned int get_version() {
     // The maximum value of any MAJOR / MINOR / PATCH field
     constexpr auto MAX_VERSION_FIELD = 99;
@@ -43,3 +45,5 @@ constexpr auto APP_MODE =
 #else
     AppMode::Student;
 #endif
+
+} // namespace asmgrader

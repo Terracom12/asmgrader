@@ -7,6 +7,8 @@
 #include <string_view>
 #include <vector>
 
+namespace asmgrader {
+
 class FileSearcher
 {
 public:
@@ -27,3 +29,5 @@ private:
     std::string expr_;
     std::map<std::string, std::string> args_;
 };
+
+} // namespace asmgrader

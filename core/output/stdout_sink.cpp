@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string_view>
 
+namespace asmgrader {
+
 void StdoutSink::write(std::string_view str) {
     std::cout << str;
 }
@@ -10,3 +12,5 @@ void StdoutSink::write(std::string_view str) {
 void StdoutSink::flush() {
     std::cout.flush();
 }
+
+} // namespace asmgrader

@@ -16,6 +16,8 @@
 #include <cstdint>
 #include <string>
 
+namespace asmgrader {
+
 template <std::size_t NumBytes>
 class AsmBuffer : public AsmData<ByteArray<NumBytes>>
 {
@@ -64,3 +66,5 @@ std::string AsmBuffer<NumBytes>::str() const {
 template <std::size_t NumBytes>
 AsmBuffer<NumBytes>::AsmBuffer(Program& prog)
     : AsmData<ByteArray<NumBytes>>{prog, get_alloced_address(prog)} {}
+
+} // namespace asmgrader

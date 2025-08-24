@@ -1,9 +1,11 @@
 #pragma once
 
-#include "subprocess/memory/memory_io.hpp"
 #include "common/byte_vector.hpp"
+#include "subprocess/memory/memory_io.hpp"
 
 #include <cstddef>
+
+namespace asmgrader {
 
 /// TraceeMemory implemented using ptrace(2) commands
 class PtraceMemoryIO final : public MemoryIOBase
@@ -11,7 +13,9 @@ class PtraceMemoryIO final : public MemoryIOBase
     using MemoryIOBase::MemoryIOBase;
 
 private:
-    util::Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override;
+    Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override;
     // ByteVector read_until_impl(std::uintptr_t address, const std::function<bool(std::byte)>& predicate) override;
-    util::Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) override;
+    Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) override;
 };
+
+} // namespace asmgrader

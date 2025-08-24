@@ -6,6 +6,8 @@
 #include <optional>
 #include <vector>
 
+namespace asmgrader {
+
 /// A basic symbol table, for simple interaction with a number of symbols loaded from an ELF file
 class SymbolTable
 {
@@ -24,3 +26,5 @@ public:
 private:
     std::vector<Symbol> symbols_;
 };
+
+} // namespace asmgrader

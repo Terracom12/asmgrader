@@ -8,6 +8,8 @@
 #include <memory>
 #include <optional>
 
+namespace asmgrader {
+
 /// Manages test execution and result aggregation for a specific assignment
 class AssignmentTestRunner
 {
@@ -22,3 +24,5 @@ private:
     Assignment* assignment_;
     std::shared_ptr<Serializer> serializer_;
 };
+
+} // namespace asmgrader

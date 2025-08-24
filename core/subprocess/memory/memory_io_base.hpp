@@ -1,9 +1,9 @@
 #pragma once
 
-#include "meta/remove_all_pointers.hpp"
-#include "subprocess/memory/concepts.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
+#include "meta/remove_all_pointers.hpp"
+#include "subprocess/memory/concepts.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -12,6 +12,8 @@
 #include <type_traits>
 
 #include <sys/types.h>
+
+namespace asmgrader {
 
 /// Base class for interacting with a tracee's memory in a variety of ways at a (relatively) high-level
 /// Functionally a data pipeline between the tracer and tracee
@@ -25,13 +27,13 @@ public:
     virtual ~MemoryIOBase() = default;
 
     template <MemoryReadSupported T>
-    util::Result<T> read(std::uintptr_t address) {
+    Result<T> read(std::uintptr_t address) {
         return MemoryIOSerde<T>::read(address, *this);
     }
 
     template <MemoryReadSupported T>
         requires std::is_trivial_v<T> // more complex types may have sizes that don't correspond
-    util::Result<std::vector<T>> read_array(std::uintptr_t address, std::size_t size) {
+    Result<std::vector<T>> read_array(std::uintptr_t address, std::size_t size) {
         std::vector<T> result;
         result.reserve(size);
 
@@ -44,7 +46,7 @@ public:
 
     template <MemoryReadSupported T>
         requires std::is_trivial_v<T> // more complex types may have sizes that don't correspond
-    util::Result<std::vector<T>> read_array(std::uintptr_t address, std::function<bool(const T&)> until_predicate) {
+    Result<std::vector<T>> read_array(std::uintptr_t address, std::function<bool(const T&)> until_predicate) {
         std::vector<T> result;
 
         for (std::uintptr_t current_address = address;; current_address += sizeof(T)) {
@@ -60,13 +62,13 @@ public:
         return result;
     }
 
-    util::Result<ByteVector> read_bytes(std::uintptr_t address, std::size_t length) {
+    Result<ByteVector> read_bytes(std::uintptr_t address, std::size_t length) {
         return this->read_block_impl(address, length);
     }
 
     // FIXME: The reinterpret_cast's to/from std::uintptr_t and pointer types seems kinda bad
     template <MemoryReadSupported T>
-    util::Result<util::remove_all_pointers_t<T>> read_deref_all(std::uintptr_t address) {
+    Result<remove_all_pointers_t<T>> read_deref_all(std::uintptr_t address) {
         if constexpr (std::is_pointer_v<T>) {
             using NextType = std::remove_pointer_t<T>;
 
@@ -80,7 +82,7 @@ public:
     }
 
     template <MemoryWriteSupported T>
-    util::Result<std::size_t> write(std::uintptr_t address, const T& data) {
+    Result<std::size_t> write(std::uintptr_t address, const T& data) {
         ByteVector bytes = MemoryIOSerde<T>::to_bytes(data);
         TRY(this->write_block_impl(address, bytes));
         return bytes.size();
@@ -94,12 +96,14 @@ private:
     template <typename T>
     friend struct MemoryIOSerde;
 
-    virtual util::Result<ByteVector> read_until(std::uintptr_t address,
+    virtual Result<ByteVector> read_until(std::uintptr_t address,
                                                 const std::function<bool(std::byte)>& predicate);
-    virtual util::Result<ByteVector> read_until(std::uintptr_t address,
+    virtual Result<ByteVector> read_until(std::uintptr_t address,
                                                 const std::function<bool(std::span<const std::byte>)>& predicate,
                                                 std::size_t block_size);
 
-    virtual util::Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;
-    virtual util::Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) = 0;
+    virtual Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;
+    virtual Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) = 0;
 };
+
+} // namespace asmgrader

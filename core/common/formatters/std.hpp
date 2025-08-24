@@ -67,7 +67,7 @@ struct fmt::formatter<std::source_location> : formatter<std::string>
 
 /// Output formatter for make_error_code
 template <>
-struct fmt::formatter<std::error_code> : DebugFormatter
+struct fmt::formatter<std::error_code> : ::asmgrader::DebugFormatter
 {
     auto format(const std::error_code& from, format_context& ctx) const {
         return format_to(ctx.out(), "{} : {}", strerrorname_np(from.value()), from.message());
@@ -75,7 +75,7 @@ struct fmt::formatter<std::error_code> : DebugFormatter
 };
 
 template <typename T>
-struct fmt::formatter<std::optional<T>> : DebugFormatter
+struct fmt::formatter<std::optional<T>> : ::asmgrader::DebugFormatter
 {
     auto format(const std::optional<T>& from, format_context& ctx) const {
         if (!from) {
@@ -91,7 +91,7 @@ struct fmt::formatter<std::optional<T>> : DebugFormatter
 };
 
 template <typename... Ts>
-struct fmt::formatter<std::variant<Ts...>> : DebugFormatter
+struct fmt::formatter<std::variant<Ts...>> : ::asmgrader::DebugFormatter
 {
     auto format(const std::variant<Ts...>& from, format_context& ctx) const {
         const auto& [type_str, inner_str] = std::visit(

@@ -35,6 +35,8 @@
 #include <sys/user.h>
 #include <unistd.h>
 
+namespace asmgrader {
+
 TestContext::TestContext(TestBase& test, Program program,
                          std::function<void(const RequirementResult&)> on_requirement) noexcept
     : associated_test_{&test}
@@ -91,7 +93,7 @@ void TestContext::restart_program() {
     TRY_OR_THROW(prog_.get_subproc().restart(), "failed to restart program");
 }
 
-util::Result<SyscallRecord> TestContext::exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
+Result<SyscallRecord> TestContext::exec_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
     return prog_.get_subproc().get_tracer().execute_syscall(sys_nr, args);
 }
 
@@ -152,7 +154,7 @@ std::size_t TestContext::flush_stdin() {
         }
 
         if (read_res.ret->has_error()) {
-            throw ContextInternalError{util::ErrorKind::SyscallFailure, "failed to flush stdin"};
+            throw ContextInternalError{ErrorKind::SyscallFailure, "failed to flush stdin"};
         }
 
         bytes_read += gsl::narrow_cast<std::size_t>(read_res.ret->value());
@@ -168,3 +170,5 @@ RegistersState TestContext::get_registers() const {
 
     return RegistersState::from(regs, fp_regs);
 }
+
+} // namespace asmgrader

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/byte_vector.hpp"
 #include "subprocess/memory/memory_io_base.hpp"
 #include "subprocess/memory/non_terminated_str.hpp"
-#include "common/byte_vector.hpp"
 
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/algorithm/transform.hpp>
@@ -18,12 +18,14 @@
 #include <type_traits>
 #include <vector>
 
+namespace asmgrader {
+
 /// Example class implementation:
 ///
 /// struct TraceeMemoryTypedIO<Type>
 /// {
 /// public:
-///     static util::Result<T> read(std::uintptr_t address, TraceeMemory& mio);
+///     static Result<T> read(std::uintptr_t address, TraceeMemory& mio);
 ///     static ByteVector to_bytes(const T& data);
 /// };
 template <typename T>
@@ -73,7 +75,7 @@ template <typename T>
              std::is_bounded_array_v<T> || (std::is_aggregate_v<T> && !std::is_array_v<T>)
 struct MemoryIOSerde<T>
 {
-    static util::Result<T> read(std::uintptr_t address, MemoryIOBase& mio) {
+    static Result<T> read(std::uintptr_t address, MemoryIOBase& mio) {
         const auto raw_data = TRY(mio.read_block_impl(address, sizeof(T)));
 
         return raw_data.bit_cast_to<T>();
@@ -85,7 +87,7 @@ struct MemoryIOSerde<T>
 template <>
 struct MemoryIOSerde<std::string>
 {
-    static util::Result<std::string> read(std::uintptr_t address, MemoryIOBase& mio) {
+    static Result<std::string> read(std::uintptr_t address, MemoryIOBase& mio) {
         auto is_null_term = [](std::byte chr) { return std::to_integer<char>(chr) == '\0'; };
         const auto raw_data = TRY(mio.read_until(address, is_null_term));
 
@@ -106,7 +108,7 @@ struct MemoryIOSerde<std::string>
 template <std::size_t Length>
 struct MemoryIOSerde<NonTermString<Length>>
 {
-    static util::Result<NonTermString<Length>> read(std::uintptr_t address, MemoryIOBase& mio) {
+    static Result<NonTermString<Length>> read(std::uintptr_t address, MemoryIOBase& mio) {
         const auto raw_data = TRY(mio.read_block_impl(address, Length));
 
         return {.string = MemoryIOSerde<std::string>::data_to_str(raw_data)};
@@ -116,3 +118,5 @@ struct MemoryIOSerde<NonTermString<Length>>
         return detail::reinterpret_raw_each(std::string_view{data.string, data.string + data.LENGTH});
     }
 };
+
+} // namespace asmgrader

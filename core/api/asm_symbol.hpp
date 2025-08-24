@@ -14,20 +14,22 @@
 #include <string_view>
 #include <utility>
 
+namespace asmgrader {
+
 template <typename T>
 class AsmSymbol : AsmData<T>
 {
 public:
     AsmSymbol(Program& prog, std::string name, std::uintptr_t address);
-    AsmSymbol(Program& prog, std::string name, util::ErrorKind resolution_err);
+    AsmSymbol(Program& prog, std::string name, ErrorKind resolution_err);
 
     std::string_view get_name() const;
 
-    util::Result<T> get_value() const override;
+    Result<T> get_value() const override;
 
 private:
     std::string name_;
-    std::optional<util::ErrorKind> resolution_err_;
+    std::optional<ErrorKind> resolution_err_;
 };
 
 template <typename T>
@@ -36,7 +38,7 @@ std::string_view AsmSymbol<T>::get_name() const {
 }
 
 template <typename T>
-util::Result<T> AsmSymbol<T>::get_value() const {
+Result<T> AsmSymbol<T>::get_value() const {
     if (resolution_err_.has_value()) {
         return *resolution_err_;
     }
@@ -58,7 +60,9 @@ AsmSymbol<T>::AsmSymbol(Program& prog, std::string name, std::uintptr_t address)
     , name_{std::move(name)} {}
 
 template <typename T>
-AsmSymbol<T>::AsmSymbol(Program& prog, std::string name, util::ErrorKind resolution_err)
+AsmSymbol<T>::AsmSymbol(Program& prog, std::string name, ErrorKind resolution_err)
     : AsmData<T>(prog, 0)
     , name_{std::move(name)}
     , resolution_err_{resolution_err} {}
+
+} // namespace asmgrader

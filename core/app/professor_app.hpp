@@ -6,6 +6,8 @@
 #include <optional>
 #include <vector>
 
+namespace asmgrader {
+
 class ProfessorApp final : public App
 {
 public:
@@ -16,3 +18,5 @@ private:
 
     std::optional<std::vector<StudentInfo>> get_student_names() const;
 };
+
+} // namespace asmgrader

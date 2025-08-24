@@ -2,6 +2,8 @@
 
 #include <string_view>
 
+namespace asmgrader {
+
 class Sink
 {
 public:
@@ -10,3 +12,5 @@ public:
 
     virtual ~Sink() = default;
 };
+
+} // namespace asmgrader

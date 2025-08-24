@@ -7,14 +7,13 @@
 #include <cstring>
 #include <functional>
 #include <optional>
-#include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-namespace util {
+namespace asmgrader {
 
 namespace detail {
 
@@ -81,4 +80,4 @@ static_assert(*tuple_find_first(
                   std::make_tuple(0, "hi"sv, "bye"sv)) == std::variant<int, std::string_view>{"bye"});
 } // namespace tests
 
-} // namespace util
+} // namespace asmgrader

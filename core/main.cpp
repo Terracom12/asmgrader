@@ -20,16 +20,16 @@
 #include <span>
 
 int main(int argc, const char* argv[]) {
-    init_loggers();
+    asmgrader::init_loggers();
 
     std::span<const char*> args{argv, static_cast<std::size_t>(argc)};
-    const ProgramOptions options = parse_args_or_exit(args);
+    const asmgrader::ProgramOptions options = asmgrader::parse_args_or_exit(args);
 
-    std::unique_ptr<App> app =
+    std::unique_ptr<asmgrader::App> app =
 #ifdef PROFESSOR_VERSION
-        std::make_unique<ProfessorApp>(options);
+        std::make_unique<asmgrader::ProfessorApp>(options);
 #else
-        std::make_unique<StudentApp>(options);
+        std::make_unique<asmgrader::StudentApp>(options);
 #endif // PROFESSOR_VERSION
 
     return app->run();

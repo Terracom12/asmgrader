@@ -1,13 +1,15 @@
 #pragma once
 
 #include "app/trace_exception.hpp"
-#include "user/program_options.hpp"
 #include "common/class_traits.hpp"
+#include "user/program_options.hpp"
 
 #include <optional>
 #include <utility>
 
-class App : util::NonCopyable
+namespace asmgrader {
+
+class App : NonCopyable
 {
 public:
     explicit App(ProgramOptions opts)
@@ -28,3 +30,5 @@ public:
 protected:
     virtual int run_impl() = 0;
 };
+
+} // namespace asmgrader

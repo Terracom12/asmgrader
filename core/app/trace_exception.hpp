@@ -16,6 +16,8 @@
 #include <type_traits>
 #include <utility>
 
+namespace asmgrader {
+
 template <typename T>
 void trace_exception(const T& exception) {
     boost::stacktrace::stacktrace trace = boost::stacktrace::stacktrace::from_current_exception();
@@ -40,3 +42,5 @@ std::optional<std::invoke_result_t<Func, Args...>> wrap_throwable_fn(Func&& fn, 
 
     return std::nullopt;
 }
+
+} // namespace asmgrader

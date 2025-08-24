@@ -9,6 +9,8 @@
 
 #include <unistd.h>
 
+namespace asmgrader {
+
 // Determine if the terminal supports colors
 // Based on: https://github.com/gabime/spdlog
 // Which is subsequently based on: https://github.com/agauniyal/rang/
@@ -41,3 +43,5 @@ bool is_color_terminal() noexcept {
 bool in_terminal(FILE* file) noexcept {
     return ::isatty(fileno(file)) != 0;
 }
+
+} // namespace asmgrader

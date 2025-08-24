@@ -4,19 +4,19 @@
 
 #include <fmt/base.h>
 
-namespace util::detail {
+namespace asmgrader::detail {
 
 template <typename T, typename Enable = void>
 struct FormatterImpl;
 
-} // namespace util::detail
+} // namespace asmgrader::detail
 
 /// Formatter specialization for anything supported by FormatterImpl
 template <typename T>
-    requires requires { util::detail::FormatterImpl<T>(); }
-struct fmt::formatter<T> : DebugFormatter
+    requires requires { ::asmgrader::detail::FormatterImpl<T>(); }
+struct fmt::formatter<T> : ::asmgrader::DebugFormatter
 {
     constexpr auto format(const T& from, fmt::format_context& ctx) const {
-        return util::detail::FormatterImpl<T>::format(from, ctx);
+        return ::asmgrader::detail::FormatterImpl<T>::format(from, ctx);
     }
 };

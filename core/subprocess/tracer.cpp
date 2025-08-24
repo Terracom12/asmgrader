@@ -43,9 +43,11 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
+namespace asmgrader {
+
 using namespace std::chrono_literals;
 
-util::Result<void> Tracer::begin(pid_t pid) {
+Result<void> Tracer::begin(pid_t pid) {
     pid_ = pid;
 
     assert_invariants();
@@ -60,7 +62,7 @@ util::Result<void> Tracer::begin(pid_t pid) {
     // Set options:
     //   Stop tracee upon execve
     //   Deliver a info on a syscall trap (see TracedWaitid::parse or ptrace(2))
-    TRYE(util::linux::ptrace(PTRACE_SETOPTIONS, pid_, NULL,
+    TRYE(linux::ptrace(PTRACE_SETOPTIONS, pid_, NULL,
                              PTRACE_O_TRACEEXEC | PTRACE_O_TRACESYSGOOD | PTRACE_O_EXITKILL),
          SyscallFailure);
 
@@ -88,12 +90,12 @@ util::Result<void> Tracer::begin(pid_t pid) {
     return {};
 }
 
-util::Result<void> Tracer::init_child() {
+Result<void> Tracer::init_child() {
     // Request to be traced by parent process
-    TRYE(util::linux::ptrace(PTRACE_TRACEME), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_TRACEME), SyscallFailure);
 
     // Stop process so that parent has a chance to attach before further action
-    TRYE(util::linux::raise(SIGSTOP), SyscallFailure);
+    TRYE(linux::raise(SIGSTOP), SyscallFailure);
 
     return {};
 }
@@ -102,7 +104,7 @@ util::Result<void> Tracer::init_child() {
 void Tracer::assert_invariants() const {
     const std::string proc_stat_pathname = fmt::format("/proc/{}/stat", pid_);
 
-    if (const auto proc_stat_res = util::linux::stat(proc_stat_pathname); proc_stat_res.has_error()) {
+    if (const auto proc_stat_res = linux::stat(proc_stat_pathname); proc_stat_res.has_error()) {
         LOG_FATAL("Traced child of pid={} does not exist in procfs ({})", pid_, proc_stat_res.error());
         throw std::runtime_error("contract violation");
     }
@@ -129,7 +131,7 @@ void Tracer::assert_invariants() const {
     }
 
     // Check that parent is THIS process
-    const int expected_ppid = util::linux::getpid().value();
+    const int expected_ppid = linux::getpid().value();
     if (info.ppid != expected_ppid) {
         LOG_FATAL("Traced child of pid={} has parent proc that is not this one (expected={}, actual ppid={})", pid_,
                   expected_ppid, info.ppid);
@@ -174,7 +176,7 @@ void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_inf
 
     rec.ret = [&]() -> decltype(SyscallRecord::ret) {
         if (exit->exit.is_error) {
-            return util::linux::make_error_code(static_cast<int>(-ret_val));
+            return linux::make_error_code(static_cast<int>(-ret_val));
         }
         return ret_val;
     }();
@@ -182,7 +184,7 @@ void Tracer::get_syscall_exit_info(SyscallRecord& rec, struct ptrace_syscall_inf
     // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 }
 
-util::Result<void> Tracer::jump_to(std::uintptr_t address) {
+Result<void> Tracer::jump_to(std::uintptr_t address) {
     auto regs = TRY(get_registers());
 #if defined(ASMGRADER_AARCH64)
     regs.pc = address;
@@ -194,43 +196,43 @@ util::Result<void> Tracer::jump_to(std::uintptr_t address) {
     return {};
 }
 
-util::Result<user_regs_struct> Tracer::get_registers() const {
+Result<user_regs_struct> Tracer::get_registers() const {
     user_regs_struct result{};
 
     iovec iov = {.iov_base = &result, .iov_len = sizeof(result)};
 
-    TRYE(util::linux::ptrace(PTRACE_GETREGSET, pid_, NT_PRSTATUS, &iov), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_GETREGSET, pid_, NT_PRSTATUS, &iov), SyscallFailure);
 
     return result;
 }
 
-util::Result<void> Tracer::set_registers(user_regs_struct regs) const {
+Result<void> Tracer::set_registers(user_regs_struct regs) const {
     iovec iov = {.iov_base = &regs, .iov_len = sizeof(regs)};
 
-    TRYE(util::linux::ptrace(PTRACE_SETREGSET, pid_, NT_PRSTATUS, &iov), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_SETREGSET, pid_, NT_PRSTATUS, &iov), SyscallFailure);
 
     return {};
 }
 
-util::Result<user_fpregs_struct> Tracer::get_fp_registers() const {
+Result<user_fpregs_struct> Tracer::get_fp_registers() const {
     user_fpregs_struct result{};
 
     iovec iov = {.iov_base = &result, .iov_len = sizeof(result)};
 
-    TRYE(util::linux::ptrace(PTRACE_GETREGSET, pid_, NT_FPREGSET, &iov), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_GETREGSET, pid_, NT_FPREGSET, &iov), SyscallFailure);
 
     return result;
 }
 
-util::Result<void> Tracer::set_fp_registers(user_fpregs_struct regs) const {
+Result<void> Tracer::set_fp_registers(user_fpregs_struct regs) const {
     iovec iov = {.iov_base = &regs, .iov_len = sizeof(regs)};
 
-    TRYE(util::linux::ptrace(PTRACE_SETREGSET, pid_, NT_FPREGSET, &iov), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_SETREGSET, pid_, NT_FPREGSET, &iov), SyscallFailure);
 
     return {};
 }
 
-util::Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
+Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args) {
     auto orig_regs = TRY(get_registers());
     auto new_regs = orig_regs;
 
@@ -250,7 +252,7 @@ util::Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::
     //   svc 0         - d4000001
     //   nop           - d503201f
     ByteVector new_instrs = ByteVector::from<u32, std::uint32_t>(0xD4000001, //
-                                                                           0xD503201F);
+                                                                 0xD503201F);
     TRY(memory_io_->write(instr_ptr, new_instrs));
 #elif defined(ASMGRADER_X86_64)
     // syscall args are rdi, rsi, rdx, r10, r8, r9
@@ -292,21 +294,21 @@ util::Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::
 }
 
 // TODO: Refactor to use Exxpected result values
-util::Result<RunResult> Tracer::run() {
+Result<RunResult> Tracer::run() {
     assert_invariants();
 
     for (;;) {
-        assert_expected(util::linux::ptrace(PTRACE_SYSCALL, pid_), "PTRACE_SYSCALL failed");
+        assert_expected(linux::ptrace(PTRACE_SYSCALL, pid_), "PTRACE_SYSCALL failed");
 
         auto wait_result = TracedWaitid::wait_with_timeout(pid_, DEFAULT_TIMEOUT);
 
-        if (wait_result == util::ErrorKind::TimedOut) {
+        if (wait_result == ErrorKind::TimedOut) {
             LOG_DEBUG("Child process (pid={}) timed out. Stopping...", pid_);
 
             // stop process to keep in tracable state
-            TRYE(util::linux::kill(pid_, SIGSTOP), SyscallFailure);
+            TRYE(linux::kill(pid_, SIGSTOP), SyscallFailure);
 
-            return util::ErrorKind::TimedOut;
+            return ErrorKind::TimedOut;
         }
 
         if (!wait_result) {
@@ -327,7 +329,7 @@ util::Result<RunResult> Tracer::run() {
         if (waitid_data.is_syscall_trap) {
             struct ptrace_syscall_info info{};
 
-            assert_expected(util::linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(info), &info));
+            assert_expected(linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(info), &info));
 
             if (info.op == PTRACE_SYSCALL_INFO_ENTRY) {
                 SyscallRecord record = get_syscall_entry_info(&info);
@@ -351,7 +353,7 @@ util::Result<RunResult> Tracer::run() {
             // FIXME: better macro, or abstracted registers
 #ifndef ASMGRADER_AARCH64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
-                      util::fmt_or_unknown(get_registers()));
+                      fmt_or_unknown(get_registers()));
 #endif
             return RunResult::make_signal_caught(*waitid_data.signal_num);
         }
@@ -368,7 +370,7 @@ util::Result<RunResult> Tracer::run() {
     unreachable();
 }
 
-util::Result<void> Tracer::setup_function_return() {
+Result<void> Tracer::setup_function_return() {
     // TODO: Could do a couple fewer context switches by doing register setup all at once if perf is a concern
     user_regs_struct regs = TRY(get_registers());
 
@@ -388,8 +390,8 @@ util::Result<void> Tracer::setup_function_return() {
     //   nop           - d503201f
     // 32-bit alignment is required
     auto instrs = ByteVector::from<u32, std::uint32_t>( //
-        0xD4224680,                                               //
-        0xD503201F                                                //
+        0xD4224680,                                     //
+        0xD503201F                                      //
     );
 
 #elif defined(ASMGRADER_X86_64)
@@ -417,7 +419,7 @@ util::Result<void> Tracer::setup_function_return() {
 
 // FIXME: Not a great function... Does not permit handling of unexpected cases (e.g., program exiting, SIGSEGV,
 // etc.)
-util::Result<TracedWaitid> Tracer::resume_until(const std::function<bool(TracedWaitid)>& pred,
+Result<TracedWaitid> Tracer::resume_until(const std::function<bool(TracedWaitid)>& pred,
                                                 std::chrono::microseconds timeout, int ptrace_request) const {
 
     assert_invariants();
@@ -429,7 +431,7 @@ util::Result<TracedWaitid> Tracer::resume_until(const std::function<bool(TracedW
     std::common_type_t<decltype(start_time - start_time), std::chrono::microseconds> remaining_time = timeout;
 
     while (remaining_time > 0us) {
-        auto ptrace_result = util::linux::ptrace(ptrace_request, pid_);
+        auto ptrace_result = linux::ptrace(ptrace_request, pid_);
         assert_expected(ptrace_result, "ptrace failed in `resume_until`");
 
         auto wait_result = TracedWaitid::wait_with_timeout(pid_, timeout);
@@ -445,12 +447,12 @@ util::Result<TracedWaitid> Tracer::resume_until(const std::function<bool(TracedW
     }
 
     LOG_DEBUG("resume_until timed out at {}", timeout);
-    return util::ErrorKind::TimedOut;
+    return ErrorKind::TimedOut;
 }
 
 // FIXME: Not a great function... Does not permit handling of unexpected cases (e.g., program exiting, SIGSEGV,
 // etc.)
-util::Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds timeout) const {
+Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds timeout) const {
     assert_invariants();
 
     using Hrc = std::chrono::steady_clock;
@@ -465,7 +467,7 @@ util::Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds t
         !res) {
         return res.error();
     }
-    TRYE(util::linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(entry), &entry), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(entry), &entry), SyscallFailure);
 
     const auto elapsed_time = (Hrc::now() - start_time);
     timeout -= std::chrono::duration_cast<std::chrono::microseconds>(elapsed_time);
@@ -476,7 +478,7 @@ util::Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds t
         !res) {
         return res.error();
     }
-    TRYE(util::linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(exit), &exit), SyscallFailure);
+    TRYE(linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(exit), &exit), SyscallFailure);
 
     SyscallRecord rec = get_syscall_entry_info(&entry);
     get_syscall_exit_info(rec, &exit);
@@ -511,15 +513,15 @@ SyscallRecord::SyscallArg Tracer::from_syscall_value(u64 value, SyscallEntry::Ty
 
         if (!string_ptr_array) {
             // FIXME: ouch... these types hurt me
-            return util::Result<std::vector<util::Result<std::string>>>{string_ptr_array.error()};
+            return Result<std::vector<Result<std::string>>>{string_ptr_array.error()};
         }
 
-        std::vector<util::Result<std::string>> result(string_ptr_array->size());
+        std::vector<Result<std::string>> result(string_ptr_array->size());
         for (const auto& [ptr, elem] : ranges::views::zip(string_ptr_array.value(), result)) {
             elem = memory_io_->read<std::string>(ptr);
         }
 
-        return {util::Result<decltype(result)>{result}};
+        return {Result<decltype(result)>{result}};
     }
 
     case TimeSpecPtr:
@@ -533,3 +535,5 @@ SyscallRecord::SyscallArg Tracer::from_syscall_value(u64 value, SyscallEntry::Ty
 MemoryIOBase& Tracer::get_memory_io() {
     return *memory_io_;
 }
+
+} // namespace asmgrader

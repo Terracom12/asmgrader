@@ -1,15 +1,17 @@
 #pragma once
 
+#include "common/extra_formatters.hpp"
 #include "expected.hpp"
 #include "logging.hpp"
-#include "common/extra_formatters.hpp"
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <range/v3/algorithm/transform.hpp>
 
+#include <cerrno>
 #include <csignal>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <optional>
@@ -17,6 +19,7 @@
 #include <system_error>
 #include <vector>
 
+#include <bits/types/siginfo_t.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/ptrace.h>
@@ -25,7 +28,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace util::linux {
+namespace asmgrader::linux {
 
 inline std::error_code make_error_code(int err = errno) {
     return {err, std::generic_category()};
@@ -130,8 +133,10 @@ inline Expected<> execve(const std::string& exec, const std::vector<std::string>
 struct Fork
 {
     enum { Parent, Child } which;
+
     pid_t pid; // Only valid if type == child
 };
+
 /// see dup(2) and ``ForkExpected``
 /// returns result from enum; logs failure at debug level
 inline Expected<Fork> fork() {
@@ -279,6 +284,7 @@ struct Pipe
     int read_fd;
     int write_fd;
 };
+
 // Ensure that fds are packed so that pipe works properly
 static_assert(offsetof(Pipe, read_fd) + sizeof(Pipe::read_fd) == offsetof(Pipe, write_fd));
 
@@ -362,6 +368,7 @@ inline Expected<pid_t> getppid() {
 #define SIGSTRCASE(sig)                                                                                                \
     case sig:                                                                                                          \
         return #sig;
+
 // Value type to behave as a linux signal
 class Signal
 {
@@ -419,10 +426,12 @@ public:
 private:
     int signal_num_;
 };
+
 #undef SIGSTRCASE
 
 // TODO: Switch to using sigaction
 using SignalHandlerT = void (*)(int);
+
 inline Expected<SignalHandlerT> signal(Signal sig, SignalHandlerT handler) {
     SignalHandlerT prev_handler = ::signal(sig, handler);
 
@@ -437,4 +446,4 @@ inline Expected<SignalHandlerT> signal(Signal sig, SignalHandlerT handler) {
     return prev_handler;
 }
 
-} // namespace util::linux
+} // namespace asmgrader::linux

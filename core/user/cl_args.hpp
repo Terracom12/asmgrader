@@ -1,7 +1,7 @@
 #pragma once
 
-#include "user/program_options.hpp"
 #include "common/expected.hpp"
+#include "user/program_options.hpp"
 
 #include <argparse/argparse.hpp>
 
@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <vector>
 
+namespace asmgrader {
+
 /// Just a wrapper around argparse for now
 class CommandLineArgs
 {
@@ -21,7 +23,7 @@ public:
     /// Returns:
     ///   Success - Expected<ProgramOptions> with parsed program options structure
     ///   Failure - Expected<std::string> with failure essage
-    util::Expected<ProgramOptions, std::string> parse();
+    Expected<ProgramOptions, std::string> parse();
 
     std::string usage_message() const;
     std::string help_message() const;
@@ -48,3 +50,5 @@ private:
 };
 
 ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code = 1) noexcept;
+
+} // namespace asmgrader

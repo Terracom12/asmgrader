@@ -14,7 +14,7 @@
 #include <string_view>
 #include <type_traits>
 
-namespace util::detail {
+namespace asmgrader::detail {
 
 template <typename Aggregate>
     requires(std::is_aggregate_v<Aggregate> && std::is_standard_layout_v<Aggregate> && !std::is_array_v<Aggregate> &&
@@ -71,4 +71,4 @@ struct FormatterImpl<Aggregate>
     }
 };
 
-} // namespace util::detail
+} // namespace asmgrader::detail

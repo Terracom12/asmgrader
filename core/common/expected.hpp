@@ -1,12 +1,13 @@
 #pragma once
 
-#include "logging.hpp"
 #include "common/extra_formatters.hpp"
+#include "logging.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <concepts>
+#include <string>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
@@ -15,7 +16,7 @@
 
 #include <unistd.h> // _exit
 
-namespace util {
+namespace asmgrader {
 
 struct UnexpectedT
 {
@@ -68,7 +69,9 @@ public:
             return std::holds_alternative<T>(data_.data);
         }
     }
+
     constexpr bool has_error() const { return !has_value(); }
+
     constexpr explicit operator bool() const { return has_value(); }
 
     // TODO: clean this up. It seems like a whole void specialization would be required, but there MUST be a better way
@@ -78,6 +81,7 @@ public:
     {
         return const_cast<U&>(const_cast<const Expected*>(this)->value());
     }
+
     template <typename U = T>
     constexpr const U& value() const
         requires(!std::is_void_v<U>)
@@ -105,6 +109,7 @@ public:
                       "Do not attempt to instantiate Expected<T,E>::operator*() for any type other than T");
         return value();
     }
+
     template <typename U = T>
     constexpr const U& operator*() const
         requires(!std::is_void_v<U>)
@@ -122,6 +127,7 @@ public:
                       "Do not attempt to instantiate Expected<T,E>::operator->() for any type other than T");
         return &value();
     }
+
     template <typename U = T>
     constexpr const U* operator->() const
         requires(!std::is_void_v<U>)
@@ -170,6 +176,7 @@ private:
         std::variant<Td, Ed> data;
         constexpr auto operator<=>(const ExpectedData& rhs) const = default;
     };
+
     template <typename Ed>
     struct ExpectedData<void, Ed>
     {
@@ -229,7 +236,7 @@ inline auto format_as(const Expected<void, E>& from) {
 #endif
 
 template <typename T, typename E>
-[[maybe_unused]] ASSERT_EXPECTED_DEPRECATED inline void assert_expected(const util::Expected<T, E>& exp,
+[[maybe_unused]] ASSERT_EXPECTED_DEPRECATED inline void assert_expected(const Expected<T, E>& exp,
                                                                         std::string_view msg = "<no message>") {
     if (exp.has_value()) {
         return;
@@ -243,19 +250,19 @@ template <typename T, typename E>
     _exit(1);
 }
 
-} // namespace util
+} // namespace asmgrader
 
 template <typename T, typename E>
-struct fmt::formatter<util::Expected<T, E>> : DebugFormatter
+struct fmt::formatter<::asmgrader::Expected<T, E>> : ::asmgrader::DebugFormatter
 {
 
-    auto format(const util::Expected<T, E>& from, fmt::format_context& ctx) const {
+    auto format(const ::asmgrader::Expected<T, E>& from, fmt::format_context& ctx) const {
         // TODO: Use a `copy` algo. `ranges::copy` has stricter iter reqs than the `ctx.out()` type impls
         return format_to(ctx.out(), "{}", format_impl(from));
     }
 
 private:
-    std::string format_impl(const util::Expected<T, E>& from) const {
+    std::string format_impl(const ::asmgrader::Expected<T, E>& from) const {
         if (!from) {
             if constexpr (formattable<E>) {
                 return fmt::format("Error({})", from.error());

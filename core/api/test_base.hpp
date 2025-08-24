@@ -6,6 +6,8 @@
 #include <optional>
 #include <string_view>
 
+namespace asmgrader {
+
 class Assignment;
 
 /// Base class primarily for a user-written test
@@ -43,3 +45,5 @@ private:
     bool is_prof_only_;
     std::optional<metadata::Weight> weight_;
 };
+
+} // namespace asmgrader

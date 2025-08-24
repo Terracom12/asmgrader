@@ -6,6 +6,8 @@
 #include <string_view>
 #include <vector>
 
+namespace asmgrader {
+
 GlobalRegistrar& GlobalRegistrar::get() noexcept {
     // thread-safe singleton initialization pattern
     static GlobalRegistrar local_instance{};
@@ -26,3 +28,5 @@ std::vector<std::string_view> GlobalRegistrar::get_assignment_names() {
 std::size_t GlobalRegistrar::get_num_registered() const {
     return registered_assignments_.size();
 }
+
+} // namespace asmgrader

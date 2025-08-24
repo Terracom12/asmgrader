@@ -2,8 +2,8 @@
 
 // TODO: Rename this file
 
-#include "exceptions.hpp"
 #include "common/extra_formatters.hpp"
+#include "exceptions.hpp"
 
 #include <fmt/base.h>
 #include <gsl/util>
@@ -20,8 +20,9 @@
 #include <string_view>
 #include <vector>
 
-/// Defines data classes to store result data for the current run session
+namespace asmgrader {
 
+/// Defines data classes to store result data for the current run session
 struct RequirementResult
 {
     bool passed;
@@ -41,19 +42,6 @@ struct RequirementResult
     };
 
     DebugInfo debug_info;
-};
-
-template <>
-struct fmt::formatter<RequirementResult::DebugInfo> : DebugFormatter
-{
-    constexpr auto format(const RequirementResult::DebugInfo& from, fmt::format_context& ctx) const {
-        // Explicitly called "DebugInfo", so fmt to an empty string if not debug mode
-        if (is_debug_format) {
-            return ctx.out();
-        }
-
-        return fmt::format_to(ctx.out(), "{{{} at {}}}", from.msg, from.loc);
-    }
 };
 
 struct TestResult
@@ -115,4 +103,19 @@ struct StudentResult
 struct MultiStudentResult
 {
     std::vector<StudentResult> results;
+};
+
+} // namespace asmgrader
+
+template <>
+struct fmt::formatter<::asmgrader::RequirementResult::DebugInfo> : ::asmgrader::DebugFormatter
+{
+    constexpr auto format(const ::asmgrader::RequirementResult::DebugInfo& from, fmt::format_context& ctx) const {
+        // Explicitly called "DebugInfo", so fmt to an empty string if not debug mode
+        if (is_debug_format) {
+            return ctx.out();
+        }
+
+        return fmt::format_to(ctx.out(), "{{{} at {}}}", from.msg, from.loc);
+    }
 };

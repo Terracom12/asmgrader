@@ -3,7 +3,7 @@
 #include <chrono>
 #include <type_traits>
 
-namespace util {
+namespace asmgrader {
 
 /**
  * \brief A trivially-movable, but non-copyable type.
@@ -47,6 +47,7 @@ public:
 
     ~NonMovable() = default;
 };
+
 static_assert(std::is_trivially_constructible_v<NonMovable> && std::is_trivially_copyable_v<NonMovable> &&
                   !std::is_copy_assignable_v<NonMovable> && !std::is_copy_constructible_v<NonMovable> &&
                   !std::is_move_assignable_v<NonMovable> && !std::is_move_constructible_v<NonMovable>,
@@ -58,4 +59,4 @@ concept ChronoDuration = requires {
     []<class Rep, class Period>(std::type_identity<std::chrono::duration<Rep, Period>>) {}(std::type_identity<T>());
 };
 
-} // namespace util
+} // namespace asmgrader

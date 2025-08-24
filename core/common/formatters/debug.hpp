@@ -3,6 +3,8 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+namespace asmgrader {
+
 struct DebugFormatter
 {
     bool is_debug_format = false;
@@ -21,3 +23,5 @@ struct DebugFormatter
         return it;
     }
 };
+
+} // namespace asmgrader

@@ -7,12 +7,12 @@
 
 #include <cstddef>
 
-namespace util {
+namespace asmgrader {
 
 template <typename Func>
 struct FunctionTraits
 {
-    static_assert(util::always_false_v<Func>, "Must be instantiated with a callable type");
+    static_assert(always_false_v<Func>, "Must be instantiated with a callable type");
 };
 
 template <typename FuncRet, typename... FuncArgs>
@@ -30,4 +30,4 @@ struct FunctionTraits<FuncRet(FuncArgs...)>
     };
 };
 
-} // namespace util
+} // namespace asmgrader

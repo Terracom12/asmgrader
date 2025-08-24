@@ -21,7 +21,9 @@
 #include <string_view>
 #include <vector>
 
-class Program : util::NonCopyable
+namespace asmgrader {
+
+class Program : NonCopyable
 {
 public:
     explicit Program(std::filesystem::path path, std::vector<std::string> args = {});
@@ -31,7 +33,7 @@ public:
 
     ~Program() = default;
 
-    util::Result<RunResult> run();
+    Result<RunResult> run();
 
     TracedSubprocess& get_subproc();
     const TracedSubprocess& get_subproc() const;
@@ -44,15 +46,15 @@ public:
     /// Returns the result of the function call, or nullopt if the symbol name was not found
     /// or some other error occured
     template <typename Func, typename... Args>
-    util::Result<typename util::FunctionTraits<Func>::Ret> call_function(std::string_view name, Args&&... args);
+    Result<typename FunctionTraits<Func>::Ret> call_function(std::string_view name, Args&&... args);
 
     template <typename Func, typename... Args>
-    util::Result<typename util::FunctionTraits<Func>::Ret> call_function(std::uintptr_t addr, Args&&... args);
+    Result<typename FunctionTraits<Func>::Ret> call_function(std::uintptr_t addr, Args&&... args);
 
     // TODO: Proper allocation (and deallocation!!)
     std::uintptr_t alloc_mem(std::size_t amt);
 
-    static util::Expected<void, std::string> check_is_elf(const std::filesystem::path& path);
+    static Expected<void, std::string> check_is_elf(const std::filesystem::path& path);
 
 private:
     std::filesystem::path path_;
@@ -65,8 +67,8 @@ private:
 };
 
 template <typename Func, typename... Args>
-util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(std::uintptr_t addr, Args&&... args) {
-    using Ret = typename util::FunctionTraits<Func>::Ret;
+Result<typename FunctionTraits<Func>::Ret> Program::call_function(std::uintptr_t addr, Args&&... args) {
+    using Ret = typename FunctionTraits<Func>::Ret;
 
     Tracer& tracer = subproc_->get_tracer();
     TRY(tracer.setup_function_call(std::forward<Args>(args)...));
@@ -115,7 +117,7 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
             LOG_TRACE("Memory (16 bytes) at point of instruction ptr (0x{:x}): {::x}", instr_addr, *res);
         }
 
-        return util::ErrorKind::UnexpectedReturn;
+        return ErrorKind::UnexpectedReturn;
     }
 
     if constexpr (std::same_as<Ret, void>) {
@@ -124,7 +126,7 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
         std::optional<Ret> return_val = TRY(tracer.process_function_ret<Ret>());
 
         if (!return_val) {
-            return util::ErrorKind::UnknownError;
+            return ErrorKind::UnknownError;
         }
 
         return *return_val;
@@ -132,13 +134,15 @@ util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(st
 }
 
 template <typename Func, typename... Args>
-util::Result<typename util::FunctionTraits<Func>::Ret> Program::call_function(std::string_view name, Args&&... args) {
+Result<typename FunctionTraits<Func>::Ret> Program::call_function(std::string_view name, Args&&... args) {
     auto symbol = symtab_->find(name);
     if (!symbol) {
-        return util::ErrorKind::UnresolvedSymbol;
+        return ErrorKind::UnresolvedSymbol;
     }
 
     LOG_TRACE("Resolved symbol {:?} at {:#X}", symbol->name, symbol->address);
 
     return call_function<Func>(symbol->address, std::forward<Args>(args)...);
 }
+
+} // namespace asmgrader

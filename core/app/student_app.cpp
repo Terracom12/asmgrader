@@ -15,6 +15,8 @@
 #include <memory>
 #include <optional>
 
+namespace asmgrader {
+
 int StudentApp::run_impl() {
     LOG_TRACE("Registered tests: {::}", GlobalRegistrar::get().for_each_assignment([](const Assignment& assignment) {
         return fmt::format("{:?}: {}", assignment.get_name(), assignment.get_test_names());
@@ -39,3 +41,5 @@ int StudentApp::run_impl() {
 
     return EXIT_SUCCESS;
 }
+
+} // namespace asmgrader

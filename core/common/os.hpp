@@ -3,6 +3,8 @@
 #include <boost/endian.hpp>
 #include <boost/endian/detail/order.hpp>
 
+namespace asmgrader {
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 enum class ProcessorKind { Aarch64, x86_64 };
 
@@ -24,3 +26,5 @@ constexpr auto ENDIANNESS = (                                    //
         ?                                                        //
         EndiannessKind::Little
         : EndiannessKind::Big);
+
+} // namespace asmgrader

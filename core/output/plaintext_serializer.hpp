@@ -13,6 +13,8 @@
 #include <string>
 #include <string_view>
 
+namespace asmgrader {
+
 class PlainTextSerializer : public Serializer
 {
 public:
@@ -88,3 +90,5 @@ std::string PlainTextSerializer::style_str(const T& arg, fmt::text_style style, 
 
     return fmt::vformat(style, fmt.str, fmt::vargs<T>{arg});
 }
+
+} // namespace asmgrader

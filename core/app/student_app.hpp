@@ -2,6 +2,8 @@
 
 #include "app/app.hpp" // IWYU pragma: export
 
+namespace asmgrader {
+
 class StudentApp final : public App
 {
 public:
@@ -10,3 +12,5 @@ public:
 private:
     int run_impl() override;
 };
+
+} // namespace asmgrader

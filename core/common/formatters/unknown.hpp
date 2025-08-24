@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace util {
+namespace asmgrader {
 
 template <typename T>
 inline std::string fmt_or_unknown(T&& value, fmt::fstring<T> fmt = "{}") {
@@ -16,4 +16,4 @@ inline std::string fmt_or_unknown(T&& value, fmt::fstring<T> fmt = "{}") {
     }
 }
 
-} // namespace util
+} // namespace asmgrader

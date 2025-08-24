@@ -1,18 +1,23 @@
 #include "subprocess/memory/ptrace_memory_io.hpp"
 
 #include "common/byte_vector.hpp"
+#include "common/error_types.hpp"
 #include "common/linux.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <cstdint>
 
 #include <sys/ptrace.h>
 
-util::Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
+namespace asmgrader {
+
+Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
     // TODO: Detetermine whether alignment logic is necessary
 
     // TODO: Use <algorithm> instead of ptr arithmetic
     ByteVector result_buffer(length);
-    unsigned char* raw_buffer_ptr = reinterpret_cast<unsigned char*>(result_buffer.data());
+    auto* raw_buffer_ptr = reinterpret_cast<unsigned char*>(result_buffer.data());
 
     // NOLINTBEGIN(google-runtime-int) - based on ptrace(2) spec
 
@@ -20,9 +25,9 @@ util::Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address,
     static constexpr auto ALIGNMENT = sizeof(long) - 1;
 
     while (length != 0) {
-        size_t todo = std::min(length, sizeof(long) - (address & ALIGNMENT));
-        long res = TRYE(util::linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0),
-                        util::ErrorKind::SyscallFailure);
+        std::size_t todo = std::min(length, sizeof(long) - (address & ALIGNMENT));
+        long res = TRYE(linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0),
+                        ErrorKind::SyscallFailure);
 
         std::memcpy(raw_buffer_ptr, reinterpret_cast<char*>(&res) + (address & ALIGNMENT), todo);
 
@@ -35,7 +40,8 @@ util::Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address,
 
     return result_buffer;
 }
-util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
+
+Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
     // TODO: Detetermine whether alignment logic is necessary
     // static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
     // ASSERT(/*addr % ALIGNMENT == 0 &&*/ data.size() % ALIGNMENT == 0,
@@ -64,8 +70,8 @@ util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, cons
                     reinterpret_cast<const char*>(&*iter), todo);
 
         std::size_t ptrace_write_addr = address - 8 + todo;
-        TRYE(util::linux::ptrace(PTRACE_POKETEXT, get_pid(), ptrace_write_addr, ptrace_write_data),
-             util::ErrorKind::SyscallFailure);
+        TRYE(linux::ptrace(PTRACE_POKETEXT, get_pid(), ptrace_write_addr, ptrace_write_data),
+             ErrorKind::SyscallFailure);
 
         iter += static_cast<std::ptrdiff_t>(todo);
         address += todo;
@@ -92,7 +98,7 @@ util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, cons
 //
 //     while (result_buffer.size() < MAX_SIZE) {
 //         size_t todo = sizeof(long) - (address & ALIGNMENT);
-//         auto res = util::linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0);
+//         auto res = linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0);
 //
 //         if (!res) {
 //             LOG_WARN("PTRACE_PEEKTEXT failed at {:#x}", address - (address & ALIGNMENT));
@@ -115,3 +121,6 @@ util::Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, cons
 // finish:
 //     return result_buffer;
 // }
+//
+
+} // namespace asmgrader

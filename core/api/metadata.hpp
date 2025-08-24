@@ -17,7 +17,7 @@
 #include <utility>
 #include <variant>
 
-namespace metadata {
+namespace asmgrader::metadata {
 
 struct Assignment
 {
@@ -281,4 +281,4 @@ static consteval auto global_file_metadata() {
     return Metadata{};
 }
 
-} // namespace metadata
+} // namespace asmgrader::metadata

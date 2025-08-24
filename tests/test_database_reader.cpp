@@ -12,7 +12,7 @@
 auto THIS_DIR = std::filesystem::path{__FILE__}.parent_path();
 
 TEST_CASE("Read small database") {
-    DatabaseReader reader{THIS_DIR / "small_database.csv"};
+    asmgrader::DatabaseReader reader{THIS_DIR / "small_database.csv"};
 
     auto res = reader.read();
 
@@ -30,13 +30,13 @@ TEST_CASE("Read small database") {
 }
 
 TEST_CASE("Read bad_field database; ensure error") {
-    DatabaseReader reader{THIS_DIR / "bad_field.csv"};
+    asmgrader::DatabaseReader reader{THIS_DIR / "bad_field.csv"};
 
     REQUIRE_FALSE(reader.read());
 }
 
 TEST_CASE("Read non-existant database; ensure error") {
-    DatabaseReader reader{THIS_DIR / "i-do-not-exist.csv"};
+    asmgrader::DatabaseReader reader{THIS_DIR / "i-do-not-exist.csv"};
 
     REQUIRE_FALSE(reader.read());
 }

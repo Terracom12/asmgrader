@@ -33,6 +33,8 @@
 #include <iterator>
 #include <string_view>
 
+namespace asmgrader {
+
 /// A fully compile-time capable string type
 /// Guaranteed to be null-terminated
 template <std::size_t N>
@@ -93,3 +95,5 @@ consteval auto format_static() {
 
 static_assert(format_static<"{0} + {0} = {1}", 1, 2>() == "1 + 1 = 2");
 static_assert(format_static<"", 1, 2>() == "");
+
+} // namespace asmgrader

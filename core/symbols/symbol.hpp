@@ -1,9 +1,13 @@
 #pragma once
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <cctype>
+#include <cstddef>
 #include <string>
+
+namespace asmgrader {
 
 /// Basic definition for a symbol found in an ELF file
 struct Symbol
@@ -12,16 +16,21 @@ struct Symbol
 
     /// I.e.: found in .symtab or .dynsym respectively
     enum { Static, Dynamic } kind;
+
     std::size_t address;
 
     enum { Local, Global, Weak, Other } binding;
 };
 
+} // namespace asmgrader
+
 template <>
-struct fmt::formatter<Symbol> : formatter<std::string>
+struct fmt::formatter<::asmgrader::Symbol> : formatter<std::string>
 {
     template <typename Context>
-    auto format(const Symbol& from, Context& ctx) const {
+    auto format(const ::asmgrader::Symbol& from, Context& ctx) const {
+        using Symbol = ::asmgrader::Symbol;
+
         const std::string kind_str = [&from]() {
             switch (from.kind) {
             case Symbol::Static:

@@ -14,7 +14,7 @@
 #include <optional>
 #include <type_traits>
 
-namespace util::detail {
+namespace asmgrader::detail {
 
 // See: https://www.boost.org/doc/libs/1_81_0/libs/describe/doc/html/describe.html#example_printing_enums_ct
 template <typename Enum>
@@ -46,7 +46,7 @@ struct FormatterImpl<Enum>
     }
 };
 
-} // namespace util::detail
+} // namespace asmgrader::detail
 
 namespace ct_test {
 

@@ -2,9 +2,10 @@
 
 #include "common/expected.hpp"
 
-#include <boost/describe.hpp>
+#include <boost/describe/enum.hpp>
+#include <boost/preprocessor/cat.hpp>
 
-namespace util {
+namespace asmgrader {
 
 // NOLINTNEXTLINE
 BOOST_DEFINE_ENUM_CLASS(ErrorKind,
@@ -18,11 +19,9 @@ BOOST_DEFINE_ENUM_CLASS(ErrorKind,
 );
 
 template <typename T>
-using Result = util::Expected<T, ErrorKind>;
+using Result = Expected<T, ErrorKind>;
 
-} // namespace util
-
-#include "common/macros.hpp"
+} // namespace asmgrader
 
 /// If the supplied argument is an error (unexpected) type, then propegate the error type `e` up
 /// the call stack. Otherwise, continue execution as normal
@@ -31,7 +30,7 @@ using Result = util::Expected<T, ErrorKind>;
     __extension__({                                                                                                    \
         const auto& ident = val;                                                                                       \
         if (ident.has_error()) {                                                                                       \
-            using enum util::ErrorKind;                                                                                \
+            using enum ErrorKind;                                                                                \
             return e;                                                                                                  \
         }                                                                                                              \
         ident.value();                                                                                                 \
@@ -40,8 +39,8 @@ using Result = util::Expected<T, ErrorKind>;
 #define TRY_IMPL(val, ident) TRYE_IMPL(val, ident.error(), ident)
 // NOLINTEND(bugprone-macro-parentheses)
 
-#define TRYE(val, e) TRYE_IMPL(val, e, CONCAT(errref_uniq__, __COUNTER__))
+#define TRYE(val, e) TRYE_IMPL(val, e, BOOST_PP_CAT(errref_uniq__, __COUNTER__))
 
 /// If the supplied argument is an error (unexpected) type, then propegate it up the call stack.
 /// Otherwise, continue execution as normal
-#define TRY(val) TRY_IMPL(val, CONCAT(errrefe_uniq__, __COUNTER__))
+#define TRY(val) TRY_IMPL(val, BOOST_PP_CAT(errrefe_uniq__, __COUNTER__))

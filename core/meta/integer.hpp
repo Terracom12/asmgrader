@@ -14,7 +14,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace meta {
+namespace asmgrader {
 
 namespace detail {
 namespace mp = boost::mp11;
@@ -59,4 +59,4 @@ static_assert(digits10_max_count<u32> == 10);
 static_assert(digits10_max_count<i64> == 19);
 static_assert(digits10_max_count<u64> == 20);
 
-} // namespace meta
+} // namespace asmgrader

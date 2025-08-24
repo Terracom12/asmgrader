@@ -1,34 +1,35 @@
 #pragma once
 
-#include "api/assignment.hpp"  // IWYU pragma: export
-#include "api/test_base.hpp"   // IWYU pragma: export
+#include "api/assignment.hpp" // IWYU pragma: export
+#include "api/test_base.hpp"  // IWYU pragma: export
+#include "common/macros.hpp"
 #include "grading_session.hpp" // IWYU pragma: export
 #include "logging.hpp"
 #include "registrars/auto_registrars.hpp" // IWYU pragma: export
 #include "test_context.hpp"
-#include "common/macros.hpp"
 
 // Some macros to substantially simplify test case development
 
 #define ASSIGNMENT(cpp_identifier, name, executable)                                                                   \
     const static Assignment& cpp_identifier = /* NOLINT(misc-use-anonymous-namespace)*/                                \
-        GlobalRegistrar::get().add(Assignment{name, executable});
+        ::asmgrader::GlobalRegistrar::get().add(Assignment{name, executable});
 
 #define TEST_IMPL(ident, name, /*metadata attributes*/...)                                                             \
     namespace {                                                                                                        \
-    class ident final : public TestBase                                                                                \
+    class ident final : public ::asmgrader::TestBase                                                                   \
     {                                                                                                                  \
     public:                                                                                                            \
         using TestBase::TestBase;                                                                                      \
-        void run(TestContext& ctx) override;                                                                           \
+        void run(::asmgrader::TestContext& ctx) override;                                                              \
     };                                                                                                                 \
-    using namespace metadata; /*NOLINT(google-build-using-namespace)*/                                                 \
-    constexpr auto CONCAT(ident, __metadata) = metadata::create(metadata::DEFAULT_METADATA,                            \
-                                                                metadata::global_file_metadata() __VA_OPT__(, )        \
-                                                                    __VA_ARGS__);                                      \
-    const TestAutoRegistrar<ident> CONCAT(ident, __registrar){name, CONCAT(ident, __metadata)};                        \
+    using namespace ::asmgrader::metadata; /*NOLINT(google-build-using-namespace)*/                                    \
+    constexpr auto CONCAT(ident,                                                                                       \
+                          __metadata) = ::asmgrader::metadata::create(::asmgrader::metadata::DEFAULT_METADATA,         \
+                                                                      ::asmgrader::metadata::global_file_metadata()    \
+                                                                          __VA_OPT__(, ) __VA_ARGS__);                 \
+    const ::asmgrader::TestAutoRegistrar<ident> CONCAT(ident, __registrar){name, CONCAT(ident, __metadata)};           \
     }                                                                                                                  \
-    void ident::run([[maybe_unused]] TestContext& ctx)
+    void ident::run([[maybe_unused]] ::asmgrader::TestContext& ctx)
 
 #define TEST(name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), name __VA_OPT__(, ) __VA_ARGS__)
 
@@ -47,15 +48,16 @@
         if (!cond__bool__val) {                                                                                        \
             LOG_DEBUG("Requirement failed: {}", cond__var);                                                            \
         }                                                                                                              \
-        ctx.require(cond__bool__val, __VA_ARGS__ __VA_OPT__(, ) RequirementResult::DebugInfo{#condition});             \
+        ctx.require(cond__bool__val, __VA_ARGS__ __VA_OPT__(, )::asmgrader::RequirementResult::DebugInfo{#condition}); \
     })
 
 #define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
     __extension__({                                                                                                    \
         const auto& req_eq_lhs__ = (lhs);                                                                              \
         const auto& req_eq_rhs__ = (rhs);                                                                              \
-        bool req_eq_res__ = ctx.require(req_eq_lhs__ == req_eq_rhs__,                                                  \
-                                        __VA_ARGS__ __VA_OPT__(, ) RequirementResult::DebugInfo{#lhs " == " #rhs});    \
+        bool req_eq_res__ =                                                                                            \
+            ctx.require(req_eq_lhs__ == req_eq_rhs__,                                                                  \
+                        __VA_ARGS__ __VA_OPT__(, )::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});        \
         if (!req_eq_res__) {                                                                                           \
             LOG_DEBUG("{} != {}", (req_eq_lhs__), (req_eq_rhs__));                                                     \
         }                                                                                                              \
@@ -63,9 +65,9 @@
     })
 
 #define FILE_METADATA(...)                                                                                             \
-    namespace metadata {                                                                                               \
+    namespace asmgrader::metadata {                                                                                    \
     consteval auto global_file_metadata() {                                                                            \
-        using metadata::Assignment, metadata::Weight, metadata::ProfOnly;                                              \
-        return Metadata{__VA_ARGS__};                                                                                  \
+        using ::asmgrader::metadata::Assignment, metadata::Weight, metadata::ProfOnly;                                 \
+        return ::asmgrader::metadata::Metadata{__VA_ARGS__};                                                           \
     }                                                                                                                  \
     } // namespace metadata

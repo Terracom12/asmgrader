@@ -7,7 +7,9 @@
 
 #include <string_view>
 
-class Serializer : util::NonCopyable
+namespace asmgrader {
+
+class Serializer : NonCopyable
 {
 public:
     explicit Serializer(Sink& sink, ProgramOptions::VerbosityLevel verbosity)
@@ -29,3 +31,5 @@ protected:
     Sink& sink_;
     ProgramOptions::VerbosityLevel verbosity_;
 };
+
+} // namespace asmgrader

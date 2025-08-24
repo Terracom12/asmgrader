@@ -8,6 +8,8 @@
 
 #include <cstdint>
 
+namespace asmgrader {
+
 SymbolTable::SymbolTable(const std::vector<Symbol>& symbols) {
     // Only worry about static symbols for now, and discard any unnamed symbols
     ranges::copy_if(symbols, ranges::back_inserter(symbols_),
@@ -40,3 +42,5 @@ std::optional<Symbol> SymbolTable::find_closest_above(std::uintptr_t address) co
 
     return result;
 }
+
+} // namespace asmgrader

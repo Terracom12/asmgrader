@@ -18,6 +18,8 @@
 
 #include <sys/syscall.h>
 
+namespace asmgrader {
+
 struct SyscallEntry
 {
     enum class Type {
@@ -109,5 +111,7 @@ private:
         , name_buffer_{name_buffer}
         , params_buffer_{parameters} {}
 };
+
+} // namespace asmgrader
 
 #include "subprocess/syscall_entries.inl" // IWYU pragma: export

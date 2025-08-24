@@ -3,6 +3,8 @@
 #include "user/program_options.hpp"
 #include "version.hpp"
 
+namespace asmgrader {
+
 /// VerbosityLevel Meanings:
 ///  - Professor mode is generally one level "quieter" than student mode for the output of each individual student
 ///  - Each level includes all output from levels below, possibly formatted a little differently
@@ -64,3 +66,5 @@ constexpr bool should_output_student_summary(ProgramOptions::VerbosityLevel leve
            ||                                                    //
            (APP_MODE == AppMode::Professor && level >= Summary); //
 }
+
+} // namespace asmgrader

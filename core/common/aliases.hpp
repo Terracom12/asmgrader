@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace asmgrader::inline aliases {
+
 // u64, etc. is way to verbose when u64 will suffice
 
 // We define aliases for all sized integer and floating point types,
@@ -28,3 +30,5 @@ using f64 = double;
 using f128 = long double; // will this work on aarch64?
 
 // NOLINTEND(readability-identifier-naming)
+
+} // namespace asmgrader::inline aliases

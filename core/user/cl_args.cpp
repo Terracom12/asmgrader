@@ -2,7 +2,6 @@
 
 #include "api/assignment.hpp"
 #include "common/expected.hpp"
-#include "program/program.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
@@ -24,7 +23,8 @@
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
+
+namespace asmgrader {
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
     : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
@@ -237,7 +237,7 @@ void CommandLineArgs::setup_parser() {
     // clang-format on
 }
 
-util::Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
+Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
     parse_successful_ = false;
 
     try {
@@ -274,3 +274,5 @@ ProgramOptions parse_args_or_exit(std::span<const char*> args, int exit_code) no
 
     return opts_res.value();
 }
+
+} // namespace asmgrader

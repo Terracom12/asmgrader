@@ -18,6 +18,7 @@
 #include <cstdlib> // For abort
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 // #include <fmt/std.h> // FIXME: This generates errors...
 
@@ -55,15 +56,6 @@
         std::abort();                                                                                                  \
     } while (false)
 
-struct AssertionError : std::runtime_error
-{
-    explicit AssertionError(const std::string& condition)
-        : std::runtime_error(condition) {}
-
-    AssertionError(const std::string& condition, const std::string& msg)
-        : std::runtime_error(condition + " : " + msg) {}
-};
-
 /// Basic assertion macros
 /// Usage:
 ///   ASSERT(isTrue(), "It's not true!")
@@ -74,7 +66,7 @@ struct AssertionError : std::runtime_error
         const auto _expr_res_ = expr;                                                                                  \
         if (!_expr_res_) {                                                                                             \
             LOG_ERROR("Assertion failed (" #expr ") - " __VA_ARGS__);                                                  \
-            throw AssertionError(#expr __VA_OPT__(, fmt::format(__VA_ARGS__)));                                        \
+            throw ::asmgrader::AssertionError(#expr __VA_OPT__(, fmt::format(__VA_ARGS__)));                           \
         }                                                                                                              \
     } while (false)
 
@@ -82,18 +74,39 @@ struct AssertionError : std::runtime_error
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
         const auto _expr_res_ = expr;                                                                                  \
         if (!_expr_res_) {                                                                                             \
-            throw AssertionError(#expr);                                                                               \
+            throw ::asmgrader::AssertionError(#expr);                                                                  \
         }                                                                                                              \
     } while (false)
 
 #ifdef DEBUG
 #define DEBUG_ASSERT(expr, ...) ASSERT(expr, "[!DEBUG!] " __VA_ARGS__)
 
+#define DEBUG_TIME(expr)                                                                                               \
+    [&]() {                                                                                                            \
+        ::asmgrader::detail::DebugTimeHelper debug_time_helper__(#expr);                                               \
+        return expr;                                                                                                   \
+    }()
+#else
+#define DEBUG_ASSERT(expr, ...)
+#define DEBUG_TIME(fn, ...)
+#endif
+
+namespace asmgrader {
+
+struct AssertionError : std::runtime_error
+{
+    explicit AssertionError(const std::string& condition)
+        : std::runtime_error(condition) {}
+
+    AssertionError(const std::string& condition, const std::string& msg)
+        : std::runtime_error(condition + " : " + msg) {}
+};
+
 namespace detail {
 
 // AllowImplicitlyDeletedCopyOrMove is set to true, so the lint here seems like a false positive
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
-struct DebugTimeHelper : util::NonMovable
+struct DebugTimeHelper : NonMovable
 {
     explicit DebugTimeHelper(std::string_view str)
         : str_expr(str) {
@@ -110,16 +123,6 @@ struct DebugTimeHelper : util::NonMovable
 };
 
 } // namespace detail
-
-#define DEBUG_TIME(expr)                                                                                               \
-    [&]() {                                                                                                            \
-        detail::DebugTimeHelper debug_time_helper__(#expr);                                                            \
-        return expr;                                                                                                   \
-    }()
-#else
-#define DEBUG_ASSERT(expr, ...)
-#define DEBUG_TIME(fn, ...)
-#endif
 
 /// Obtain Linux error code message given by ``err`` via libc functions
 inline std::string get_err_msg(int err) {
@@ -157,3 +160,5 @@ inline void init_loggers() {
     // Log to stderr. See https://github.com/gabime/spdlog/wiki/FAQ#switch-the-default-logger-to-stderr
     spdlog::set_default_logger(spdlog::stderr_color_st("default"));
 }
+
+} // namespace asmgrader

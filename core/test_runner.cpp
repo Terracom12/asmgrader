@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+namespace asmgrader {
+
 AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer)
     : assignment_{&assignment}
     , serializer_{serializer} {}
@@ -75,3 +77,5 @@ TestResult AssignmentTestRunner::run_one(TestBase& test) const {
 
     return context.finalize();
 }
+
+} // namespace asmgrader

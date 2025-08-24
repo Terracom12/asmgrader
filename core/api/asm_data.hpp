@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <string>
 
+namespace asmgrader {
+
 template <typename T>
     requires(MemoryReadSupported<T>)
 class AsmData
@@ -22,7 +24,7 @@ public:
     std::uintptr_t get_address() const { return address_; }
 
     /// Get the value currently present in the asm program
-    virtual util::Result<T> get_value() const;
+    virtual Result<T> get_value() const;
 
     /// Set the value of type ``T`` in the asm program
     ///
@@ -42,7 +44,7 @@ public:
         requires(MemoryWriteSupported<T>);
 
 protected:
-    util::Result<T> get_value_impl() const;
+    Result<T> get_value_impl() const;
 
     Program& get_program() const { return *prog_; }
 
@@ -79,7 +81,7 @@ T AsmData<T>::zero() const
 
 template <typename T>
     requires(MemoryReadSupported<T>)
-util::Result<T> AsmData<T>::get_value_impl() const {
+Result<T> AsmData<T>::get_value_impl() const {
     MemoryIOBase& mio = prog_->get_subproc().get_tracer().get_memory_io();
 
     return mio.read<T>(address_);
@@ -87,7 +89,7 @@ util::Result<T> AsmData<T>::get_value_impl() const {
 
 template <typename T>
     requires(MemoryReadSupported<T>)
-util::Result<T> AsmData<T>::get_value() const {
+Result<T> AsmData<T>::get_value() const {
     auto value = get_value_impl();
 
     std::string val_str = "<unformattable>";
@@ -104,3 +106,5 @@ template <typename T>
 AsmData<T>::AsmData(Program& prog, std::uintptr_t address)
     : prog_{&prog}
     , address_{address} {}
+
+} // namespace asmgrader

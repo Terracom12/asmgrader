@@ -20,6 +20,8 @@
 #include <gelf.h>
 #include <libelf.h>
 
+namespace asmgrader {
+
 // If condition is true, print out the elf error and exit
 #define ELF_ERROR(cond, msg) ASSERT(!(cond), "libelf error: " #msg " ({})", elf_errmsg(-1))
 
@@ -109,3 +111,5 @@ std::vector<Symbol> ElfReader::get_symbols() const {
 SymbolTable ElfReader::get_symbol_table() const {
     return SymbolTable{get_symbols()};
 }
+
+} // namespace asmgrader

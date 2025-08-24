@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+namespace asmgrader {
+
 class MultiStudentRunner
 {
 public:
@@ -18,3 +20,5 @@ private:
     Assignment* assignment_;
     std::shared_ptr<Serializer> serializer_;
 };
+
+} // namespace asmgrader

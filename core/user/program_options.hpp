@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 
+namespace asmgrader {
+
 struct ProgramOptions
 {
     /// Levels are explained in `verbosity.hpp`
@@ -17,6 +19,9 @@ struct ProgramOptions
 
     enum class ColorizeOpt { Auto, Always, Never } colorize_option;
 
+    // TODO: Premit simplified execution of individual files in prof mode. Has to be mutually excusive with some
+    // other opts
+
     // Student version only
     std::optional<std::string> file_name;
 
@@ -25,3 +30,5 @@ struct ProgramOptions
     std::optional<std::filesystem::path> database_path;
     std::filesystem::path search_path = ".";
 };
+
+} // namespace asmgrader
