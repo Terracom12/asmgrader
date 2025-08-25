@@ -1,9 +1,9 @@
 #pragma once
 
 #include "catch2/catch_tostring.hpp"
-#include "fmt/base.h"
 
 #include <catch2/catch_test_macros.hpp> // IWYU pragma: export
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <string>

@@ -1,10 +1,9 @@
-# Partially based on Catch2 docs at:
+# Enable by default
+enable_testing()
+
+# Partially based on Catch2 docs at
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
-
 include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
-
-# Catch2 for unit testing
-CPMAddPackage("gh:catchorg/Catch2@3.4.0")
 
 ##### Test runner executable
 
@@ -48,7 +47,26 @@ target_compile_definitions(
     "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
 )
 
-# list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-# include(Catch)
-# include(CTest)
-# catch_discover_tests(tests)
+# !!DISCLAIMER!!
+# This was adapted from the following source
+#   cpp-best-practices/cmake_template
+#   https://github.com/cpp-best-practices/cmake_template/tree/1015c6b88410df411c0cc0413e3e64c33d7a8331
+#   Courtesy of Jason Turner
+
+include(${Catch2_SOURCE_DIR}/extras/Catch.cmake)
+
+# automatically discover tests that are defined in catch based test files you can modify the unittests. Set TEST_PREFIX
+# to whatever you want, or use different for different binaries
+catch_discover_tests(
+    asmgrader_tests
+    TEST_PREFIX
+    "unittests."
+    REPORTER
+    XML
+    OUTPUT_DIR
+    .
+    OUTPUT_PREFIX
+    "unittests."
+    OUTPUT_SUFFIX
+    .xml
+)

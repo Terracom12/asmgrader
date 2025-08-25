@@ -1,63 +1,3 @@
-##### Dependencies
-
-# Boost for various commonities
-CPMAddPackage(
-  NAME Boost
-  VERSION 1.88.0 # Versions less than 1.85.0 may need patches for installation targets.
-  URL https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.tar.xz
-  URL_HASH SHA256=f48b48390380cfb94a629872346e3a81370dc498896f16019ade727ab72eb1ec
-
-  PATCHES "boost-pfr-system.patch"   # Make the compiler think that Boost is a system lib as to not emit warnings
-  OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace\\\;preprocessor" # Note the escapes!
-)
-
-# spdlog for logging
-CPMAddPackage("gh:fmtlib/fmt#11.1.3")
-set(SPDLOG_FMT_EXTERNAL ON)
-CPMAddPackage(
-  GITHUB_REPOSITORY gabime/spdlog
-  VERSION 1.15.1
-  OPTIONS "SPDLOG_FMT_EXTERNAL 1"
-)
-
-# argparse for command line argument parsing
-CPMAddPackage("gh:p-ranav/argparse@3.2")
-
-# nlohmann's JSON library
-CPMAddPackage("gh:nlohmann/json@3.10.5")
-
-# Ranges v3 for cleaner loop structures
-CPMAddPackage(
-  NAME range-v3
-  URL https://github.com/ericniebler/range-v3/archive/0.12.0.zip
-  VERSION 0.12.0
-  # the range-v3 CMakeLists screws with configuration options
-  DOWNLOAD_ONLY True
-)
-
-if(range-v3_ADDED)
-  add_library(range-v3 INTERFACE IMPORTED)
-  target_include_directories(range-v3 INTERFACE "${range-v3_SOURCE_DIR}/include")
-endif()
-
-# GSL for more conformant code
-CPMAddPackage(
-  NAME GSL
-  GITHUB_REPOSITORY microsoft/GSL
-  VERSION 4.2.0
-  GIT_SHALLOW TRUE
-  OPTIONS "GSL_MSVC_STATIC_ANALYZER=OFF"
-)
-
-# ELFIO for reading symbols from an ELF
-CPMAddPackage(
-  NAME elfio
-  GITHUB_REPOSITORY serge1/ELFIO
-  GIT_TAG Release_3.12
-  PATCHES "elfio-system.patch"
-)
-
 ##### Project configuration
 # For now, just substitutes version numbers as defined in root CMake project() decl
 
@@ -157,37 +97,7 @@ set(
     exceptions.hpp
 )
 
-set(
-    INTERF_COMPILE_OPTS
-
-    "$<$<COMPILE_LANGUAGE:C,CXX>:-Werror;-Wall;-Wextra;-Wpedantic;-Wshadow;-Wconversion>"
-
-    # Permit usage of statment expression from macros, which makes error
-    # propegation a lot nicer
-    "$<$<COMPILE_LANGUAGE:C,CXX>:-Wno-gnu-statement-expression-from-macro-expansion>"
-
-    # Enable debug symbols; disable optimizations
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-g3;-O0;-fno-omit-frame-pointer>"
-    # Enable sanitizers in debug mode
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-fsanitize=address,undefined,signed-integer-overflow>"
-    # disable PIE in debug mode, as ASLR messes with ASan pre-llvm17
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-no-pie>"
-
-    # Enable optimizations and warnings are errors in release mode
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-O3;-Werror>"
-)
-
-set(
-    INTERF_LINK_OPTS
-
-    # Disable optimizations in debug mode
-    "$<$<CONFIG:Debug>:-O0;-fno-omit-frame-pointer>"
-
-    # Enable sanitizers in debug mode
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-fsanitize=address,undefined,signed-integer-overflow>"
-    # disable PIE in debug mode, as ASLR messes with ASan pre-llvm17
-    "$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-no-pie>"
-)
+# -Wno-gnu-statement-expression-from-macro-expansion
 
 # TODO: Yeah, `.` is bad practice...
 set(
@@ -199,10 +109,12 @@ set(
 set(
     INTERF_LINK_LIBS
 
+    asmgrader_options
+    asmgrader_warnings
+
     fmt::fmt
-    argparse
     spdlog
-    nlohmann_json::nlohmann_json
+    argparse
     Boost::endian
     Boost::type_index
     Boost::mp11
@@ -212,6 +124,7 @@ set(
     Boost::preprocessor
     range-v3
     Microsoft.GSL::GSL
+    nlohmann_json::nlohmann_json
     elfio::elfio
 )
 

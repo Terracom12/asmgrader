@@ -1,6 +1,6 @@
 CompileFlags:
     Add: -DPROFESSOR_VERSION
-    Remove: -fconcepts-diagnostics-depth=3
+    Remove: -fconcepts-diagnostics-depth=*
     CompilationDatabase: build/
 
 InlayHints:
