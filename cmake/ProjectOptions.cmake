@@ -129,6 +129,14 @@ macro(asmgrader_local_options)
     add_library(asmgrader_warnings INTERFACE)
     add_library(asmgrader_options INTERFACE)
 
+    target_compile_definitions(
+        asmgrader_options
+        INTERFACE
+        $<$<CONFIG:Debug>:DEBUG=1>
+        $<$<NOT:$<CONFIG:Release>>:NDEBUG>
+    )
+
+
     include(cmake/CompilerWarnings.cmake)
     asmgrader_set_target_warnings(
         asmgrader_warnings

@@ -40,13 +40,7 @@ asmgrader_setup_dependencies()
 
 asmgrader_local_options()
 
-target_compile_options(asmgrader_options INTERFACE -DDEBUG)
-
-# # Debug / Release preprocessor definitions
-# add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-DDEBUG>")
-# add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-DRELEASE>")
-
-add_subdirectory(core)
+add_subdirectory(src)
 
 include(CTest)
 

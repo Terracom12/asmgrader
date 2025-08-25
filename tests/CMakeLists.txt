@@ -27,12 +27,10 @@ add_executable(
 target_link_libraries(
     asmgrader_tests
     PUBLIC asmgrader_core
-    PRIVATE Catch2::Catch2
-)
 
-target_include_directories(
-    asmgrader_tests
-    PRIVATE ../core
+    PRIVATE 
+    Catch2::Catch2
+    asmgrader_core_interface
 )
 
 ##### Simple assembly executable
