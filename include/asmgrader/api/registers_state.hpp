@@ -85,18 +85,13 @@ struct RegisterBaseImpl<Derived, BaseType, Arch>
     constexpr IntType as() const {
         // FIXME: Something something endianness
 
-        if (std::is_constant_evaluated()) {
-            // Set all bits (either 2's complement, or undeflow of unsigned integer)
-            constexpr auto ALL_BITS = static_cast<IntType>(-1);
+        // Set all bits (either 2's complement, or undeflow of unsigned integer)
+        constexpr auto ALL_BITS = static_cast<IntType>(-1);
 
-            // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
-            constexpr auto MASK = static_cast<u64>(ALL_BITS);
+        // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
+        constexpr auto MASK = static_cast<u64>(ALL_BITS);
 
-            return static_cast<IntType>(MASK & value_);
-        }
-
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        return *reinterpret_cast<const IntType*>(&value_);
+        return static_cast<IntType>(MASK & value_);
     }
 
     constexpr auto operator<=>(const RegisterBaseImpl<Derived, BaseType, Arch>& rhs) const = default;
