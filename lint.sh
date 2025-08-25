@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO: Replace this with CMake targets
+
 # Exit on error
 set -e
 
