@@ -133,7 +133,7 @@ macro(asmgrader_local_options)
         asmgrader_options
         INTERFACE
         $<$<CONFIG:Debug>:DEBUG=1>
-        $<$<NOT:$<CONFIG:Release>>:NDEBUG>
+        $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
     )
 
 
