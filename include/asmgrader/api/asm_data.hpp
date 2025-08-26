@@ -21,6 +21,8 @@ class AsmData
 public:
     AsmData(Program& prog, std::uintptr_t address);
 
+    virtual ~AsmData() = default;
+
     std::uintptr_t get_address() const { return address_; }
 
     /// Get the value currently present in the asm program

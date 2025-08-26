@@ -6,7 +6,7 @@
 using namespace asmgrader::aliases;
 using asmgrader::FloatingPointRegister, asmgrader::IntRegister;
 
-static_assert(FloatingPointRegister<>::from(f16{1.0}).as<f16>() == 1.0);
+static_assert(FloatingPointRegister<>::from(f16{1.0}).as<f16>() == 1.0F);
 static_assert(FloatingPointRegister<>::from(1.0F).as<float>() == 1.0F);
 static_assert(FloatingPointRegister<>::from(1.0F).as<float>() == 1.0F);
 static_assert(FloatingPointRegister<>::from(1.0).as<double>() == 1.0);

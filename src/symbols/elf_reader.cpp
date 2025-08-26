@@ -8,6 +8,7 @@
 #include <elfio/elfio_section.hpp>
 #include <elfio/elfio_symbols.hpp>
 #include <fmt/format.h>
+#include <libassert/assert.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/transform.hpp>
 

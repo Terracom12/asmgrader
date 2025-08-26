@@ -1,14 +1,13 @@
 #pragma once
-
 #include <asmgrader/common/extra_formatters.hpp>
 #include <asmgrader/logging.hpp>
 
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <libassert/assert.hpp>
 
 #include <concepts>
 #include <string>
-#include <string_view>
 #include <system_error>
 #include <type_traits>
 #include <utility>
@@ -60,7 +59,7 @@ public:
         requires(std::convertible_to<Eu, E>)
         : data_{std::forward<Eu>(error)} {}
 
-    constexpr void assert_val() { assert_expected(*this); }
+    constexpr void assert_val() { ASSERT(*this); }
 
     constexpr bool has_value() const {
         if constexpr (std::is_void_v<T>) {
@@ -88,7 +87,7 @@ public:
     {
         static_assert(std::same_as<U, T>,
                       "Do not attempt to instantiate Expected<T,E>::value() for any type other than T");
-        ASSERT_NOLOG(has_value());
+        DEBUG_ASSERT(has_value());
         return std::get<U>(data_.data);
     }
 
@@ -98,7 +97,7 @@ public:
     {
         static_assert(std::same_as<U, T>,
                       "Do not attempt to instantiate Expected<T,E>::value() for any type other than T");
-        ASSERT_NOLOG(has_value());
+        DEBUG_ASSERT(has_value());
     }
 
     template <typename U = T>
@@ -148,7 +147,7 @@ public:
     }
 
     constexpr E error() const {
-        ASSERT_NOLOG(!has_value());
+        DEBUG_ASSERT(!has_value());
         return std::get<E>(data_.data);
     }
 
@@ -227,27 +226,6 @@ inline auto format_as(const Expected<void, E>& from) {
     }
 
     return fmt::format("Expected(void)");
-}
-
-#ifndef DEBUG
-#define ASSERT_EXPECTED_DEPRECATED [[deprecated("Do not use ASSERT_EXPECTED in non-debug mode")]]
-#else
-#define ASSERT_EXPECTED_DEPRECATED
-#endif
-
-template <typename T, typename E>
-[[maybe_unused]] ASSERT_EXPECTED_DEPRECATED inline void assert_expected(const Expected<T, E>& exp,
-                                                                        std::string_view msg = "<no message>") {
-    if (exp.has_value()) {
-        return;
-    }
-    if constexpr (fmt::formattable<E>) {
-        LOG_FATAL("Erroneous unexpected value ({}): {:?}", exp.error(), msg);
-    } else {
-        LOG_FATAL("Erroneous unexpected value (<not formattable>): {:?}", msg);
-    }
-
-    _exit(1);
 }
 
 } // namespace asmgrader

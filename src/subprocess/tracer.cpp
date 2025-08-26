@@ -3,7 +3,7 @@
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
-#include "common/extra_formatters.hpp"
+#include "common/extra_formatters.hpp" // IWYU pragma: keep
 #include "common/linux.hpp"
 #include "common/os.hpp"
 #include "common/unreachable.hpp"
@@ -16,6 +16,7 @@
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <range/v3/view/zip.hpp>
@@ -297,7 +298,7 @@ Result<RunResult> Tracer::run() {
     assert_invariants();
 
     for (;;) {
-        assert_expected(linux::ptrace(PTRACE_SYSCALL, pid_), "PTRACE_SYSCALL failed");
+        ASSERT(linux::ptrace(PTRACE_SYSCALL, pid_), "PTRACE_SYSCALL failed");
 
         auto wait_result = TracedWaitid::wait_with_timeout(pid_, DEFAULT_TIMEOUT);
 
@@ -328,7 +329,7 @@ Result<RunResult> Tracer::run() {
         if (waitid_data.is_syscall_trap) {
             struct ptrace_syscall_info info{};
 
-            assert_expected(linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(info), &info));
+            ASSERT(linux::ptrace(PTRACE_GET_SYSCALL_INFO, pid_, sizeof(info), &info));
 
             if (info.op == PTRACE_SYSCALL_INFO_ENTRY) {
                 SyscallRecord record = get_syscall_entry_info(&info);
@@ -431,7 +432,7 @@ Result<TracedWaitid> Tracer::resume_until(const std::function<bool(TracedWaitid)
 
     while (remaining_time > 0us) {
         auto ptrace_result = linux::ptrace(ptrace_request, pid_);
-        assert_expected(ptrace_result, "ptrace failed in `resume_until`");
+        ASSERT(ptrace_result, "ptrace failed in `resume_until`");
 
         auto wait_result = TracedWaitid::wait_with_timeout(pid_, timeout);
 
@@ -527,7 +528,7 @@ SyscallRecord::SyscallArg Tracer::from_syscall_value(u64 value, SyscallEntry::Ty
         return memory_io_->read<std::timespec>(value);
 
     default:
-        ASSERT(false, "Invalid syscall entry type parse");
+        UNREACHABLE(false, "Invalid syscall entry type parse");
     }
 }
 

@@ -19,6 +19,7 @@ set(
     Boost::preprocessor
     range-v3
     Microsoft.GSL::GSL
+    libassert::assert
 )
 
 set(

@@ -1,12 +1,18 @@
 #include "subprocess/memory/memory_io_base.hpp"
 
 #include "common/byte_vector.hpp"
-#include "logging.hpp"
+#include "common/error_types.hpp"
+
+#include <libassert/assert.hpp>
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <span>
 
 namespace asmgrader {
 
-Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
-                                                  const std::function<bool(std::byte)>& predicate) {
+Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address, const std::function<bool(std::byte)>& predicate) {
     ByteVector result;
 
     bool pred_satisfied = false;
@@ -27,8 +33,8 @@ Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
 }
 
 Result<ByteVector> MemoryIOBase::read_until(std::uintptr_t address,
-                                                  const std::function<bool(std::span<const std::byte>)>& predicate,
-                                                  std::size_t block_size) {
+                                            const std::function<bool(std::span<const std::byte>)>& predicate,
+                                            std::size_t block_size) {
     ASSERT(block_size > 0);
 
     ByteVector result;

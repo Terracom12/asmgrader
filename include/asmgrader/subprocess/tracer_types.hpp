@@ -8,15 +8,23 @@
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
 #include <asmgrader/common/linux.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <gsl/util>
+#include <libassert/assert.hpp>
 
 #include <chrono>
+#include <cstdlib>
 #include <optional>
 #include <string>
 
+#include <bits/types/siginfo_t.h>
+#include <sched.h>
 #include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 namespace asmgrader {
 
@@ -70,9 +78,10 @@ struct TracedWaitid
 
         // while elapsed time < timeout
         while (steady_clock::now() - start_time < timeout) {
-            Expected<siginfo_t> waitid_res = linux::waitid(P_PID, pid, WEXITED | WSTOPPED | WNOHANG);
+            Expected<siginfo_t> waitid_res =
+                linux::waitid(P_PID, gsl::narrow_cast<id_t>(pid), WEXITED | WSTOPPED | WNOHANG);
 
-            assert_expected(waitid_res);
+            ASSERT(waitid_res);
 
             // si_pid will only be 0 if waitid returned early from WNOHANG
             // see waitid(2)
@@ -103,13 +112,13 @@ struct TracedWaitid
         // where (status >> 8) is the same as siginfo.si_code
 
         if (result.type == CLD_EXITED) {
-            result.exit_code = siginfo.si_status;
+            result.exit_code = gsl::narrow_cast<int>(siginfo.si_status);
             return result;
         }
 
         constexpr u64 SIG_MASK = 0x7f;
         constexpr u64 SYSCALL_TRAP_MASK = 0x80;
-        u32 signal_bits = siginfo.si_status;
+        u32 signal_bits = gsl::narrow_cast<u32>(siginfo.si_status);
 
         // actual signal will be in first 7 bits
         result.signal_num = signal_bits & SIG_MASK;

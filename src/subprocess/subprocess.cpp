@@ -7,6 +7,7 @@
 #include "subprocess/tracer_types.hpp"
 
 #include <fmt/ranges.h>
+#include <libassert/assert.hpp>
 
 #include <cerrno>
 #include <chrono>

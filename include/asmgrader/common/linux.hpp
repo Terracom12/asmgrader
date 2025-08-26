@@ -6,6 +6,7 @@
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/transform.hpp>
 
 #include <cerrno>

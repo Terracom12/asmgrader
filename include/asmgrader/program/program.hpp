@@ -3,6 +3,8 @@
 #include <asmgrader/common/class_traits.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/logging.hpp>
 #include <asmgrader/meta/functional_traits.hpp>
 #include <asmgrader/subprocess/memory/concepts.hpp>
 #include <asmgrader/subprocess/run_result.hpp>
@@ -12,10 +14,12 @@
 
 #include <fmt/format.h>
 
+#include <concepts>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -79,10 +83,10 @@ Result<typename FunctionTraits<Func>::Ret> Program::call_function(std::uintptr_t
                   subproc_->get_tracer().get_mmapped_addr(), *res);
     }
 
-#ifdef __aarch64__
-    std::uintptr_t instr_pointer = TRY(tracer.get_registers()).pc;
-#else // x86_64 assumed
-    std::uintptr_t instr_pointer = TRY(tracer.get_registers()).rip;
+#if defined(ASMGRADER_AARCH64)
+    [[maybe_unused]] std::uintptr_t instr_pointer = TRY(tracer.get_registers()).pc;
+#elif defined(ASMGRADER_X86_64)
+    [[maybe_unused]] std::uintptr_t instr_pointer = TRY(tracer.get_registers()).rip;
 #endif
     LOG_TRACE("Jumping to: {:#X} from {:#X}", addr, instr_pointer);
     TRY(tracer.jump_to(addr));

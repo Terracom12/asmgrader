@@ -9,6 +9,7 @@
 #include "subprocess/memory/memory_io_serde.hpp"
 #include "subprocess/memory/non_terminated_str.hpp"
 
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/algorithm/copy.hpp>
 

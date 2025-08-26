@@ -55,52 +55,17 @@
         std::abort();                                                                                                  \
     } while (false)
 
-/// Basic assertion macros
-/// Usage:
-///   ASSERT(isTrue(), "It's not true!")
-///   ASSERT_NOLOG(bad())
-///   DEBUG_ASSERT(x == 1, "Unexpected value for {}", "x")
-#define ASSERT(expr, ...)                                                                                              \
-    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto _expr_res_ = expr;                                                                                  \
-        if (!_expr_res_) {                                                                                             \
-            LOG_ERROR("Assertion failed (" #expr ") - " __VA_ARGS__);                                                  \
-            throw ::asmgrader::AssertionError(#expr __VA_OPT__(, fmt::format(__VA_ARGS__)));                           \
-        }                                                                                                              \
-    } while (false)
-
-#define ASSERT_NOLOG(expr)                                                                                             \
-    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto _expr_res_ = expr;                                                                                  \
-        if (!_expr_res_) {                                                                                             \
-            throw ::asmgrader::AssertionError(#expr);                                                                  \
-        }                                                                                                              \
-    } while (false)
-
 #ifdef DEBUG
-#define DEBUG_ASSERT(expr, ...) ASSERT(expr, "[!DEBUG!] " __VA_ARGS__)
-
 #define DEBUG_TIME(expr)                                                                                               \
     [&]() {                                                                                                            \
         ::asmgrader::detail::DebugTimeHelper debug_time_helper__(#expr);                                               \
         return expr;                                                                                                   \
     }()
 #else
-#define DEBUG_ASSERT(expr, ...)
 #define DEBUG_TIME(fn, ...)
 #endif
 
 namespace asmgrader {
-
-struct AssertionError : std::runtime_error
-{
-    explicit AssertionError(const std::string& condition)
-        : std::runtime_error(condition) {}
-
-    AssertionError(const std::string& condition, const std::string& msg)
-        : std::runtime_error(condition + " : " + msg) {}
-};
-
 namespace detail {
 
 // AllowImplicitlyDeletedCopyOrMove is set to true, so the lint here seems like a false positive

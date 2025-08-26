@@ -14,6 +14,7 @@
 #include "user/program_options.hpp"
 
 #include <gsl/util>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/range/conversion.hpp>

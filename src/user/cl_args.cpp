@@ -16,6 +16,7 @@
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <gsl/util>
 
 #include <cstddef>
 #include <cstdlib>
@@ -63,7 +64,7 @@ void ensure_is_regular_file(const std::filesystem::path& path, fmt::format_strin
 
 void CommandLineArgs::setup_parser() {
     if (auto term_sz = terminal_size(stdout)) {
-        arg_parser_.set_usage_max_line_width(term_sz->ws_col * 3 / 4);
+        arg_parser_.set_usage_max_line_width(gsl::narrow_cast<std::size_t>(term_sz->ws_col) * 3 / 4);
         LOG_DEBUG("Cols = {}, px = {}", term_sz->ws_col, term_sz->ws_xpixel);
     } else {
         constexpr std::size_t DEFAULT_MAX_WIDTH = 80;
