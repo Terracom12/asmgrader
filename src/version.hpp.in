@@ -1,7 +1,6 @@
 #pragma once
 
-#include "app/app.hpp"
-#include "common/macros.hpp"
+#include <asmgrader/common/macros.hpp>
 
 #include <fmt/compile.h>
 #include <fmt/format.h>
