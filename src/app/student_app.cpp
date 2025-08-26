@@ -1,6 +1,5 @@
 #include "app/student_app.hpp"
 
-#include "api/assignment.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "output/plaintext_serializer.hpp"
@@ -10,6 +9,7 @@
 #include "user/program_options.hpp"
 
 #include <fmt/format.h>
+#include <libassert/assert.hpp>
 
 #include <cstdlib>
 #include <memory>
@@ -24,6 +24,7 @@ int StudentApp::run_impl() {
 
     auto assignment = GlobalRegistrar::get().get_assignment(OPTS.assignment_name);
 
+    // should be verified by CLI; double-check here just in case
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
 
     using enum ProgramOptions::VerbosityLevel;

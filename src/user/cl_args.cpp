@@ -38,29 +38,7 @@ CommandLineArgs::CommandLineArgs(std::span<const char*> args)
     setup_parser();
 }
 
-namespace {
-
-void ensure_file_exists(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
-    if (!std::filesystem::exists(path)) {
-        throw std::invalid_argument(fmt::format(fmt, path.string()) + " does not exist");
-    }
-}
-
-void ensure_is_regular_file(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
-    ensure_file_exists(path, fmt);
-    if (!std::filesystem::is_regular_file(path)) {
-        throw std::invalid_argument(fmt::format(fmt, path.string()) + " is not a regular file");
-    }
-}
-
-[[maybe_unused]] void ensure_is_directory(const std::filesystem::path& path, fmt::format_string<std::string> fmt) {
-    ensure_file_exists(path, fmt);
-    if (!std::filesystem::is_directory(path)) {
-        throw std::invalid_argument(fmt::format(fmt, path.string()) + " is not a directory");
-    }
-}
-
-} // namespace
+namespace {} // namespace
 
 void CommandLineArgs::setup_parser() {
     if (auto term_sz = terminal_size(stdout)) {
@@ -106,58 +84,37 @@ void CommandLineArgs::setup_parser() {
         })
         .help("prints version information and exits");
 
-    {
-        // Block to reduce scope of `using enum`
 
-        using enum ProgramOptions::VerbosityLevel;
+        using VerbosityLevelUnderlyingT = std::underlying_type_t<ProgramOptions::VerbosityLevel>;
 
-        constexpr auto DEFAULT_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(DEFAULT_VERBOSITY_LEVEL);
-        constexpr auto MAX_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Max);
-        constexpr auto MIN_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Silent);
+    arg_parser_.add_argument("-v", "--verbose")
+        .flag()
+        .action([this] (const std::string& /*unused*/) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
 
-        constexpr auto MAX_VERBOSITY_INCREASE = MAX_VERBOSITY_VALUE - DEFAULT_VERBOSITY_VALUE;
-        constexpr auto MAX_VERBOSITY_DECREASE = DEFAULT_VERBOSITY_VALUE - MIN_VERBOSITY_VALUE;
+                verbosity_ref++;
+            })
+        .append()
+        .help("Increase verbosity level");
 
-        arg_parser_.add_argument("-v", "--verbose")
-            .flag()
-            .action([this] (const std::string& /*unused*/) {
-                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                    static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
+    arg_parser_.add_argument("-q", "--quiet")
+        .flag()
+        .action([this] (const std::string& /*unused*/) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
 
-                    verbosity_ref++;
+                verbosity_ref--;
+            })
+        .append()
+        .help("Decrease verbosity level");
 
-                    if (verbosity_ref > MAX_VERBOSITY_VALUE) {
-                        throw std::invalid_argument("Verbosity specification exceeds maximum level");
-                    }
-                })
-            .append()
-            .help(fmt::format("Increase verbosity level (up to {}x)", MAX_VERBOSITY_INCREASE));
-
-        arg_parser_.add_argument("-q", "--quiet")
-            .flag()
-            .action([this] (const std::string& /*unused*/) {
-                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                    static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
-
-                    verbosity_ref--;
-
-                    if (verbosity_ref < MIN_VERBOSITY_VALUE) {
-                        throw std::invalid_argument("Verbosity specification is lower than minimum level");
-                    }
-                })
-            .append()
-            .help(fmt::format("Decrease verbosity level (up to {}x)", MAX_VERBOSITY_DECREASE));
-
-        arg_parser_.add_argument("--silent")
-            .flag()
-            .action([this] (const std::string& /*unused*/) {
-                    opts_buffer_.verbosity = Silent;
-                })
-            .help("Sets verbosity level to 'Silent', suppressing all output except for the return code. Useful for scripting.");
-
-        opts_buffer_.verbosity = DEFAULT_VERBOSITY_LEVEL;
-    }
-
+    arg_parser_.add_argument("--silent")
+        .flag()
+        .action([this] (const std::string& /*unused*/) {
+                opts_buffer_.verbosity = ProgramOptions::VerbosityLevel::Silent;
+            })
+        .help("Sets verbosity level to 'Silent', suppressing all output except for the return code. Useful for scripting.");
 
     arg_parser_.add_argument("--stop")
         .choices("never", "first", "each")
@@ -205,12 +162,6 @@ void CommandLineArgs::setup_parser() {
         .nargs(1)
         .metavar("REGEX")
         .action([this] (const std::string& opt) {
-                // Ensure that the matcher is a valid RegEx
-                try {
-                    std::ignore = std::regex{opt};
-                } catch (std::exception& ex) {
-                    throw std::invalid_argument(fmt::format("File matcher {:?} is invalid. {}", opt, ex.what()));
-                }
                 opts_buffer_.file_matcher = opt;
         })
         .help("RegEx to match files for a given student and assignment.\nSee docs for syntax details.");
@@ -220,8 +171,6 @@ void CommandLineArgs::setup_parser() {
         .nargs(1)
         .metavar("FILE")
         .action([this] (const std::string& opt) {
-                ensure_is_regular_file(opt, "Database file {:?}");
-
                 opts_buffer_.database_path = opt;
         })
         .help("CSV database file with student names. If not specified, "
@@ -232,8 +181,6 @@ void CommandLineArgs::setup_parser() {
         .nargs(1)
         .metavar("PATH")
         .action([this] (const std::string& opt) {
-                ensure_is_directory(opt, "Search path {:?}");
-
                 opts_buffer_.search_path = opt;
         })
         .help("Root path to begin searching for student assignments.");
@@ -242,12 +189,6 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("-f", "--file")
         .metavar("FILE")
         .action([this] (const std::string& opt) {
-                ensure_is_regular_file(opt, "File to run tests on {:?}");
-
-                if (auto is_elf = Program::check_is_elf(opt); not is_elf) {
-                    throw std::runtime_error(is_elf.error());
-                }
-
                 opts_buffer_.file_name = opt;
         })
         .help(APP_MODE == AppMode::Professor ?
@@ -265,6 +206,10 @@ Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
         arg_parser_.parse_args(args_);
     } catch (const std::exception& err) {
         return err.what();
+    }
+
+    if (auto valid_res = opts_buffer_.validate(); valid_res.has_error()) {
+        return valid_res.error();
     }
 
     parse_successful_ = true;

@@ -87,16 +87,12 @@ int ProfessorApp::run_impl() {
 }
 
 std::optional<std::vector<StudentInfo>> ProfessorApp::get_student_names() const {
-    if (not OPTS.database_path) {
-        return std::nullopt;
-    }
-
-    DatabaseReader database_reader{*OPTS.database_path};
+    DatabaseReader database_reader{OPTS.database_path};
 
     Expected res = database_reader.read();
 
     if (not res) {
-        LOG_WARN("Error loading database {:?}: {}", OPTS.database_path->string(), res.error());
+        LOG_WARN("Error loading database {:?}: {}", OPTS.database_path.string(), res.error());
         return std::nullopt;
     }
 
