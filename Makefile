@@ -57,11 +57,11 @@ clean: ## clean
 
 .PHONY: test
 test: debug  ## test
-	cd $(BUILD_DIR) && ctest --progress --output-on-failure
+	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: test-release
 test-release: release  ## test-release
-	cd $(BUILD_DIR) && ctest --progress --output-on-failure
+	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: list-opts
 list-opts: ## list available CMake options
