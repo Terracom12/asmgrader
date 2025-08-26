@@ -52,7 +52,11 @@ release: configure-release  ## build in release mode (with debug info)
 	cmake --build $(BUILD_DIR)
 
 .PHONY: clean
-clean: ## clean
+clean: ## remove build objects, libraries, and executables
+	cmake --build $(BUILD_DIR) --target clean
+
+.PHONY: deep-clean
+deep-clean: ## remove all build files and configuration
 	rm -rf $(BUILD_DIR)/
 
 .PHONY: test
