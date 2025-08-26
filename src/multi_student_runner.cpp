@@ -5,6 +5,8 @@
 #include "output/serializer.hpp"
 #include "test_runner.hpp"
 
+#include <fmt/compile.h>
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -21,9 +23,17 @@ MultiStudentResult MultiStudentRunner::run_all_students(const std::vector<Studen
     AssignmentTestRunner assignment_runner{*assignment_, serializer_};
 
     for (const StudentInfo& info : students) {
-        // TODO: Serialize student info
+        serializer_->on_student_begin(info);
 
-        StudentResult res{.info = info, .result = assignment_runner.run_all(info.assignment_path)};
+        AssignmentResult assignment_res;
+
+        if (info.assignment_path.has_value()) {
+            assignment_res = assignment_runner.run_all(info.assignment_path);
+        }
+
+        StudentResult res{.info = info, .result = assignment_res};
+
+        serializer_->on_student_end(info);
 
         result.results.push_back(std::move(res));
     }

@@ -7,6 +7,7 @@
 #include "output/sink.hpp"
 #include "output/verbosity.hpp"
 #include "user/program_options.hpp"
+#include "version.hpp"
 
 #include <fmt/color.h>
 #include <fmt/compile.h>
@@ -68,7 +69,8 @@ void PlainTextSerializer::on_test_result(const TestResult& data) {
 
     // Potentially output a msg hidden passing requirements
     if (data.num_passed > 0 && !should_output_requirement(verbosity_, /*passed=*/true)) {
-        std::string hidden_reqs_msg = fmt::format("{} hidden passing requirements.\n", data.num_passed);
+        std::string hidden_reqs_msg =
+            fmt::format("+ {} passing requirements.\n", style_str(data.num_passed, SUCCESS_STYLE, "{} hidden"));
         sink_.write(hidden_reqs_msg);
     }
 
@@ -81,8 +83,14 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
         return;
     }
 
-    std::string out =
-        fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
+    std::string out;
+
+    // We don't want to repeatedly output the same assignment name for every student in prof mode
+    if (APP_MODE == AppMode::Student) {
+        out = fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
+    } else {
+        out = LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH) + "\n";
+    }
 
     auto labeled_num = [](int num, std::string_view label_singular) {
         return fmt::format("{} {}", num, pluralize(label_singular, num));
@@ -120,10 +128,11 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
         pass_fail_line("Requirements", data.num_requirements_passed(), data.num_requirements_failed());
 
     out += fmt::format("{}\n{}\n", tests_line, requirements_line);
+
     sink_.write(out);
 }
 
-void PlainTextSerializer::on_metadata() {}
+void PlainTextSerializer::on_run_metadata() {}
 
 void PlainTextSerializer::finalize() {}
 
@@ -154,4 +163,57 @@ std::string PlainTextSerializer::pluralize(std::string_view root, int count, std
     return fmt::format("{}{}", root, suffix);
 }
 
+void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
+    static bool is_first = true;
+
+    // 4 newlines to separate each student
+    if (!is_first) {
+        sink_.write("\n\n\n\n");
+    }
+    is_first = false;
+
+    std::string name_text;
+
+    if (info.names_known) {
+        name_text = info.first_name + ", " + info.last_name;
+    } else {
+        name_text = "<unknown>";
+
+        if (!info.first_name.empty()) {
+            name_text += fmt::format(" (\"{}\" inferred)", info.first_name);
+        }
+    }
+
+    std::string student_label = "Student: ";
+    std::string student_label_text = student_label + style_str(name_text, POP_OUT_STYLE);
+
+    const auto actual_sz = student_label.size() + name_text.size();
+
+    std::string out = fmt::format("{}\n{:>{}}\n\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), student_label_text,
+                                  student_label_text.size() + ((LINE_DIVIDER_DEFAULT_WIDTH - actual_sz) / 2));
+
+    if (info.assignment_path) {
+        out += fmt::to_string(info.assignment_path->relative_path()) + "\n";
+    } else {
+        out += style_str("Could not locate executable\n", ERROR_STYLE);
+    }
+
+    sink_.write(out);
+}
+
+void PlainTextSerializer::on_student_end([[maybe_unused]] const StudentInfo& info) {
+    // Line divider at the end to make it easier to differentiate between students
+    std::string out = LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH) + "\n";
+    sink_.write(out);
+}
+
+void PlainTextSerializer::on_warning(std::string_view what) {
+    std::string out = style_str(what, WARNING_STYLE, "{}\n");
+    sink_.write(out);
+}
+
+void PlainTextSerializer::on_error(std::string_view what) {
+    std::string out = style_str(what, ERROR_STYLE, "{}\n");
+    sink_.write(out);
+}
 } // namespace asmgrader

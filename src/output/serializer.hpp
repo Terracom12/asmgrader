@@ -18,11 +18,18 @@ public:
 
     virtual ~Serializer() = default;
 
-    virtual void on_requirement_result(const RequirementResult& data) = 0;
+    virtual void on_student_begin(const StudentInfo& info) = 0;
+    virtual void on_student_end(const StudentInfo& info) = 0;
+    virtual void on_run_metadata() = 0;
+
     virtual void on_test_begin(std::string_view test_name) = 0;
+
+    virtual void on_requirement_result(const RequirementResult& data) = 0;
     virtual void on_test_result(const TestResult& data) = 0;
     virtual void on_assignment_result(const AssignmentResult& data) = 0;
-    virtual void on_metadata() = 0;
+
+    virtual void on_warning(std::string_view what) = 0;
+    virtual void on_error(std::string_view what) = 0;
 
     virtual void finalize() = 0;
 

@@ -1,9 +1,11 @@
+/// Defines data classes to store result data for the current run session
 #pragma once
 
 // TODO: Rename this file
 
 #include <asmgrader/common/extra_formatters.hpp>
 #include <asmgrader/exceptions.hpp>
+#include <asmgrader/version.hpp>
 
 #include <fmt/base.h>
 #include <gsl/util>
@@ -12,6 +14,7 @@
 #include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <functional>
 #include <optional>
@@ -22,7 +25,13 @@
 
 namespace asmgrader {
 
-/// Defines data classes to store result data for the current run session
+struct RunMetadata
+{
+    int version = get_version();
+    std::string_view version_string = ASMGRADER_VERSION_STRING;
+    std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
+};
+
 struct RequirementResult
 {
     bool passed;
@@ -33,7 +42,7 @@ struct RequirementResult
         std::string_view msg;     // stringified condition
         std::source_location loc; // requirement execution point
 
-        constexpr static std::string_view DEFAULT_MSG = "<unknown>";
+        static constexpr std::string_view DEFAULT_MSG = "<unknown>";
 
         explicit DebugInfo(std::string_view message = DEFAULT_MSG,
                            std::source_location location = std::source_location::current())
@@ -85,7 +94,7 @@ struct AssignmentResult
 
 struct StudentInfo
 {
-    std::string first_name;
+    std::string first_name; // if names_known = false, this holds the inferred name for now
     std::string last_name;
     bool names_known; // whether the names are known (i.e., obtained from a database) or inferred based on filename
 
@@ -112,7 +121,7 @@ struct fmt::formatter<::asmgrader::RequirementResult::DebugInfo> : ::asmgrader::
 {
     constexpr auto format(const ::asmgrader::RequirementResult::DebugInfo& from, fmt::format_context& ctx) const {
         // Explicitly called "DebugInfo", so fmt to an empty string if not debug mode
-        if (is_debug_format) {
+        if (!is_debug_format) {
             return ctx.out();
         }
 

@@ -21,11 +21,17 @@ public:
     PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
                         ProgramOptions::VerbosityLevel verbosity);
 
+    void on_student_begin(const StudentInfo& info) override;
+    void on_student_end(const StudentInfo& info) override;
+
     void on_requirement_result(const RequirementResult& data) override;
     void on_test_begin(std::string_view test_name) override;
     void on_test_result(const TestResult& data) override;
     void on_assignment_result(const AssignmentResult& data) override;
-    void on_metadata() override;
+    void on_run_metadata() override;
+
+    void on_warning(std::string_view what) override;
+    void on_error(std::string_view what) override;
 
     void finalize() override;
 
@@ -55,8 +61,10 @@ private:
     //   header   - section header (like "String Test Results:")
     //   value    - for variables or literal values referenced for test requirements
     static constexpr auto ERROR_STYLE = fmt::fg(fmt::color::red) | fmt::emphasis::bold;
+    static constexpr auto WARNING_STYLE = fmt::fg(fmt::color::yellow) | fmt::emphasis::bold;
     static constexpr auto SUCCESS_STYLE = fmt::fg(fmt::color::lime_green);
-    static constexpr auto HEADER_STYLE = fmt::emphasis::underline | fmt::emphasis::bold;
+    static constexpr auto POP_OUT_STYLE =
+        fmt::emphasis::underline | fmt::emphasis::bold | fmt::fg(fmt::color::golden_rod);
     static constexpr auto VALUE_STYLE = fmt::fg(fmt::color::aqua);
 
     static constexpr std::size_t LINE_DIVIDER_DEFAULT_WIDTH = 64;
@@ -66,10 +74,12 @@ private:
     };
 
     // Basic line dividers to seperate output, parameterized on length
-    // Line Divider Emphasized : "======="...
-    // Line Divider            : "--------...
-    static const inline auto LINE_DIVIDER_EM = MAKE_LINE_DIVIDER('=');
+    // Line Divider 2x Emphasized : "#######"...
+    // Line Divider Emphasized    : "======="...
+    // Line Divider               : "--------...
     static const inline auto LINE_DIVIDER = MAKE_LINE_DIVIDER('-');
+    static const inline auto LINE_DIVIDER_EM = MAKE_LINE_DIVIDER('=');
+    static const inline auto LINE_DIVIDER_2EM = MAKE_LINE_DIVIDER('#');
 
     bool do_colorize_;
 };

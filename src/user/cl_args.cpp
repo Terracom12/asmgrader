@@ -2,6 +2,8 @@
 
 #include "api/assignment.hpp"
 #include "common/expected.hpp"
+#include "common/terminal_checks.hpp"
+#include "logging.hpp"
 #include "program/program.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
@@ -15,6 +17,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include <cstddef>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
@@ -59,6 +62,15 @@ void ensure_is_regular_file(const std::filesystem::path& path, fmt::format_strin
 } // namespace
 
 void CommandLineArgs::setup_parser() {
+    if (auto term_sz = terminal_size(stdout)) {
+        arg_parser_.set_usage_max_line_width(term_sz->ws_col * 3 / 4);
+        LOG_DEBUG("Cols = {}, px = {}", term_sz->ws_col, term_sz->ws_xpixel);
+    } else {
+        constexpr std::size_t DEFAULT_MAX_WIDTH = 80;
+        LOG_DEBUG("Failed to get terminal size. Setting max width to 80");
+        arg_parser_.set_usage_max_line_width(DEFAULT_MAX_WIDTH);
+    }
+
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
@@ -188,7 +200,7 @@ void CommandLineArgs::setup_parser() {
     // such for groups of arguments.
 
     arg_parser_.add_argument("-fm", "--file-matcher")
-        .default_value(std::string{AssignmentFileSearcher::DEFAULT_REGEX})
+        .default_value(std::string{ProgramOptions::DEFAULT_FILE_MATCHER})
         .nargs(1)
         .metavar("REGEX")
         .action([this] (const std::string& opt) {
@@ -203,6 +215,7 @@ void CommandLineArgs::setup_parser() {
         .help("RegEx to match files for a given student and assignment.\nSee docs for syntax details.");
 
     arg_parser_.add_argument("-db", "--database")
+        .default_value(std::string{ProgramOptions::DEFAULT_DATABASE_PATH})
         .nargs(1)
         .metavar("FILE")
         .action([this] (const std::string& opt) {
@@ -214,7 +227,7 @@ void CommandLineArgs::setup_parser() {
               "will attempt to find student submissions recursively using heuristics.\nSee docs for format spec.");
 
     arg_parser_.add_argument("-p", "--search-path")
-        .default_value(std::string{"."})
+        .default_value(std::string{ProgramOptions::DEFAULT_SEARCH_PATH})
         .nargs(1)
         .metavar("PATH")
         .action([this] (const std::string& opt) {
@@ -254,6 +267,8 @@ Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
     }
 
     parse_successful_ = true;
+
+    LOG_DEBUG("Parsed CLI arguments: {}", opts_buffer_);
 
     return opts_buffer_;
 }
