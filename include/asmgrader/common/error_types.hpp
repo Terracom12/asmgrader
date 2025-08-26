@@ -29,7 +29,7 @@ using Result = Expected<T, ErrorKind>;
 #define TRYE_IMPL(val, e, ident)                                                                                       \
     __extension__({                                                                                                    \
         const auto& ident = val;                                                                                       \
-        if (ident.has_error()) {                                                                                       \
+        if (!ident.has_value()) {                                                                                      \
             using enum ErrorKind;                                                                                      \
             return e;                                                                                                  \
         }                                                                                                              \
