@@ -44,11 +44,11 @@ namespace asmgrader {
 constexpr bool should_output_requirement(ProgramOptions::VerbosityLevel level, bool passed) {
     using enum ProgramOptions::VerbosityLevel;
 
-    return (APP_MODE == AppMode::Student &&                         //
-            ((level >= Summary) || (level >= FailsOnly && passed))) //
-           ||                                                       //
-           (APP_MODE == AppMode::Professor &&                       //
-            ((level >= All) || (level >= FailsOnly && passed)));    //
+    return (APP_MODE == AppMode::Student &&                          //
+            ((level >= Summary) || (level >= FailsOnly && !passed))) //
+           ||                                                        //
+           (APP_MODE == AppMode::Professor &&                        //
+            ((level >= All) || (level >= FailsOnly && !passed)));    //
 }
 
 constexpr bool should_output_test(ProgramOptions::VerbosityLevel level) {
