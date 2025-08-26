@@ -20,7 +20,7 @@ public:
 
     virtual void on_student_begin(const StudentInfo& info) = 0;
     virtual void on_student_end(const StudentInfo& info) = 0;
-    virtual void on_run_metadata() = 0;
+    virtual void on_run_metadata(const RunMetadata& data) = 0;
 
     virtual void on_test_begin(std::string_view test_name) = 0;
 

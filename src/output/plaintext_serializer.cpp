@@ -1,6 +1,7 @@
 #include "output/plaintext_serializer.hpp"
 
 #include "common/terminal_checks.hpp"
+#include "common/time.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "output/serializer.hpp"
@@ -9,14 +10,20 @@
 #include "user/program_options.hpp"
 #include "version.hpp"
 
+#include <fmt/chrono.h>
 #include <fmt/color.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
 
+#include <chrono>
+#include <concepts>
 #include <cstddef>
+#include <cstdio>
+#include <ctime>
 #include <string>
 #include <string_view>
 
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 namespace asmgrader {
@@ -26,7 +33,8 @@ using enum ProgramOptions::VerbosityLevel;
 PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
                                          ProgramOptions::VerbosityLevel verbosity)
     : Serializer{sink, verbosity}
-    , do_colorize_{process_colorize_opt(colorize_option)} {}
+    , do_colorize_{process_colorize_opt(colorize_option)}
+    , terminal_width_{get_terminal_width()} {}
 
 void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     if (!should_output_requirement(verbosity_, data.passed)) {
@@ -51,8 +59,7 @@ void PlainTextSerializer::on_test_begin(std::string_view test_name) {
         return;
     }
 
-    std::string header_msg =
-        fmt::format("{0}\nTest Case: {1}\n{0}\n", LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH), test_name);
+    std::string header_msg = fmt::format("{0}\nTest Case: {1}\n{0}\n", LINE_DIVIDER(terminal_width_), test_name);
 
     sink_.write(header_msg);
 }
@@ -87,9 +94,9 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
 
     // We don't want to repeatedly output the same assignment name for every student in prof mode
     if (APP_MODE == AppMode::Student) {
-        out = fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), data.name);
+        out = fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(terminal_width_), data.name);
     } else {
-        out = LINE_DIVIDER(LINE_DIVIDER_DEFAULT_WIDTH) + "\n";
+        out = LINE_DIVIDER(terminal_width_) + "\n";
     }
 
     auto labeled_num = [](int num, std::string_view label_singular) {
@@ -131,8 +138,6 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
 
     sink_.write(out);
 }
-
-void PlainTextSerializer::on_run_metadata() {}
 
 void PlainTextSerializer::finalize() {}
 
@@ -189,8 +194,8 @@ void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
 
     const auto actual_sz = student_label.size() + name_text.size();
 
-    std::string out = fmt::format("{}\n{:>{}}\n\n", LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH), student_label_text,
-                                  student_label_text.size() + ((LINE_DIVIDER_DEFAULT_WIDTH - actual_sz) / 2));
+    std::string out = fmt::format("{}\n{:>{}}\n\n", LINE_DIVIDER_EM(terminal_width_), student_label_text,
+                                  student_label_text.size() + ((terminal_width_ - actual_sz) / 2));
 
     if (info.assignment_path) {
         out += fmt::to_string(info.assignment_path->relative_path()) + "\n";
@@ -203,7 +208,7 @@ void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
 
 void PlainTextSerializer::on_student_end([[maybe_unused]] const StudentInfo& info) {
     // Line divider at the end to make it easier to differentiate between students
-    std::string out = LINE_DIVIDER_EM(LINE_DIVIDER_DEFAULT_WIDTH) + "\n";
+    std::string out = LINE_DIVIDER_EM(terminal_width_) + "\n";
     sink_.write(out);
 }
 
@@ -216,4 +221,41 @@ void PlainTextSerializer::on_error(std::string_view what) {
     std::string out = style_str(what, ERROR_STYLE, "{}\n");
     sink_.write(out);
 }
+
+void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
+    std::size_t half_align_amt = terminal_width_ / 2;
+
+    constexpr std::string_view HEADER_TEXT = "Execution Info";
+    constexpr std::string_view VERSION_LABEL = "Version:";
+    constexpr std::string_view DATE_LABEL = "Date and Time:";
+
+    std::string version_text{data.version_string};
+
+    if (APP_MODE == AppMode::Professor) {
+        version_text += " (Professor)";
+    } else {
+        version_text += " (Student)";
+    }
+
+    std::string local_timepoint_text =
+        asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
+
+    std::string out = fmt::format("{:#^{}}\n", HEADER_TEXT, terminal_width_);
+    out += fmt::format("{0:<{2}}{1:>{2}}\n", VERSION_LABEL, version_text, half_align_amt);
+    out += fmt::format("{0:<{2}}{1:>{2}}\n", DATE_LABEL, local_timepoint_text, half_align_amt);
+    out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
+
+    sink_.write(out);
+}
+
+std::size_t PlainTextSerializer::get_terminal_width() {
+    auto width = terminal_size(stdout).transform([](const winsize& size) { return size.ws_col; });
+
+    if (width.has_error()) {
+        LOG_WARN("Could not obtain terminal width because {}. Defaulting to {}", width.error(), DEFAULT_WIDTH);
+    }
+
+    return width.value_or(DEFAULT_WIDTH);
+}
+
 } // namespace asmgrader

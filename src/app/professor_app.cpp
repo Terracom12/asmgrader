@@ -74,6 +74,8 @@ int ProfessorApp::run_impl() {
 
     MultiStudentRunner runner{*assignment, output_serializer};
 
+    output_serializer->on_run_metadata(RunMetadata{});
+
     MultiStudentResult res = runner.run_all_students(students);
 
     auto num_students_failed =

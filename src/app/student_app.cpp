@@ -34,6 +34,7 @@ int StudentApp::run_impl() {
         std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity);
     AssignmentTestRunner runner{*assignment, output_serializer};
 
+    output_serializer->on_run_metadata(RunMetadata{});
     AssignmentResult res = runner.run_all(OPTS.file_name);
 
     if (OPTS.verbosity == ProgramOptions::VerbosityLevel::Silent) {

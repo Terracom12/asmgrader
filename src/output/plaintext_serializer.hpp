@@ -24,11 +24,11 @@ public:
     void on_student_begin(const StudentInfo& info) override;
     void on_student_end(const StudentInfo& info) override;
 
+    void on_run_metadata(const RunMetadata& data) override;
     void on_requirement_result(const RequirementResult& data) override;
     void on_test_begin(std::string_view test_name) override;
     void on_test_result(const TestResult& data) override;
     void on_assignment_result(const AssignmentResult& data) override;
-    void on_run_metadata() override;
 
     void on_warning(std::string_view what) override;
     void on_error(std::string_view what) override;
@@ -37,6 +37,7 @@ public:
 
 private:
     static bool process_colorize_opt(ProgramOptions::ColorizeOpt colorize_option);
+    static std::size_t get_terminal_width();
 
     template <fmt::formattable T>
     auto style(const T& arg, fmt::text_style style) const -> decltype(fmt::styled(arg, style));
@@ -67,7 +68,7 @@ private:
         fmt::emphasis::underline | fmt::emphasis::bold | fmt::fg(fmt::color::golden_rod);
     static constexpr auto VALUE_STYLE = fmt::fg(fmt::color::aqua);
 
-    static constexpr std::size_t LINE_DIVIDER_DEFAULT_WIDTH = 64;
+    static constexpr std::size_t DEFAULT_WIDTH = 80;
 
     static constexpr auto MAKE_LINE_DIVIDER = [](char chr) {
         return [chr](std::size_t len) { return std::string(len, chr); };
@@ -82,6 +83,7 @@ private:
     static const inline auto LINE_DIVIDER_2EM = MAKE_LINE_DIVIDER('#');
 
     bool do_colorize_;
+    std::size_t terminal_width_;
 };
 
 template <fmt::formattable T>
