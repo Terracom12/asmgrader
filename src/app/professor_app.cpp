@@ -1,5 +1,6 @@
 #include "app/professor_app.hpp"
 
+#include "app/student_app.hpp"
 #include "common/expected.hpp"
 #include "common/extra_formatters.hpp" // IWYU pragma: keep
 #include "database_reader.hpp"
@@ -35,6 +36,10 @@ int ProfessorApp::run_impl() {
 
     auto assignment = GlobalRegistrar::get().get_assignment(OPTS.assignment_name);
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
+
+    if (OPTS.file_name.has_value()) {
+        return StudentApp{OPTS}.run();
+    }
 
     AssignmentFileSearcher file_searcher{*assignment, OPTS.file_matcher};
     std::vector<StudentInfo> students;

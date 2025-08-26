@@ -63,6 +63,12 @@ set(
     api/test_context.cpp
 
     database_reader.cpp
+
+    user/file_searcher.cpp
+    user/assignment_file_searcher.cpp
+
+    app/professor_app.cpp
+    app/student_app.cpp
 )
 
 set(
@@ -151,12 +157,6 @@ endfunction()
 
 ##### Student version
 create_target(asmgrader)
-target_sources(
-    asmgrader_core
-
-    PRIVATE
-    app/student_app.cpp
-)
 
 ##### Professor version
 create_target(asmgrader_prof)
@@ -165,13 +165,4 @@ target_compile_definitions(
 
     PUBLIC
     "PROFESSOR_VERSION"
-)
-target_sources(
-    asmgrader_prof_core
-
-    PRIVATE
-    user/file_searcher.cpp
-    user/assignment_file_searcher.cpp
-
-    app/professor_app.cpp
 )

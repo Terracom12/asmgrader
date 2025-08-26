@@ -2,6 +2,7 @@
 
 #include "api/assignment.hpp"
 #include "common/expected.hpp"
+#include "program/program.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
@@ -93,56 +94,55 @@ void CommandLineArgs::setup_parser() {
         .help("prints version information and exits");
 
     {
-    // Block to reduce scope of `using enum`
+        // Block to reduce scope of `using enum`
 
-    using enum ProgramOptions::VerbosityLevel;
+        using enum ProgramOptions::VerbosityLevel;
 
-    constexpr auto DEFAULT_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(DEFAULT_VERBOSITY_LEVEL);
-    constexpr auto MAX_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Max);
-    constexpr auto MIN_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Silent);
+        constexpr auto DEFAULT_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(DEFAULT_VERBOSITY_LEVEL);
+        constexpr auto MAX_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Max);
+        constexpr auto MIN_VERBOSITY_VALUE = static_cast<VerbosityLevelUnderlyingT>(Silent);
 
-    constexpr auto MAX_VERBOSITY_INCREASE = MAX_VERBOSITY_VALUE - DEFAULT_VERBOSITY_VALUE;
-    constexpr auto MAX_VERBOSITY_DECREASE = DEFAULT_VERBOSITY_VALUE - MIN_VERBOSITY_VALUE;
+        constexpr auto MAX_VERBOSITY_INCREASE = MAX_VERBOSITY_VALUE - DEFAULT_VERBOSITY_VALUE;
+        constexpr auto MAX_VERBOSITY_DECREASE = DEFAULT_VERBOSITY_VALUE - MIN_VERBOSITY_VALUE;
 
-    arg_parser_.add_argument("-v", "--verbose")
-        .flag()
-        .action([this] (const std::string& /*unused*/) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
+        arg_parser_.add_argument("-v", "--verbose")
+            .flag()
+            .action([this] (const std::string& /*unused*/) {
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                    static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
 
-                verbosity_ref++;
+                    verbosity_ref++;
 
-                if (verbosity_ref > MAX_VERBOSITY_VALUE) {
-                    throw std::invalid_argument("Verbosity specification exceeds maximum level");
-                }
-            })
-        .append()
-        .help(fmt::format("Increase verbosity level (up to {}x)", MAX_VERBOSITY_INCREASE));
+                    if (verbosity_ref > MAX_VERBOSITY_VALUE) {
+                        throw std::invalid_argument("Verbosity specification exceeds maximum level");
+                    }
+                })
+            .append()
+            .help(fmt::format("Increase verbosity level (up to {}x)", MAX_VERBOSITY_INCREASE));
 
-    arg_parser_.add_argument("-q", "--quiet")
-        .flag()
-        .action([this] (const std::string& /*unused*/) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
+        arg_parser_.add_argument("-q", "--quiet")
+            .flag()
+            .action([this] (const std::string& /*unused*/) {
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                    static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
 
-                verbosity_ref--;
+                    verbosity_ref--;
 
-                if (verbosity_ref < MIN_VERBOSITY_VALUE) {
-                    throw std::invalid_argument("Verbosity specification is lower than minimum level");
-                }
-            })
-        .append()
-        .help(fmt::format("Decrease verbosity level (up to {}x)", MAX_VERBOSITY_DECREASE));
+                    if (verbosity_ref < MIN_VERBOSITY_VALUE) {
+                        throw std::invalid_argument("Verbosity specification is lower than minimum level");
+                    }
+                })
+            .append()
+            .help(fmt::format("Decrease verbosity level (up to {}x)", MAX_VERBOSITY_DECREASE));
 
-    arg_parser_.add_argument("--silent")
-        .flag()
-        .action([this] (const std::string& /*unused*/) {
-                opts_buffer_.verbosity = Silent;
-            })
-        .help("Sets verbosity level to 'Silent', suppressing all output except for the return code. Useful for scripting.");
+        arg_parser_.add_argument("--silent")
+            .flag()
+            .action([this] (const std::string& /*unused*/) {
+                    opts_buffer_.verbosity = Silent;
+                })
+            .help("Sets verbosity level to 'Silent', suppressing all output except for the return code. Useful for scripting.");
 
-    opts_buffer_.verbosity = DEFAULT_VERBOSITY_LEVEL;
-
+        opts_buffer_.verbosity = DEFAULT_VERBOSITY_LEVEL;
     }
 
 
@@ -184,6 +184,9 @@ void CommandLineArgs::setup_parser() {
         });
 
 #ifdef PROFESSOR_VERSION
+    // Manual implementation of mutually exclusive group, as argparse doesn't seem to support
+    // such for groups of arguments.
+
     arg_parser_.add_argument("-fm", "--file-matcher")
         .default_value(std::string{AssignmentFileSearcher::DEFAULT_REGEX})
         .nargs(1)
@@ -219,8 +222,9 @@ void CommandLineArgs::setup_parser() {
 
                 opts_buffer_.search_path = opt;
         })
-        .help("File to run tests on");
-#else // PROFESSOR_VERSION
+        .help("Root path to begin searching for student assignments.");
+#endif // PROFESSOR_VERSION
+
     arg_parser_.add_argument("-f", "--file")
         .metavar("FILE")
         .action([this] (const std::string& opt) {
@@ -232,8 +236,11 @@ void CommandLineArgs::setup_parser() {
 
                 opts_buffer_.file_name = opt;
         })
-        .help("File to run tests on");
-#endif // PROFESSOR_VERSION
+        .help(APP_MODE == AppMode::Professor ?
+                "The *individual* file to run tests on. No other files are searched for, nor is the database read.\n"
+                "This argument's behavior overrides any usage of --file-matcher, --search-path, and --database." :  // professor help msg
+                "The file to run tests on." // student help msg
+        );
     // clang-format on
 }
 
