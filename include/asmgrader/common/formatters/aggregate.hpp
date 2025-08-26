@@ -10,6 +10,8 @@
 #include <fmt/format.h>
 #include <range/v3/range/concepts.hpp>
 
+#include <concepts>
+#include <ctime>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -17,8 +19,11 @@
 namespace asmgrader::detail {
 
 template <typename Aggregate>
-    requires(std::is_aggregate_v<Aggregate> && std::is_standard_layout_v<Aggregate> && !std::is_array_v<Aggregate> &&
-             !ranges::range<Aggregate>)
+    requires(std::is_aggregate_v<Aggregate> &&       //
+             std::is_standard_layout_v<Aggregate> && //
+             !std::is_array_v<Aggregate> &&          //
+             !ranges::range<Aggregate> &&            //
+             !std::same_as<std::tm, Aggregate>)
 struct FormatterImpl<Aggregate>
 {
     static auto format(const Aggregate& from, fmt::format_context& ctx) {
