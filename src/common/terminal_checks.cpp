@@ -1,5 +1,9 @@
 #include "common/terminal_checks.hpp"
 
+#include "common/error_types.hpp"
+#include "common/expected.hpp"
+#include "common/linux.hpp"
+
 #include <range/v3/algorithm/any_of.hpp>
 
 #include <array>
@@ -7,6 +11,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <asm-generic/ioctls.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 namespace asmgrader {
@@ -42,6 +48,16 @@ bool is_color_terminal() noexcept {
 // Which is subsequently based on: https://github.com/agauniyal/rang/
 bool in_terminal(FILE* file) noexcept {
     return ::isatty(fileno(file)) != 0;
+}
+
+Expected<winsize> terminal_size(FILE* file) noexcept {
+    winsize result{};
+
+    if (auto res = linux::ioctl(fileno(file), TIOCGWINSZ, &result); !res) {
+        return res.error();
+    }
+
+    return result;
 }
 
 } // namespace asmgrader
