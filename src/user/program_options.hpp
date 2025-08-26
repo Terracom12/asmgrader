@@ -125,17 +125,19 @@ struct ProgramOptions
         auto assignment = TRYE(GlobalRegistrar::get().get_assignment(assignment_name),
                                fmt::format("Error locating assignment {}", assignment_name));
 
-        // TODO: A more friendly diagnostic for non-existant file
-        std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
-        TRY(ensure_is_regular_file(exec_file_name, "File to run tests on {:?}"));
+        if (APP_MODE != AppMode::Professor) {
+            // TODO: A more friendly diagnostic for non-existant file
+            std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
+
+            TRY(ensure_is_regular_file(exec_file_name, "File to run tests on {:?}"));
+            TRY(Program::check_is_elf(exec_file_name));
+        }
 
         // Only check the database path if it's not the default
         // non-existance will be handled properly in ProfessorApp
         if (database_path != DEFAULT_DATABASE_PATH) {
             TRY(ensure_is_regular_file(database_path, "Database file {:?}"));
         }
-
-        TRY(Program::check_is_elf(exec_file_name));
 
         return {};
     }
