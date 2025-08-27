@@ -73,10 +73,10 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     ##### END Doxygen header extensions
 
     # find doxygen and dot if available
-    find_package(Doxygen 1.12.0 REQUIRED OPTIONAL_COMPONENTS dot)
+    find_package(Doxygen 1.10 REQUIRED OPTIONAL_COMPONENTS dot)
 
     if(NOT DOXYGEN_VERSION MATCHES "1.12.0")
-        message(FATAL_ERROR "Doxygen version must be exactly 1.12.0; your version is ${DOXYGEN_VERSION}. It's a happy medium between supporting C++20 features and not rendering weirdly")
+        message(WARNING "Doxygen version should be be exactly 1.12.0; your version is ${DOXYGEN_VERSION}. It's a happy medium between supporting C++20 features and not rendering weirdly")
     endif()
 
 
