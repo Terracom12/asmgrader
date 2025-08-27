@@ -14,6 +14,7 @@
 #define ASMGRADER_VERSION_MAJOR @AsmGrader_VERSION_MAJOR@
 #define ASMGRADER_VERSION_MINOR @AsmGrader_VERSION_MINOR@
 #define ASMGRADER_VERSION_PATCH @AsmGrader_VERSION_PATCH@
+#define ASMGRADER_VERSION_GIT_HASH @ASMGRADER_VERSION_GIT_HASH@
 // clang-format on
 
 #define ASMGRADER_VERSION_STRING                                                                                       \

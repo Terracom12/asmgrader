@@ -7,6 +7,7 @@
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/version.hpp>
 
+#include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>
 #include <gsl/util>
 #include <range/v3/algorithm/all_of.hpp>
@@ -30,6 +31,7 @@ struct RunMetadata
     int version = get_version();
     std::string_view version_string = ASMGRADER_VERSION_STRING;
     std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
+    std::string_view git_hash = BOOST_PP_STRINGIZE(ASMGRADER_VERSION_GIT_HASH);
 };
 
 struct RequirementResult

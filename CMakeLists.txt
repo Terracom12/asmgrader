@@ -15,8 +15,13 @@ if(MSVC)
 endif()
 
 # Get the project version based on the most recent git tag
-include(cmake/GitVersionTag.cmake)
-git_version_tag(ASMGRADER_VERSION_MAJOR ASMGRADER_VERSION_MINOR ASMGRADER_VERSION_PATCH)
+include(cmake/GitVersionInfo.cmake)
+git_version_info(
+    ASMGRADER_VERSION_MAJOR 
+    ASMGRADER_VERSION_MINOR 
+    ASMGRADER_VERSION_PATCH 
+    ASMGRADER_VERSION_GIT_HASH
+)
 
 project(AsmGrader
     VERSION ${ASMGRADER_VERSION_MAJOR}.${ASMGRADER_VERSION_MINOR}.${ASMGRADER_VERSION_PATCH}
