@@ -16,6 +16,8 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR := $(ROOT_DIR)/build
 SOURCE_DIR := $(ROOT_DIR)
 
+CMAKE_SOURCES := $(shell find $(SOURCE_DIR) -path $(BUILD_DIR) -prune -o -name 'CMakeLists.txt' -o -name '*.cmake' )
+
 default: help
 
 ##### --- snipped from gh:compiler-explorer/compiler-explorer/blob/main/Makefile
@@ -27,18 +29,18 @@ help: # with thanks to Ben Rady
 .PHONY: build
 build: debug  ## build in debug mode
 
-$(BUILD_DIR)/configured-debug:
+$(BUILD_DIR)/configured-debug: $(CMAKE_SOURCES)
 	cmake -S $(SOURCE_DIR) -B build -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Debug $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-debug
 
-$(BUILD_DIR)/configured-release:
+$(BUILD_DIR)/configured-release: $(CMAKE_SOURCES)
 	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-release
 
-$(BUILD_DIR)/configured-docs:
+$(BUILD_DIR)/configured-docs: $(CMAKE_SOURCES)
 	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Release -DASMGRADER_BUILD_DOCS:=TRUE $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-docs
