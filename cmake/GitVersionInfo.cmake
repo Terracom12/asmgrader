@@ -20,7 +20,7 @@ macro(git_version_info version_major_var version_minor_var version_patch_var com
     if(GIT_HASH STREQUAL "")
         message(WARNING "Somehow failed to obtain hash of latest commit from git repo. Defaulting to \"\"")
     else()
-        message(VERBOSE "Using ${GIT_HASH} as git commit hash")
+        message(STATUS "Using ${GIT_HASH} as git commit hash")
         set(${commit_hash} ${GIT_HASH})
     endif()
 
