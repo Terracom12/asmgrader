@@ -14,7 +14,9 @@
 #include <fmt/color.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
+#include <range/v3/algorithm/all_of.hpp>
 
+#include <cctype>
 #include <chrono>
 #include <concepts>
 #include <cstddef>
@@ -198,9 +200,17 @@ void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
                                   student_label_text.size() + ((terminal_width_ - actual_sz) / 2));
 
     if (info.assignment_path) {
-        out += fmt::to_string(info.assignment_path->relative_path()) + "\n";
+        out += info.assignment_path->relative_path().string() + "\n";
     } else {
-        out += style_str("Could not locate executable\n", ERROR_STYLE);
+        std::string regex_text;
+
+        if (ranges::all_of(info.subst_regex_string, [](unsigned char chr) { return std::isprint(chr); })) {
+            regex_text = fmt::format("\"{}\"", info.subst_regex_string);
+        } else {
+            regex_text = fmt::format("{:?}", info.subst_regex_string);
+        }
+
+        out += fmt::format(ERROR_STYLE, "Could not locate executable [RegEx matcher: {}]\n", regex_text);
     }
 
     sink_.write(out);

@@ -39,6 +39,8 @@ bool AssignmentFileSearcher::search_recursive(StudentInfo& student, const std::f
     set_arg("firstname", student.first_name | tolower);
     set_arg("lastname", student.last_name | tolower);
 
+    student.subst_regex_string = get_expr();
+
     std::vector matching_files = FileSearcher::search_recursive(base, max_depth);
 
     if (matching_files.size() == 0) {
@@ -75,7 +77,11 @@ StudentInfo AssignmentFileSearcher::infer_student_names_from_file(const std::fil
     std::string name_field =
         path.filename().string() | ranges::actions::take_while(static_cast<int (*)(int)>(std::isalpha));
 
-    return {.first_name = name_field, .last_name = "", .names_known = false, .assignment_path = path};
+    return {.first_name = name_field,
+            .last_name = "",
+            .names_known = false,
+            .assignment_path = path,
+            .subst_regex_string = ""};
 }
 
 } // namespace asmgrader

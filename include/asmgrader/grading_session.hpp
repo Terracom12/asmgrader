@@ -100,6 +100,9 @@ struct StudentInfo
 
     std::optional<std::filesystem::path> assignment_path;
 
+    // the regex matcher, with fields substituted; used to provide a more helpful diagnostic
+    std::string subst_regex_string;
+
     // TODO: ids for students with the same names?
 };
 

@@ -46,8 +46,11 @@ Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() const {
             return "Too many values in name entry";
         }
 
-        StudentInfo entry = {
-            .first_name = values[1], .last_name = values[0], .names_known = true, .assignment_path = std::nullopt};
+        StudentInfo entry = {.first_name = values[1],
+                             .last_name = values[0],
+                             .names_known = true,
+                             .assignment_path = std::nullopt,
+                             .subst_regex_string = ""};
 
         result.push_back(std::move(entry));
     }

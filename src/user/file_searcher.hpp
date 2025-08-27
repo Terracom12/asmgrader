@@ -22,6 +22,8 @@ public:
 protected:
     std::string set_arg(const std::string& key, std::string_view value);
 
+    std::string get_expr() const;
+
 private:
     std::string subst_args() const;
     static bool does_match(const std::regex& expr, std::string_view filename);

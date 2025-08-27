@@ -85,4 +85,8 @@ bool FileSearcher::does_match(const std::regex& expr, std::string_view filename)
     return std::regex_match(filename.begin(), filename.end(), expr);
 }
 
+std::string FileSearcher::get_expr() const {
+    return subst_args();
+}
+
 } // namespace asmgrader
