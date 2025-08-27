@@ -38,11 +38,10 @@ consteval unsigned int get_version() {
 
 enum class AppMode { Student, Professor };
 
-constexpr auto APP_MODE =
 #ifdef PROFESSOR_VERSION
-    AppMode::Professor;
+constexpr auto APP_MODE = AppMode::Professor;
 #else
-    AppMode::Student;
+constexpr auto APP_MODE = AppMode::Student;
 #endif
 
 } // namespace asmgrader

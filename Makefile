@@ -68,6 +68,10 @@ test: debug  ## test
 test-release: release  ## test-release
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
+.PHONY: docs
+docs:  configure-release ## build project documentation (Doxygen)
+	cmake --build build --target doxygen-docs
+
 .PHONY: list-opts
 list-opts: ## list available CMake options
 	@if ! cmake -S . -B build/ -LAH -N 2>/dev/null \
