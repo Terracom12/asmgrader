@@ -33,14 +33,15 @@ $(BUILD_DIR)/configured-debug:
 	touch $(BUILD_DIR)/configured-debug
 
 $(BUILD_DIR)/configured-release:
-	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo $(CONFIGURE_OPTS)
+	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-release
 
-$(BUILD_DIR)/configured-release-docs:
-	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASMGRADER_BUILD_DOCS:=TRUE $(CONFIGURE_OPTS)
+$(BUILD_DIR)/configured-docs:
+	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Release -DASMGRADER_BUILD_DOCS:=TRUE $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
-	touch $(BUILD_DIR)/configured-docs $(BUILD_DIR)/configured-release
+	touch $(BUILD_DIR)/configured-docs
 
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/configured-debug
@@ -49,7 +50,7 @@ configure-debug: $(BUILD_DIR)/configured-debug
 configure-release: $(BUILD_DIR)/configured-release
 
 .PHONY: configure-docs
-configure-release-docs: $(BUILD_DIR)/configured-release-docs
+configure-docs: $(BUILD_DIR)/configured-docs
 
 .PHONY: debug
 debug: configure-debug  ## build in debug mode
@@ -77,7 +78,7 @@ test-release: release  ## test-release
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: docs
-docs:  configure-release-docs ## build project documentation (Doxygen)
+docs:  configure-docs ## build project documentation (Doxygen)
 	cmake --build build --target doxygen-docs
 
 .PHONY: list-opts

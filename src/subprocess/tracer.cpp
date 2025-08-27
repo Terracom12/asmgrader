@@ -58,7 +58,7 @@ Result<void> Tracer::begin(pid_t pid) {
 
     // Wait for SIGSTOP raised by Tracer::init_child
     auto waitid_res = TRYE(TracedWaitid::waitid(P_PID, static_cast<id_t>(pid_)), SyscallFailure);
-    DEBUG_ASSERT(waitid_res.signal_num == SIGSTOP, "Tracer::init_child was not called in child process");
+    ASSERT(waitid_res.signal_num == SIGSTOP, "Tracer::init_child was not called in child process");
     LOG_DEBUG("Waitid returned: {}", waitid_res);
     // Set options:
     //   Stop tracee upon execve
