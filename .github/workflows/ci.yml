@@ -75,7 +75,7 @@ jobs:
 
       - name: Check Ninja Install
         run: |
-          echo ninja --version
+          ninja --version
 
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
