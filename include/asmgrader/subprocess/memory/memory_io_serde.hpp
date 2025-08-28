@@ -4,8 +4,7 @@
 #include <asmgrader/subprocess/memory/memory_io_base.hpp>
 #include <asmgrader/subprocess/memory/non_terminated_str.hpp>
 
-#include <boost/range/algorithm/copy.hpp>
-#include <boost/range/algorithm/transform.hpp>
+#include <range/v3/algorithm/copy.hpp>
 
 #include <array>
 #include <concepts>
@@ -33,6 +32,8 @@ struct MemoryIOSerde;
 
 namespace detail {
 
+// FIXME: Some of this is probably UB
+
 template <typename T>
 ByteVector reinterpret_raw(const T& data) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -55,7 +56,7 @@ ByteVector reinterpret_raw_each(const T& range) {
     ByteVector result(size);
 
     for (auto it = result.begin(); const auto& elem : range) {
-        it = boost::range::copy(reinterpret_raw(elem), it);
+        it = ranges::copy(reinterpret_raw(elem), it).out;
     }
 
     return result;
