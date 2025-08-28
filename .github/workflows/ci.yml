@@ -68,6 +68,10 @@ jobs:
           build_type: ${{ matrix.build_type }}
           # generator: ${{ matrix.generator }}
 
+      # CMake isn't detecting Ninja installed by setup-cpp
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
         with:
