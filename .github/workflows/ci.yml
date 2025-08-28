@@ -87,12 +87,14 @@ jobs:
 
       - name: Configure
         run: |
-            make configure-${{ matrix.build_type }}
+          cmake -S . -B build -G Ninja -DCMAKE_MAKE_PROGRAM=$(which ninja) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF \
+          -DASMGRADER_BUILD_TESTS=ON -DASMGRADER_ENABLE_CACHE=ON -DASMGRADER_ENABLE_PCH=ON
 
       - name: Build
         run: |
-            make build-${{ matrix.build_type }}
+          ninja -C build
 
       - name: Test
         run: |
-            make test-${{ matrix.build_type }}
+            ctest --test-dir build -output-on-failure -v
