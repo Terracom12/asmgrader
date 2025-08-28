@@ -58,13 +58,14 @@ jobs:
         os: [ubuntu-22.04, ubuntu-22.04-arm]
     steps:
       - uses: actions/checkout@v4
+        fetch-tags: true
 
       - name: Setup Cache
         uses: ./.github/actions/setup_cache
         with:
           compiler: ${{ matrix.compiler }}
           build_type: ${{ matrix.build_type }}
-          generator: ${{ matrix.generator }}
+          # generator: ${{ matrix.generator }}
 
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
