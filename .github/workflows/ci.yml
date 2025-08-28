@@ -99,4 +99,4 @@ jobs:
 
       - name: Test
         run: |
-            ctest --test-dir build -v
+            ctest --test-dir build
