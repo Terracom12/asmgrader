@@ -54,7 +54,7 @@ jobs:
       matrix:
         compiler: [gcc-11]  # TODO: Add llvm-14; cpptrace does not work without libgcc's _Unwind though
         build_type: [release] # TODO: Add debug mode
-        # generator: [Ninja] # TODO: Maybe add Unix Makefiles
+        generator: [Ninja] # TODO: Maybe add Unix Makefiles
         os: [ubuntu-22.04, ubuntu-22.04-arm]
     steps:
       - uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
           compiler: ${{ matrix.compiler }}
           build_type: ${{ matrix.build_type }}
           os: ${{ matrix.os }}
-          # generator: ${{ matrix.generator }}
+          generator: ${{ matrix.generator }}
 
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
