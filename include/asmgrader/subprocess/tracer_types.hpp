@@ -1,6 +1,6 @@
-#pragma once
-
+/// \file
 /// Types primarily to wrap Linux result info for use with ref``Tracer``
+#pragma once
 
 #include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/class_traits.hpp>

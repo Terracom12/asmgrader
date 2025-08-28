@@ -53,12 +53,12 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    constexpr auto VERSION_FMT = "AsmGrader v{}"
+    constexpr auto VERSION_FMT = "AsmGrader v{}-g{}"
 #ifdef PROFESSOR_VERSION
                                  " (Professor's Version)"
 #endif
         ;
-    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING));
+    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING));
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
@@ -85,15 +85,15 @@ void CommandLineArgs::setup_parser() {
         .help("prints version information and exits");
 
 
-        using VerbosityLevelUnderlyingT = std::underlying_type_t<ProgramOptions::VerbosityLevel>;
+    static constexpr auto ADD_ENUM = [] <typename Enum> (Enum& enumv, int diff) {
+        auto val = fmt::underlying(enumv);
+        enumv = static_cast<Enum>(val + diff);
+    };
 
     arg_parser_.add_argument("-v", "--verbose")
         .flag()
         .action([this] (const std::string& /*unused*/) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
-
-                verbosity_ref++;
+                ADD_ENUM(opts_buffer_.verbosity, 1);
             })
         .append()
         .help("Increase verbosity level");
@@ -101,10 +101,7 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("-q", "--quiet")
         .flag()
         .action([this] (const std::string& /*unused*/) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                static auto& verbosity_ref = reinterpret_cast<VerbosityLevelUnderlyingT&>(opts_buffer_.verbosity);
-
-                verbosity_ref--;
+                ADD_ENUM(opts_buffer_.verbosity, -1);
             })
         .append()
         .help("Decrease verbosity level");

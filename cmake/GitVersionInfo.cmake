@@ -1,11 +1,28 @@
 # Get the version (major + minor + patch) from the latest tag on the local git repo
-macro(git_version_tag version_major_var version_minor_var version_patch_var)
+# and also the full hash of the latest commit
+macro(git_version_info version_major_var version_minor_var version_patch_var commit_hash)
     execute_process(
         COMMAND git describe --tags --abbrev=0
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_TAG
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    
+    execute_process(
+        COMMAND git log -n 1 --format=%H
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    set(${commit_hash} "")
+
+    if(GIT_HASH STREQUAL "")
+        message(WARNING "Somehow failed to obtain hash of latest commit from git repo. Defaulting to \"\"")
+    else()
+        message(VERBOSE "Using ${GIT_HASH} as git commit hash")
+        set(${commit_hash} ${GIT_HASH})
+    endif()
 
     set(${version_major_var} 0)
     set(${version_minor_var} 0)

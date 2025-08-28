@@ -8,23 +8,29 @@ set(CMAKE_C_EXTENSIONS OFF)
 # Creates compile_commands.json to be used with an LSP
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-enable_language(ASM)
-
 if(MSVC)
   message( FATAL_ERROR "Compiling with MSVC is unsupported!" )
 endif()
 
+# Disable in-source builds
+include(cmake/PreventInSourceBuilds.cmake)
+
 # Get the project version based on the most recent git tag
-include(cmake/GitVersionTag.cmake)
-git_version_tag(ASMGRADER_VERSION_MAJOR ASMGRADER_VERSION_MINOR ASMGRADER_VERSION_PATCH)
+include(cmake/GitVersionInfo.cmake)
+git_version_info(
+    ASMGRADER_VERSION_MAJOR 
+    ASMGRADER_VERSION_MINOR 
+    ASMGRADER_VERSION_PATCH 
+    ASMGRADER_VERSION_GIT_HASH
+)
 
 project(AsmGrader
     VERSION ${ASMGRADER_VERSION_MAJOR}.${ASMGRADER_VERSION_MINOR}.${ASMGRADER_VERSION_PATCH}
     LANGUAGES CXX
 )
 
-# Disable in-source builds
-include(cmake/PreventInSourceBuilds.cmake)
+enable_language(ASM)
+
 
 
 # Setup CMake project options (ASMGRADER_* args)

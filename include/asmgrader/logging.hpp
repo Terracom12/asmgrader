@@ -78,7 +78,7 @@ struct DebugTimeHelper : NonMovable
     }
 
     ~DebugTimeHelper() {
-        const auto& stop = std::chrono::steady_clock::now();
+        [[maybe_unused]] const auto& stop = std::chrono::steady_clock::now();
         LOG_DEBUG("{} took {:%S}s to execute", str_expr, stop - start);
     }
 

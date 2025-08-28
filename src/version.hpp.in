@@ -14,10 +14,12 @@
 #define ASMGRADER_VERSION_MAJOR @AsmGrader_VERSION_MAJOR@
 #define ASMGRADER_VERSION_MINOR @AsmGrader_VERSION_MINOR@
 #define ASMGRADER_VERSION_PATCH @AsmGrader_VERSION_PATCH@
+#define ASMGRADER_VERSION_GIT_HASH @ASMGRADER_VERSION_GIT_HASH@
 // clang-format on
 
 #define ASMGRADER_VERSION_STRING                                                                                       \
     STRINGIFY(ASMGRADER_VERSION_MAJOR) "." STRINGIFY(ASMGRADER_VERSION_MINOR) "." STRINGIFY(ASMGRADER_VERSION_PATCH)
+#define ASMGRADER_VERSION_GIT_HASH_STRING STRINGIFY(ASMGRADER_VERSION_GIT_HASH)
 
 namespace asmgrader {
 
@@ -38,11 +40,10 @@ consteval unsigned int get_version() {
 
 enum class AppMode { Student, Professor };
 
-constexpr auto APP_MODE =
 #ifdef PROFESSOR_VERSION
-    AppMode::Professor;
+constexpr auto APP_MODE = AppMode::Professor;
 #else
-    AppMode::Student;
+constexpr auto APP_MODE = AppMode::Student;
 #endif
 
 } // namespace asmgrader

@@ -233,13 +233,11 @@ void PlainTextSerializer::on_error(std::string_view what) {
 }
 
 void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
-    std::size_t half_align_amt = terminal_width_ / 2;
-
     constexpr std::string_view HEADER_TEXT = "Execution Info";
-    constexpr std::string_view VERSION_LABEL = "Version:";
-    constexpr std::string_view DATE_LABEL = "Date and Time:";
+    constexpr std::string_view VERSION_LABEL = "Version: ";
+    constexpr std::string_view DATE_LABEL = "Date and Time: ";
 
-    std::string version_text{data.version_string};
+    std::string version_text = fmt::format("{}-g{}", data.version_string, data.git_hash);
 
     if (APP_MODE == AppMode::Professor) {
         version_text += " (Professor)";
@@ -251,8 +249,8 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
         asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
 
     std::string out = fmt::format("{:#^{}}\n", HEADER_TEXT, terminal_width_);
-    out += fmt::format("{0:<{2}}{1:>{2}}\n", VERSION_LABEL, version_text, half_align_amt);
-    out += fmt::format("{0:<{2}}{1:>{2}}\n", DATE_LABEL, local_timepoint_text, half_align_amt);
+    out += fmt::format("{}{:>{}}\n", VERSION_LABEL, version_text, terminal_width_ - VERSION_LABEL.size());
+    out += fmt::format("{:}{:>{}}\n", DATE_LABEL, local_timepoint_text, terminal_width_ - DATE_LABEL.size());
     out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
 
     sink_.write(out);

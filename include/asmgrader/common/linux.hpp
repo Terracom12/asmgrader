@@ -22,6 +22,11 @@
 
 #include <bits/types/siginfo_t.h>
 #include <fcntl.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/ptrace.h>
 #include <sys/stat.h>
@@ -309,9 +314,11 @@ inline Expected<Pipe> pipe2(int flags = 0) {
 
 /// see ptrace(2)
 /// returns success/failure; logs failure at debug level
+// NOLINTBEGIN(google-runtime-int)
+//! \cond DoNotRaiseWarning
 template <typename AddrT = void*, typename DataT = void*>
+//! \endcond
     requires(sizeof(AddrT) <= sizeof(void*) && sizeof(DataT) <= sizeof(void*))
-// NOLINTNEXTLINE(google-runtime-int)
 inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, DataT data = NULL) {
     //  clear errno before calling
     errno = 0;
@@ -320,10 +327,11 @@ inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, Data
     //   google-runtime-int                 : `long` is based on ptrace(2) spec
     //   cppcoreguidelines-pro-type-vararg  : this is a wrapper for ptrace
     //   reinterpret-cast                   : ptrace spec is `void*`, caller of this wrapper should not care
-    // NOLINTNEXTLINE(google-runtime-int, cppcoreguidelines-pro-type-vararg)
-    long res = ::ptrace(static_cast<enum __ptrace_request>(request), pid,
-                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-                        reinterpret_cast<void*>(addr), reinterpret_cast<void*>(data));
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,cppcoreguidelines-pro-type-reinterpret-cast)
+    long res = ::ptrace(static_cast<enum __ptrace_request>(request), pid, reinterpret_cast<void*>(addr),
+                        reinterpret_cast<void*>(data));
+    // NOLINTEND(cppcoreguidelines-pro-type-vararg,cppcoreguidelines-pro-type-reinterpret-cast)
+    // NOLINTEND(google-runtime-int)
 
     // see the Return section of ptrace(2)
     if (errno) {
@@ -366,11 +374,7 @@ inline Expected<pid_t> getppid() {
     return ::getppid();
 }
 
-#define SIGSTRCASE(sig)                                                                                                \
-    case sig:                                                                                                          \
-        return #sig;
-
-// Value type to behave as a linux signal
+/// Value type to behave as a linux signal
 class Signal
 {
 public:
@@ -383,52 +387,13 @@ public:
     // NOLINTNEXTLINE(google-explicit-constructor)
     operator int() const { return signal_num_; }
 
-    std::string to_string() const {
-        // TODO: Consider just converting to table
-
-        // Signals obtained from the output of `kill -l` on bash
-        switch (signal_num_) {
-            SIGSTRCASE(SIGHUP)
-            SIGSTRCASE(SIGINT)
-            SIGSTRCASE(SIGQUIT)
-            SIGSTRCASE(SIGILL)
-            SIGSTRCASE(SIGTRAP)
-            SIGSTRCASE(SIGABRT)
-            SIGSTRCASE(SIGBUS)
-            SIGSTRCASE(SIGFPE)
-            SIGSTRCASE(SIGKILL)
-            SIGSTRCASE(SIGSEGV)
-            SIGSTRCASE(SIGPIPE)
-            SIGSTRCASE(SIGALRM)
-            SIGSTRCASE(SIGTERM)
-            SIGSTRCASE(SIGSTKFLT)
-            SIGSTRCASE(SIGCHLD)
-            SIGSTRCASE(SIGCONT)
-            SIGSTRCASE(SIGSTOP)
-            SIGSTRCASE(SIGTSTP)
-            SIGSTRCASE(SIGTTIN)
-            SIGSTRCASE(SIGTTOU)
-            SIGSTRCASE(SIGURG)
-            SIGSTRCASE(SIGXCPU)
-            SIGSTRCASE(SIGXFSZ)
-            SIGSTRCASE(SIGVTALRM)
-            SIGSTRCASE(SIGPROF)
-            SIGSTRCASE(SIGWINCH)
-            SIGSTRCASE(SIGIO)
-            SIGSTRCASE(SIGPWR)
-            SIGSTRCASE(SIGSYS)
-        default:
-            return fmt::format("<unknown ({})>", signal_num_);
-        }
-    }
+    std::string to_string() const { return sigdescr_np(signal_num_); }
 
     friend std::string format_as(const Signal& from) { return from.to_string(); }
 
 private:
     int signal_num_;
 };
-
-#undef SIGSTRCASE
 
 // TODO: Switch to using sigaction
 using SignalHandlerT = void (*)(int);

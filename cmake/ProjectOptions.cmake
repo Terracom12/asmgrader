@@ -64,6 +64,7 @@ macro(asmgrader_setup_options)
 
     if(NOT PROJECT_IS_TOP_LEVEL)
         option(ASMGRADER_BUILD_TESTS "Enable building unit tests" OFF)
+        option(ASMGRADER_BUILD_DOCS "Enable building docs (Doxygen)" OFF)
         # option(ASMGRADER_ENABLE_IPO "Enable IPO/LTO" OFF)
         option(ASMGRADER_WARNINGS_AS_ERRORS "Treat Warnings As Errors" OFF)
         option(ASMGRADER_ENABLE_SANITIZER_ADDRESS "Enable address sanitizer" OFF)
@@ -77,6 +78,7 @@ macro(asmgrader_setup_options)
         option(ASMGRADER_ENABLE_CACHE "Enable ccache" OFF)
     else()
         option(ASMGRADER_BUILD_TESTS "Enable building unit tests" ON)
+        option(ASMGRADER_BUILD_DOCS "Enable building docs (Doxygen)" OFF)
         # option(ASMGRADER_ENABLE_IPO "Enable IPO/LTO" ON)
         option(ASMGRADER_WARNINGS_AS_ERRORS "Treat Warnings As Errors" ON)
         option(ASMGRADER_ENABLE_SANITIZER_ADDRESS "Enable address sanitizer" ${SUPPORTS_ASAN})
@@ -112,12 +114,17 @@ endmacro()
 
 # Options that should be set *before* adding dependencies
 macro(asmgrader_global_options)
-  # if(myproject_ENABLE_IPO)
-  #   include(cmake/InterproceduralOptimization.cmake)
-  #   myproject_enable_ipo()
-  # endif()
+    if(${ASMGRADER_BUILD_DOCS})
+        include(FetchContent)
+        include(cmake/Doxygen.cmake)
+        asmgrader_enable_doxygen("")
 
-  # Empty for the moment
+        if(${ASMGRADER_BUILD_DOCS_ONLY})
+            unset(ASMGRADER_BUILD_DOCS_ONLY CACHE)
+            message(WARNING "Exiting early because ASMGRADER_BUILD_DOCS_ONLY was specified")
+            return()
+        endif()
+    endif()
 endmacro()
 
 # Options that are project-specific, and may be set after adding dependencies

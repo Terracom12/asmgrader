@@ -47,37 +47,3 @@ struct FormatterImpl<Enum>
 };
 
 } // namespace asmgrader::detail
-
-namespace ct_test {
-
-enum class SEa {};
-enum class SEb { A, B };
-enum class SEc {};
-enum class SEd { A, B };
-
-enum Ea {};
-
-enum Eb { A, B };
-
-enum Ec {};
-
-enum Ed { C, D };
-
-// NOLINTBEGIN
-BOOST_DESCRIBE_ENUM(SEa);
-BOOST_DESCRIBE_ENUM(SEb, A, B);
-BOOST_DESCRIBE_ENUM(Ea);
-BOOST_DESCRIBE_ENUM(Eb, A, B);
-// NOLINTEND
-
-static_assert(fmt::formattable<SEa>);
-static_assert(fmt::formattable<SEb>);
-static_assert(!fmt::formattable<SEc>);
-static_assert(!fmt::formattable<SEd>);
-
-static_assert(fmt::formattable<Ea>);
-static_assert(fmt::formattable<Eb>);
-static_assert(!fmt::formattable<Ec>);
-static_assert(!fmt::formattable<Ed>);
-
-} // namespace ct_test

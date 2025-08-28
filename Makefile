@@ -16,6 +16,8 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR := $(ROOT_DIR)/build
 SOURCE_DIR := $(ROOT_DIR)
 
+CMAKE_SOURCES := $(shell find $(SOURCE_DIR) -path $(BUILD_DIR) -prune -o -name 'CMakeLists.txt' -o -name '*.cmake' )
+
 default: help
 
 ##### --- snipped from gh:compiler-explorer/compiler-explorer/blob/main/Makefile
@@ -25,17 +27,26 @@ help: # with thanks to Ben Rady
 #### --- END snip
 
 .PHONY: build
-build: debug  ## build in debug mode
+build: build-debug  ## build in debug mode
 
-$(BUILD_DIR)/configured-debug:
+$(BUILD_DIR)/configured-debug: $(CMAKE_SOURCES)
+	rm -f ./build/CMakeCache.txt
 	cmake -S $(SOURCE_DIR) -B build -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Debug $(CONFIGURE_OPTS)
-	rm -f $(BUILD_DIR)/configured-release
+	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-debug
 
-$(BUILD_DIR)/configured-release:
-	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo $(CONFIGURE_OPTS)
-	rm -f $(BUILD_DIR)/configured-debug
+$(BUILD_DIR)/configured-release: $(CMAKE_SOURCES)
+	rm -f ./build/CMakeCache.txt
+	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF $(CONFIGURE_OPTS)
+	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-release
+
+$(BUILD_DIR)/configured-docs: $(CMAKE_SOURCES)
+	rm -f ./build/CMakeCache.txt
+	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Release -DASMGRADER_BUILD_DOCS:=TRUE -DASMGRADER_BUILD_DOCS_ONLY:=TRUE $(CONFIGURE_OPTS)
+	rm -f $(BUILD_DIR)/configured-*
+	touch $(BUILD_DIR)/configured-docs
 
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/configured-debug
@@ -43,12 +54,16 @@ configure-debug: $(BUILD_DIR)/configured-debug
 .PHONY: configure-release
 configure-release: $(BUILD_DIR)/configured-release
 
-.PHONY: debug
-debug: configure-debug  ## build in debug mode
+# FIXME: The reconfiguring should be unnecessary
+.PHONY: configure-docs
+configure-docs: $(BUILD_DIR)/configured-docs
+
+.PHONY: build-debug
+build-debug: configure-debug  ## build in debug mode
 	cmake --build $(BUILD_DIR)
 
-.PHONY: release
-release: configure-release  ## build in release mode (with debug info)
+.PHONY: build-release
+build-release: configure-release  ## build in release mode (with debug info)
 	cmake --build $(BUILD_DIR)
 
 .PHONY: clean
@@ -61,12 +76,16 @@ deep-clean: ## remove all build files and configuration
 	rm -rf $(BUILD_DIR)/
 
 .PHONY: test
-test: debug  ## test
+test: build-debug  ## test
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: test-release
-test-release: release  ## test-release
+test-release: build-release  ## test-release
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
+
+.PHONY: docs
+docs:  configure-docs ## build project documentation (Doxygen)
+	cmake --build build --target doxygen-docs
 
 .PHONY: list-opts
 list-opts: ## list available CMake options
