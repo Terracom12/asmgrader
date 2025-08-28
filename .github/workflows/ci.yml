@@ -28,6 +28,7 @@ jobs:
           doxygen: 1.12.0
           graphviz: true
           cmake: true
+          ninja: true
 
       - name: Build Docs
         run: |
@@ -51,8 +52,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [llvm-14]  # TODO: Add gcc
-        build_type: [debug, release]
+        compiler: [gcc-11]  # TODO: Add llvm-14; cpptrace does not work without libgcc's _Unwind though
+        build_type: [release] # TODO: Add debug mode
         # generator: [Ninja] # TODO: Maybe add Unix Makefiles
         os: [ubuntu-22.04, ubuntu-22.04-arm]
     steps:
