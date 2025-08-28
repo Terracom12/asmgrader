@@ -27,21 +27,24 @@ help: # with thanks to Ben Rady
 #### --- END snip
 
 .PHONY: build
-build: debug  ## build in debug mode
+build: build-debug  ## build in debug mode
 
 $(BUILD_DIR)/configured-debug: $(CMAKE_SOURCES)
+	rm -f ./build/CMakeCache.txt
 	cmake -S $(SOURCE_DIR) -B build -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Debug $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-debug
 
 $(BUILD_DIR)/configured-release: $(CMAKE_SOURCES)
+	rm -f ./build/CMakeCache.txt
 	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-release
 
 $(BUILD_DIR)/configured-docs: $(CMAKE_SOURCES)
-	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Release -DASMGRADER_BUILD_DOCS:=TRUE $(CONFIGURE_OPTS)
+	rm -f ./build/CMakeCache.txt
+	cmake -S $(SOURCE_DIR) -B $(BUILD_DIR) -G $(GENERATOR) -DCMAKE_BUILD_TYPE=Release -DASMGRADER_BUILD_DOCS:=TRUE -DASMGRADER_BUILD_DOCS_ONLY:=TRUE $(CONFIGURE_OPTS)
 	rm -f $(BUILD_DIR)/configured-*
 	touch $(BUILD_DIR)/configured-docs
 
@@ -51,15 +54,16 @@ configure-debug: $(BUILD_DIR)/configured-debug
 .PHONY: configure-release
 configure-release: $(BUILD_DIR)/configured-release
 
+# FIXME: The reconfiguring should be unnecessary
 .PHONY: configure-docs
 configure-docs: $(BUILD_DIR)/configured-docs
 
-.PHONY: debug
-debug: configure-debug  ## build in debug mode
+.PHONY: build-debug
+build-debug: configure-debug  ## build in debug mode
 	cmake --build $(BUILD_DIR)
 
-.PHONY: release
-release: configure-release  ## build in release mode (with debug info)
+.PHONY: build-release
+build-release: configure-release  ## build in release mode (with debug info)
 	cmake --build $(BUILD_DIR)
 
 .PHONY: clean
