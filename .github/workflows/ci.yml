@@ -95,8 +95,8 @@ jobs:
 
       - name: Build
         run: |
-          make
+          cd build && make
 
       - name: Test
         run: |
-            ctest --test-dir build -output-on-failure -v
+            ctest --test-dir build -v
