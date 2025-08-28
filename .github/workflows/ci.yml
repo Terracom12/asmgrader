@@ -81,6 +81,11 @@ jobs:
         run: |
           make configure-${{ matrix.build_type }}
 
+      # We want ccache to be capable of caching PCH
+      - name: Set ccache Config
+        run: |
+          ccache --set-config 'sloppiness=pch_defines,time_macros'
+
       - name: Build
         run: |
           make build-${{ matrix.build_type }}
@@ -91,10 +96,10 @@ jobs:
 
       - name: Test
         run: |
-          ctest --test-dir build -VV --output-juint juint-test--results.xml
+          ctest --test-dir build -VV --output-junit junit-test-results.xml
 
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed
         with:
           name: test-results
-          path: juint-test--results.xml
+          path: junit-test-results.xml
