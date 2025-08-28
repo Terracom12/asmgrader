@@ -59,11 +59,13 @@ catch_discover_tests(
     TEST_PREFIX
     "unittests."
     REPORTER
-    XML
+    "JUnit"
     OUTPUT_DIR
-    .
+    ${CMAKE_SOURCE_DIR}/reports
     OUTPUT_PREFIX
-    "unittests."
+    "junit-unittests."
     OUTPUT_SUFFIX
-    .xml
+    ".xml"
+    EXTRA_ARGS
+    "--reporter console::out=-"
 )

@@ -96,10 +96,10 @@ jobs:
 
       - name: Test
         run: |
-          ctest --test-dir build -VV --output-junit junit-test-results.xml
+          ctest --test-dir build/ -VV --output-junit reports/junit-ctest.xml
 
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed
         with:
           name: test-results
-          path: build/junit-test-results.xml
+          path: reports/junit*.xml
