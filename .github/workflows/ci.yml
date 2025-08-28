@@ -89,7 +89,8 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_MAKE_PROGRAM=$(which ninja) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DASMGRADER_ENABLE_SANITIZER_ADDRESS=OFF \
-          -DASMGRADER_BUILD_TESTS=ON -DASMGRADER_ENABLE_CACHE=ON -DASMGRADER_ENABLE_PCH=ON
+          -DASMGRADER_BUILD_TESTS=ON -DASMGRADER_ENABLE_CACHE=ON -DASMGRADER_ENABLE_PCH=ON \
+          --log-level=TRACE
 
       - name: Build
         run: |
