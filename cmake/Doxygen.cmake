@@ -40,16 +40,15 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     # set(DOXYGEN_CLANG_OPTIONS -std=c++20)
 
     # Exclude the vcpkg files and the files CMake downloads under _deps (like project_options)
-    if(NOT DEFINED ENV{CPM_SOURCE_CACHE})
-        set(cpm_deps_dir ${CMAKE_BINARY_DIR}/CPM)
-    else()
-        set(cpm_deps_dir ENV{CPM_SOURCE_CACHE})
+    set(cpm_deps_dir ${CMAKE_BINARY_DIR}/CPM)
+    if(DEFINED ENV{CPM_SOURCE_CACHE})
+        set(cpm_deps_dir ${cpm_deps_dir} ENV{CPM_SOURCE_CACHE})
     endif()
 
     set(DOXYGEN_EXCLUDE_PATTERNS 
         "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/*" 
         "${CMAKE_CURRENT_BINARY_DIR}/_deps/*" 
-        "${cpm_deps_dir}"
+        ${cpm_deps_dir}
         "cs3b-grader"
         "tests"
     )
