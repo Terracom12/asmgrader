@@ -7,7 +7,7 @@
 #include <concepts>
 #include <type_traits>
 
-using namespace metadata;
+using namespace asmgrader::metadata;
 
 namespace ct_tests {
 
@@ -105,5 +105,5 @@ TEST_CASE("Combining metadata objects") {
     REQUIRE((start | assignment_only).get<Assignment>() == Assignment{"", ""});
     REQUIRE((start | assignment_only | Assignment{"no", "way"}).get<Assignment>() == Assignment{"no", "way"});
 
-    constexpr Metadata constructed{start, prof_only_only, weight_only};
+    [[maybe_unused]] constexpr Metadata constructed{start, prof_only_only, weight_only};
 }

@@ -1,13 +1,4 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-
-# Disallow in-source builds
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
-    message(FATAL_ERROR
-        "In-source builds are not allowed.\n"
-        "Please specify a seperate build directory with:\n"
-        "  cmake -B <build-dir>"
-    )
-endif()
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,34 +14,46 @@ if(MSVC)
   message( FATAL_ERROR "Compiling with MSVC is unsupported!" )
 endif()
 
-include(cmake/GitVersionTag.cmake)
+# Get the project version based on the most recent git tag
+include(cmake/GitVersionInfo.cmake)
+git_version_info(
+    ASMGRADER_VERSION_MAJOR 
+    ASMGRADER_VERSION_MINOR 
+    ASMGRADER_VERSION_PATCH 
+    ASMGRADER_VERSION_GIT_HASH
+)
 
-git_version_tag(MAJOR MINOR PATCH)
+project(AsmGrader
+    VERSION ${ASMGRADER_VERSION_MAJOR}.${ASMGRADER_VERSION_MINOR}.${ASMGRADER_VERSION_PATCH}
+    LANGUAGES CXX
+)
 
-project(AsmGrader VERSION ${MAJOR}.${MINOR}.${PATCH} LANGUAGES CXX)
+# Disable in-source builds
+include(cmake/PreventInSourceBuilds.cmake)
 
-# Show download progress
-set(FETCHCONTENT_QUIET FALSE)
 
-# CMake package manager for easy dependency management
-#  use local packages if possible as to not download unnecessarily
-set(CPM_USE_LOCAL_PACKAGES ON)
-include(cmake/CPM.cmake)
+# Setup CMake project options (ASMGRADER_* args)
+include(cmake/ProjectOptions.cmake)
+asmgrader_setup_options()
 
-# Debug / Release preprocessor definitions
-add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Debug>>:-DDEBUG>")
-add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<CONFIG:Release>>:-DRELEASE>")
+asmgrader_global_options()
 
-add_compile_options("-fconcepts-diagnostics-depth=3")
+# Set up project dependencies
+# CPM (CMake package manager) is used for easy dependency management
+include(cmake/SetupDependencies.cmake)
+asmgrader_setup_dependencies()
 
-add_subdirectory(core)
+asmgrader_local_options()
+
+add_subdirectory(src)
+
+include(CTest)
+
+if (ASMGRADER_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 if(EXISTS "cs3b-grader/CMakeLists.txt")
     add_subdirectory(cs3b-grader)
 endif()
 
-option(ENABLE_TESTING "Whether to enable building of unit tests or not" FALSE)
-if (ENABLE_TESTING)
-    # Add project tests
-    add_subdirectory(tests)
-endif()

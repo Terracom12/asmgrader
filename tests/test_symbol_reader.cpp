@@ -5,13 +5,16 @@
 #include "symbols/symbol_table.hpp"
 
 #include <range/v3/algorithm.hpp>
+#include <range/v3/algorithm/find_if.hpp>
+
+#include <iterator>
 
 // Should include `_start` and `strHello` where `strHello` is addressed AFTER `_start`
-const auto symbols = ElfReader(ASM_TESTS_EXEC).get_symbols();
-const auto symbol_table = SymbolTable(symbols);
+const auto symbols = asmgrader::ElfReader(ASM_TESTS_EXEC).get_symbols();
+const auto symbol_table = asmgrader::SymbolTable(symbols);
 
 TEST_CASE("Ensure that all symbols exist") {
-    auto name_eq = [](auto name) { return [name](Symbol s) { return s.name == name; }; };
+    auto name_eq = [](auto name) { return [name](asmgrader::Symbol s) { return s.name == name; }; };
 
     REQUIRE(symbols.size() >= 2);
 
@@ -28,5 +31,5 @@ TEST_CASE("SymbolTable::find test") {
 TEST_CASE("SymbolTable::find_closest_above - _start addressed above strHello") {
     auto strHello_addr = symbol_table.find("strHello")->address;
 
-    REQUIRE(symbol_table.find_closest_above(strHello_addr).value_or(Symbol{}).name == "_start");
+    REQUIRE(symbol_table.find_closest_above(strHello_addr).value_or(asmgrader::Symbol{}).name == "_start");
 }

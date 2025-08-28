@@ -1,12 +1,12 @@
 #include "catch2_custom.hpp"
 
+#include "common/error_types.hpp"
+#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep
 #include "logging.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/subprocess.hpp"
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/traced_subprocess.hpp"
-#include "common/error_types.hpp"
-#include "common/timespec_operator_eq.hpp"
 
 #include <fmt/ranges.h>
 
@@ -17,23 +17,22 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-// static_assert(requires(util::Result<std::timespec> r, std::timespec t) {
-//     t == t;
-//     r == r;
-//     r == t;
-//     t == r;
-// });
-// static_assert(requires(std::variant<util::Result<std::timespec>, double> a, util::Result<std::timespec> r) {
-//     a == a;
-//     a != a;
-//     a == r;
-//     3.14 == a;
-// });
+static_assert(requires(asmgrader::Result<std::timespec> r, std::timespec t) {
+    t == t;
+    r == r;
+    r == t;
+    t == r;
+});
+
+static_assert(requires(std::variant<asmgrader::Result<std::timespec>, double> a, asmgrader::Result<std::timespec> r) {
+    a == a;
+    a != a;
+});
 
 TEST_CASE("Read /bin/echo stdout") {
     using namespace std::chrono_literals;
-    Subprocess proc("/bin/echo", {"-n", "Hello", "world!"});
-    proc.start();
+    asmgrader::Subprocess proc("/bin/echo", {"-n", "Hello", "world!"});
+    REQUIRE(proc.start());
 
     proc.wait_for_exit();
 
@@ -43,25 +42,25 @@ TEST_CASE("Read /bin/echo stdout") {
 TEST_CASE("Interact with /bin/cat") {
     using namespace std::chrono_literals;
 
-    Subprocess proc("/bin/cat", {});
-    proc.start();
+    asmgrader::Subprocess proc("/bin/cat", {});
+    REQUIRE(proc.start());
 
-    proc.send_stdin("Goodbye dog...");
+    REQUIRE(proc.send_stdin("Goodbye dog..."));
 
     REQUIRE(proc.read_stdout(100ms) == "Goodbye dog...");
 
-    proc.send_stdin("Du Du DUHHH");
+    REQUIRE(proc.send_stdin("Du Du DUHHH"));
 
     REQUIRE(proc.read_stdout(100ms) == "Du Du DUHHH");
 }
 
 TEST_CASE("Get results of asm program") {
-    TracedSubprocess proc(ASM_TESTS_EXEC, {});
-    proc.start();
+    asmgrader::TracedSubprocess proc(ASM_TESTS_EXEC, {});
+    REQUIRE(proc.start());
 
     auto run_res = proc.run();
 
-    REQUIRE(run_res->get_kind() == RunResult::Kind::Exited);
+    REQUIRE(run_res->get_kind() == asmgrader::RunResult::Kind::Exited);
     REQUIRE(run_res->get_code() == 42);
 
     REQUIRE(proc.get_exit_code() == 42);
@@ -72,8 +71,8 @@ TEST_CASE("Get results of asm program") {
     LOG_DEBUG("Syscall records:\n\t{:?}", fmt::join(syscall_records, "\n\t"));
 
     REQUIRE(syscall_records.size() == 2);
-    // REQUIRE(syscall_records.at(0).num == SYS_write);
-    // REQUIRE(syscall_records.at(1).num == SYS_exit);
-    // REQUIRE(syscall_records.at(1).args.size() == 1);
-    // REQUIRE(syscall_records.at(1).args.at(0) == SyscallRecord::SyscallArg{42});
+    REQUIRE(syscall_records.at(0).num == SYS_write);
+    REQUIRE(syscall_records.at(1).num == SYS_exit);
+    REQUIRE(syscall_records.at(1).args.size() == 1);
+    REQUIRE(syscall_records.at(1).args.at(0) == asmgrader::SyscallRecord::SyscallArg{42});
 }

@@ -1,52 +1,64 @@
 #include "catch2_custom.hpp"
 
+#include "common/aliases.hpp"
+#include "common/byte_vector.hpp"
+#include "common/error_types.hpp"
+#include "common/timespec_operator_eq.hpp" // operator==(timespec, timespec)
 #include "logging.hpp"
 #include "subprocess/memory/memory_io_base.hpp"
 #include "subprocess/memory/memory_io_serde.hpp"
-#include "common/byte_vector.hpp"
-#include "common/timespec_operator_eq.hpp" // operator==(timespec, timespec)
+#include "subprocess/memory/non_terminated_str.hpp"
 
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm.hpp>
+#include <range/v3/algorithm/copy.hpp>
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <ctime>
 #include <memory>
+#include <string>
 #include <tuple>
 
+using namespace asmgrader::aliases;
+
 template <std::size_t N>
-class StubbedMemoryIO final : public MemoryIOBase
+class StubbedMemoryIO final : public asmgrader::MemoryIOBase
 {
 public:
     StubbedMemoryIO()
         : MemoryIOBase(-1) {}
 
 private:
-    util::Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
+    asmgrader::Result<asmgrader::ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
         ASSERT(address + length < N);
-        return ByteVector{begin(data_) + address, begin(data_) + address + length};
+        return asmgrader::ByteVector{begin(data_) + address, begin(data_) + address + length};
     }
 
-    util::Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) override {
+    asmgrader::Result<void> write_block_impl(std::uintptr_t address, const asmgrader::ByteVector& data) override {
         ASSERT(address + data.size() < N);
         ranges::copy(data, begin(data_) + address);
 
         return {};
     }
+
     std::array<std::byte, N> data_{};
 };
 
 constexpr std::size_t MEM_SIZE = 1'024;
-auto make_memory = []() -> std::unique_ptr<MemoryIOBase> { return std::make_unique<StubbedMemoryIO<MEM_SIZE>>(); };
+auto make_memory = []() -> std::unique_ptr<asmgrader::MemoryIOBase> {
+    return std::make_unique<StubbedMemoryIO<MEM_SIZE>>();
+};
 
 TEST_CASE("Read and write arithmetic types and pointers") {
     auto mio = make_memory();
 
     SECTION("Signed integers") {
-        std::int8_t a = 123;
-        std::int16_t b = 0xABC;
-        std::int32_t c = -32;
-        std::int64_t d = -999999;
+        i8 a = 123;
+        i16 b = 0xABC;
+        i32 c = -32;
+        i64 d = -999999;
 
         std::ignore = mio->write(0, a);
         std::ignore = mio->write(1, b);
@@ -54,21 +66,21 @@ TEST_CASE("Read and write arithmetic types and pointers") {
         std::ignore = mio->write(4, c);
         std::ignore = mio->write(8, d);
 
-        REQUIRE(mio->read<std::int8_t>(0) == a);
-        REQUIRE(mio->read<std::int16_t>(2) == b);
-        REQUIRE(mio->read<std::int32_t>(4) == c);
-        REQUIRE(mio->read<std::int64_t>(8) == d);
+        REQUIRE(mio->read<i8>(0) == a);
+        REQUIRE(mio->read<i16>(2) == b);
+        REQUIRE(mio->read<i32>(4) == c);
+        REQUIRE(mio->read<i64>(8) == d);
     }
 
     SECTION("Unsigned integers") {
-        std::uint64_t f = 0x0123456789ABCDEF;
-        std::uint8_t g = 0xFF;
+        u64 f = 0x0123456789ABCDEF;
+        u8 g = 0xFF;
 
         std::ignore = mio->write(3, f);
         std::ignore = mio->write(2, g);
 
-        REQUIRE(mio->read<std::uint64_t>(3) == f);
-        REQUIRE(mio->read<std::uint8_t>(2) == g);
+        REQUIRE(mio->read<u64>(3) == f);
+        REQUIRE(mio->read<u8>(2) == g);
     }
 
     SECTION("Floating point numbers") {
@@ -85,7 +97,7 @@ TEST_CASE("Read and write arithmetic types and pointers") {
     SECTION("Pointers") {
         int* j = nullptr;
         int** k = &j;
-        MemoryIOBase* l = mio.get();
+        asmgrader::MemoryIOBase* l = mio.get();
 
         std::ignore = mio->write(100, j);
         std::ignore = mio->write(108, k);
@@ -93,7 +105,7 @@ TEST_CASE("Read and write arithmetic types and pointers") {
 
         REQUIRE(mio->read<int*>(100) == j);
         REQUIRE(mio->read<int**>(108) == k);
-        REQUIRE(mio->read<MemoryIOBase*>(116) == l);
+        REQUIRE(mio->read<asmgrader::MemoryIOBase*>(116) == l);
     }
 }
 
@@ -142,7 +154,7 @@ TEST_CASE("Read and write strings") {
     REQUIRE(mio->read<char>(s1.size()) == '\0');
     REQUIRE(mio->read<char>(s1.size() + 1 + s2.size()) == '\0');
 
-    NonTermString<7> nnts = {"Goodbye"};
+    asmgrader::NonTermString<7> nnts = {"Goodbye"};
     std::ignore = mio->write(0, nnts);
     REQUIRE(mio->read<char>(nnts.LENGTH) != '\0');
 }
