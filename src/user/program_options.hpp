@@ -32,16 +32,16 @@ struct ProgramOptions
 
     // ###### Argument fields
 
-    /// Levels are explained in `verbosity.hpp`
+    /// See \ref verbosity_levels_desc for an explaination of each of the levels.
     /// `Max` is just used as a sentinal for now
     enum class VerbosityLevel {
-        Silent,
-        Quiet,
-        Summary,
-        FailsOnly,
-        All,
-        Extra,
-        Max
+        Silent,    ///< \ref verbosity_levels_silent_desc
+        Quiet,     ///< \ref verbosity_levels_quiet_desc
+        Summary,   ///< \ref verbosity_levels_summary_desc
+        FailsOnly, ///< \ref verbosity_levels_failsonly_desc
+        All,       ///< \ref verbosity_levels_all_desc
+        Extra,     ///< \ref verbosity_levels_extra_desc
+        Max        ///< \ref verbosity_levels_max_desc
     } verbosity = DEFAULT_VERBOSITY_LEVEL;
     std::string assignment_name;
 

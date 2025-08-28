@@ -53,12 +53,12 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    constexpr auto VERSION_FMT = "AsmGrader v{}"
+    constexpr auto VERSION_FMT = "AsmGrader v{}-g{}"
 #ifdef PROFESSOR_VERSION
                                  " (Professor's Version)"
 #endif
         ;
-    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING));
+    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING));
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.

@@ -23,10 +23,10 @@ struct UnexpectedT
 
 template <typename T = void, typename E = std::error_code>
 /**
- * @brief std::variant wrapper for a partial implementation of C++23's expected type
+ * \brief std::variant wrapper for a partial implementation of C++23's expected type
  *
- * @tparam T The expected value type
- * @tparam E The error type
+ * \tparam T The expected value type
+ * \tparam E The error type
  *
  * Note: types T and E must not be convertible between one another.
  */
@@ -218,15 +218,6 @@ public:
 private:
     ExpectedData<T, E> data_;
 };
-
-template <typename E>
-inline auto format_as(const Expected<void, E>& from) {
-    if (!from) {
-        return fmt::format("Error({})", from.error());
-    }
-
-    return fmt::format("Expected(void)");
-}
 
 } // namespace asmgrader
 

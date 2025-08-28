@@ -1,3 +1,6 @@
+/// \file
+/// All header-only as this is relatively low level and we want operations to be fast (inlinable)
+
 #pragma once
 
 #include <asmgrader/common/aliases.hpp>
@@ -49,8 +52,6 @@
 #include <vector>
 
 #include <sys/user.h> // user_regs_struct, ([x86_64] user_fpregs_struct | [aarch64] user_fpsimd_struct)
-
-/// All header only as this is relatively low level and we want operations to be fast (inlinable)
 
 namespace asmgrader {
 namespace detail {

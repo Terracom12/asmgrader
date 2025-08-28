@@ -1,3 +1,4 @@
+/// \file
 /// Defines data classes to store result data for the current run session
 #pragma once
 

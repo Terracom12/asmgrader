@@ -315,9 +315,9 @@ inline Expected<Pipe> pipe2(int flags = 0) {
 /// see ptrace(2)
 /// returns success/failure; logs failure at debug level
 // NOLINTBEGIN(google-runtime-int)
-//! @cond DoNotRaiseWarning
+//! \cond DoNotRaiseWarning
 template <typename AddrT = void*, typename DataT = void*>
-//! @endcond
+//! \endcond
     requires(sizeof(AddrT) <= sizeof(void*) && sizeof(DataT) <= sizeof(void*))
 inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, DataT data = NULL) {
     //  clear errno before calling

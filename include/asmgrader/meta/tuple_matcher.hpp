@@ -48,36 +48,4 @@ constexpr auto tuple_find_first(Func&& pred, const Tuple& val) {
     }
 }
 
-namespace tests {
-using namespace std::literals;
-
-static_assert(*tuple_find_first([](auto elem) { return elem == 1; }, std::make_tuple(0, 1)) == std::variant<int>{1});
-static_assert(*tuple_find_first([](auto elem) { return elem == 0; }, std::make_tuple(0, 1)) == std::variant<int>{0});
-static_assert(!tuple_find_first(
-                   [](const auto& elem) {
-                       if constexpr (std::same_as<std::decay_t<decltype(elem)>, int>) {
-                           return elem == 3;
-                       }
-                       return false;
-                   },
-                   std::make_tuple(0, "Hi"))
-                   .has_value());
-static_assert(*tuple_find_first(
-                  [](const auto& elem) {
-                      if constexpr (std::same_as<std::decay_t<decltype(elem)>, int>) {
-                          return elem == 0;
-                      }
-                      return false;
-                  },
-                  std::make_tuple(0, "Hi")) == std::variant<int, const char*>{0});
-static_assert(*tuple_find_first(
-                  [](const auto& elem) {
-                      if constexpr (!std::same_as<std::decay_t<decltype(elem)>, int>) {
-                          return elem == "bye";
-                      }
-                      return false;
-                  },
-                  std::make_tuple(0, "hi"sv, "bye"sv)) == std::variant<int, std::string_view>{"bye"});
-} // namespace tests
-
 } // namespace asmgrader

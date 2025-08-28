@@ -120,13 +120,13 @@ private:
     auto setup_function_param(const Arg& arg);
 
     /**
-     * @brief Resumes the child proc until a condition is encountered, or a timeout occurs
+     * \brief Resumes the child proc until a condition is encountered, or a timeout occurs
      *
      * Blocking for up to the duration of ``timeout``.
      *
-     * @tparam Func - type of ``pred``
-     * @param pred
-     * @param request
+     * \tparam Func - type of ``pred``
+     * \param pred
+     * \param request
      */
     Result<TracedWaitid> resume_until(const std::function<bool(TracedWaitid)>& pred,
                                       std::chrono::microseconds timeout = DEFAULT_TIMEOUT,

@@ -32,6 +32,9 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     set(DOXYGEN_JAVADOC_AUTOBRIEF NO)
     set(DOXYGEN_MULTILINE_CPP_IS_BRIEF YES)
 
+    # Use a custom clipboard copying script
+    set(DOXYGEN_HTML_COPY_CLIPBOARD NO)
+
     # Older Doxygen version will not handle C++20 without this
     # set(DOXYGEN_CLANG_ASSISTED_PARSING YES)
     # set(DOXYGEN_CLANG_OPTIONS -std=c++20)
@@ -58,7 +61,8 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     FetchContent_Declare(_doxygen_theme
                         URL https://github.com/jothepro/doxygen-awesome-css/archive/refs/tags/v2.3.4.zip)
     FetchContent_MakeAvailable(_doxygen_theme)
-    set(DOXYGEN_HTML_EXTRA_STYLESHEET 
+    set(
+        DOXYGEN_HTML_EXTRA_STYLESHEET 
         "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome.css"
         "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-sidebar-only.css"
         "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-sidebar-only-darkmode-toggle.css"
@@ -69,7 +73,13 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     # https://jothepro.github.io/doxygen-awesome-css/md_docs_2extensions.html
     set(DOXYGEN_HTML_HEADER "${PROJECT_SOURCE_DIR}/doc/header.html")
 
-    set(DOXYGEN_HTML_EXTRA_FILES ${DOXYGEN_HTML_EXTRA_FILES} "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-darkmode-toggle.js")
+    set(
+        DOXYGEN_HTML_EXTRA_FILES 
+        ${DOXYGEN_HTML_EXTRA_FILES} 
+        "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-darkmode-toggle.js"
+        "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-paragraph-link.js"
+        "${PROJECT_SOURCE_DIR}/doc/doxygen-awesome-fragment-copy-button-modified.js"
+    )
     ##### END Doxygen header extensions
 
     # find doxygen and dot if available

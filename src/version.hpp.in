@@ -19,6 +19,7 @@
 
 #define ASMGRADER_VERSION_STRING                                                                                       \
     STRINGIFY(ASMGRADER_VERSION_MAJOR) "." STRINGIFY(ASMGRADER_VERSION_MINOR) "." STRINGIFY(ASMGRADER_VERSION_PATCH)
+#define ASMGRADER_VERSION_GIT_HASH_STRING STRINGIFY(ASMGRADER_VERSION_GIT_HASH)
 
 namespace asmgrader {
 
