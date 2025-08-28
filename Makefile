@@ -76,11 +76,11 @@ deep-clean: ## remove all build files and configuration
 	rm -rf $(BUILD_DIR)/
 
 .PHONY: test
-test: debug  ## test
+test: build-debug  ## test
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: test-release
-test-release: release  ## test-release
+test-release: build-release  ## test-release
 	 ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
 
 .PHONY: docs
