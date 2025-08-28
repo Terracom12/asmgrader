@@ -114,23 +114,23 @@ endmacro()
 
 # Options that should be set *before* adding dependencies
 macro(asmgrader_global_options)
-  # if(myproject_ENABLE_IPO)
-  #   include(cmake/InterproceduralOptimization.cmake)
-  #   myproject_enable_ipo()
-  # endif()
+    if(${ASMGRADER_BUILD_DOCS})
+        include(FetchContent)
+        include(cmake/Doxygen.cmake)
+        asmgrader_enable_doxygen("")
 
-  # Empty for the moment
+        if(${ASMGRADER_BUILD_DOCS_ONLY})
+            unset(ASMGRADER_BUILD_DOCS_ONLY CACHE)
+            message(WARNING "Exiting early because ASMGRADER_BUILD_DOCS_ONLY was specified")
+            return()
+        endif()
+    endif()
 endmacro()
 
 # Options that are project-specific, and may be set after adding dependencies
 macro(asmgrader_local_options)
     if(PROJECT_IS_TOP_LEVEL)
         include(cmake/StandardProjectSettings.cmake)
-    endif()
-
-    if(ASMGRADER_BUILD_DOCS)
-        include(cmake/Doxygen.cmake)
-        asmgrader_enable_doxygen("") # doxygen_theme=""
     endif()
 
     add_library(asmgrader_warnings INTERFACE)
