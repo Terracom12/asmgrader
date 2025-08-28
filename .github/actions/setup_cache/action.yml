@@ -13,6 +13,9 @@ inputs:
   build_type:
     required: true
     type: string
+  os:
+    required: true
+    type: string
   # generator:
   #   required: true
   #   type: string
@@ -32,6 +35,6 @@ runs:
           ~/.config/ccache
           ${{ env.LOCALAPPDATA }}/ccache
           ${{ env.XDG_CACHE_HOME }}/ccache
-        key: ${{ runner.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}-${{ inputs.packaging_maintainer_mode }}-${{ hashFiles('**/CMakeLists.txt') }}
+        key: ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}-${{ inputs.packaging_maintainer_mode }}-${{ hashFiles('**/CMakeLists.txt') }}
         restore-keys: |
-          ${{ runner.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}
+          ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}

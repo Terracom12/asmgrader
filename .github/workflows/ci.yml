@@ -66,6 +66,7 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
           build_type: ${{ matrix.build_type }}
+          os: ${{ matrix.os }}
           # generator: ${{ matrix.generator }}
 
       - name: Install Dependencies
@@ -90,4 +91,10 @@ jobs:
 
       - name: Test
         run: |
-          ctest --test-dir build
+          ctest --test-dir build -VV --output-juint juint-test--results.xml
+
+      - uses: actions/upload-artifact@v4  # upload test results
+        if: ${{ !cancelled() }}           # run this step even if previous step failed
+        with:
+          name: test-results
+          path: juint-test--results.xml
