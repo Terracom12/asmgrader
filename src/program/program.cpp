@@ -41,7 +41,7 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
         throw std::runtime_error("Program file does not exist");
     }
 
-    if (auto is_elf = check_is_elf(path_); not is_elf) {
+    if (auto is_elf = check_is_compat_elf(path_); not is_elf) {
         throw std::runtime_error(is_elf.error());
     }
 
@@ -52,7 +52,7 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
     std::ignore = subproc_->start();
 }
 
-Expected<void, std::string> Program::check_is_elf(const std::filesystem::path& path) {
+Expected<void, std::string> Program::check_is_compat_elf(const std::filesystem::path& path) {
     std::ifstream file(path);
     std::array<char, 4> first_4_bytes{};
     file.read(first_4_bytes.data(), first_4_bytes.size());
