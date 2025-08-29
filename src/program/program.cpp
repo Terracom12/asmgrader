@@ -2,6 +2,7 @@
 
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
+#include "common/os.hpp"
 #include "logging.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/syscall_record.hpp"
@@ -10,6 +11,8 @@
 #include "symbols/elf_reader.hpp"
 #include "symbols/symbol_table.hpp"
 
+#include <elfio/elf_types.hpp>
+#include <elfio/elfio.hpp>
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -53,17 +56,23 @@ Program::Program(std::filesystem::path path, std::vector<std::string> args)
 }
 
 Expected<void, std::string> Program::check_is_compat_elf(const std::filesystem::path& path) {
-    std::ifstream file(path);
-    std::array<char, 4> first_4_bytes{};
-    file.read(first_4_bytes.data(), first_4_bytes.size());
+    ELFIO::elfio reader;
 
-    constexpr std::array<char, 4> EXPECTED_BYTES = {0x7F, 'E', 'L', 'F'};
-    if (first_4_bytes == EXPECTED_BYTES) {
-        return {};
+    if (!reader.load(path)) {
+        return "could not load file";
     }
 
-    return fmt::format("File {:?} does not match ELF spec (first 4 bytes are {:?})", path.string(),
-                       std::string_view{first_4_bytes.begin(), first_4_bytes.end()});
+    if (reader.get_class() != ELFIO::ELFCLASS64) {
+        return "file class is not 64-bit";
+    }
+
+    bool is_little_endian = reader.get_encoding() == ELFIO::ELFDATA2LSB;
+    if (is_little_endian != (ENDIANNESS == EndiannessKind::Little)) {
+        return "endianness does not match system's";
+    }
+
+    // all checks passed
+    return {};
 }
 
 TracedSubprocess& Program::get_subproc() {
