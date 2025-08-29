@@ -20,6 +20,7 @@ CMAKE_HASH_CACHE_FILE := $(BUILD_DIR)/cmake-sources-hash.txt
 
 DEBUG_PRESET := unixlike-gcc-debug
 RELEASE_PRESET := unixlike-gcc-release
+DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
@@ -32,6 +33,8 @@ help: # with thanks to Ben Rady
 #### --- END snip
 
 # Each preset will create a subdirectory within build
+# CMake is smart when using --preset --build and will automatically re-configure
+# if any cmake sources change, so we don't have to handle that manually here.
 
 $(BUILD_DIR)/$(DEBUG_PRESET):
 	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET)
@@ -39,11 +42,18 @@ $(BUILD_DIR)/$(DEBUG_PRESET):
 $(BUILD_DIR)/$(RELEASE_PRESET):
 	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET)
 
+$(BUILD_DIR)/$(DOCS_PRESET):
+	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET)
+
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/$(DEBUG_PRESET)
 
 .PHONY: configure-release
 configure-release: $(BUILD_DIR)/$(RELEASE_PRESET)
+
+.PHONY: configure-docs
+configure-docs: $(BUILD_DIR)/$(DOCS_PRESET)
+
 
 .PHONY: build
 build: build-debug  ## alias for build-debug
@@ -55,6 +65,11 @@ build-debug: configure-debug ## build in debug mode
 .PHONY: build-release
 build-release: configure-release ## build in release mode (with debug info)
 	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET)
+	
+.PHONY: build-docs
+build-docs: configure-docs ## build in release mode (with debug info)
+	@$(SRC_ENV) && cmake --build --preset $(DOCS_PRESET)
+
 
 .PHONY: test
 test: test-debug  ## alias for test-debug
