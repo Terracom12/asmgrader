@@ -114,17 +114,7 @@ endmacro()
 
 # Options that should be set *before* adding dependencies
 macro(asmgrader_global_options)
-    if(${ASMGRADER_BUILD_DOCS})
-        include(FetchContent)
-        include(cmake/Doxygen.cmake)
-        asmgrader_enable_doxygen("")
-
-        if(${ASMGRADER_BUILD_DOCS_ONLY})
-            unset(ASMGRADER_BUILD_DOCS_ONLY CACHE)
-            message(WARNING "Exiting early because ASMGRADER_BUILD_DOCS_ONLY was specified")
-            return()
-        endif()
-    endif()
+    # empty for now
 endmacro()
 
 # Options that are project-specific, and may be set after adding dependencies

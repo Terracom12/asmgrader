@@ -24,11 +24,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Cache
+    - name: Workflow Cache
       uses: actions/cache@v4
       with:
         path: |
-          ./build/CPM
           ~/.cache/pip
           ~/.cache/ccache
           ~/.ccache
@@ -38,3 +37,10 @@ runs:
         key: ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}
         restore-keys: |
           ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}
+
+    - name: CPM Cache
+      uses: actions/cache@v4
+      with:
+        path: ./build/CPM
+        key: CPM
+        restore-keys: CPM

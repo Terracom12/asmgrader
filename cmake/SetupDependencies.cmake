@@ -4,12 +4,15 @@
 #   https://github.com/cpp-best-practices/cmake_template/tree/1015c6b88410df411c0cc0413e3e64c33d7a8331
 #   Courtesy of Jason Turner
 
+
 # CPM.cmake README:
 # > We recommend that if you use PATCHES, you also set CPM_SOURCE_CACHE. See issue 577.
 # cpm-cmake/CPM.cmake/issues/577
-if(NOT DEFINED ENV{CPM_SOURCE_CACHE})
-    set(CPM_SOURCE_CACHE ${CMAKE_BINARY_DIR}/CPM)
+if(NOT (DEFINED CPM_SOURCE_CACHE OR DEFINED ENV{CPM_SOURCE_CACHE}))
+    message(WARNING "It is highly recommended to set the enviornment or cmake variable `CPM_SOURCE_CACHE` so as to not unnecessarily re-download libraries. Defaulting to ${CPM_SOURCE_DIR}/build/CPM.")
+    set(CPM_SOURCE_CACHE ${CMAKE_SOURCE_DIR}/build/CPM)
 endif()
+
 include(cmake/CPM.cmake)
 
 function(_resolve_alias out_var target)

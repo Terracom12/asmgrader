@@ -1,0 +1,172 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "conf-common",
+            "description": "General settings that apply to all configurations",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}"
+        },
+        {
+            "name": "conf-variables",
+            "hidden": true,
+            "description": "General variable options that apply to most configurations",
+            "cacheVariables": {
+                "ASMGRADER_BUILD_TESTS": "ON",
+                "ASMGRADER_ENABLE_CACHE": "ON",
+                "ASMGRADER_ENABLE_PCH": "ON"
+            }
+        },
+        {
+            "name": "conf-unixlike-common",
+            "description": "Unix-like OS settings toolchains",
+            "hidden": true,
+            "inherits": "conf-common",
+            "condition": {
+                "type": "inList",
+                "string": "${hostSystemName}",
+                "list": [
+                    "Linux",
+                    "Darwin"
+                ]
+            }
+        },
+        {
+            "name": "unixlike-gcc-debug",
+            "displayName": "gcc Debug",
+            "description": "Target Unix-like OS with the gcc compiler, debug build type",
+            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "unixlike-gcc-release",
+            "displayName": "gcc Release",
+            "description": "Target Unix-like OS with the gcc compiler, release build type",
+            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "unixlike-clang-debug",
+            "displayName": "clang Debug",
+            "description": "Target Unix-like OS with the clang compiler, debug build type",
+            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "unixlike-clang-release",
+            "displayName": "clang Release",
+            "description": "Target Unix-like OS with the clang compiler, release build type",
+            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "unixlike-docs-only",
+            "displayName": "docs only",
+            "description": "Target Unix-like OS, only configure for docs and nothing else",
+            "inherits": "conf-unixlike-common",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "ASMGRADER_BUILD_DOCS": "ON",
+                "ASMGRADER_BUILD_DOCS_ONLY": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "unixlike-gcc-debug",
+            "displayName": "gcc Debug",
+            "description": "Target Unix-like OS with the gcc compiler, debug build type",
+            "configurePreset": "unixlike-gcc-debug"
+        },
+        {
+            "name": "unixlike-gcc-release",
+            "displayName": "gcc Release",
+            "description": "Target Unix-like OS with the gcc compiler, release build type",
+            "configurePreset": "unixlike-gcc-release"
+        },
+        {
+            "name": "unixlike-clang-debug",
+            "displayName": "clang Debug",
+            "description": "Target Unix-like OS with the clang compiler, debug build type",
+            "configurePreset": "unixlike-clang-debug"
+        },
+        {
+            "name": "unixlike-clang-release",
+            "displayName": "clang Release",
+            "description": "Target Unix-like OS with the clang compiler, release build type",
+            "configurePreset": "unixlike-clang-release"
+        },
+        {
+            "name": "unixlike-docs-only",
+            "displayName": "docs only",
+            "description": "Target Unix-like OS, only configure for docs and nothing else",
+            "configurePreset": "unixlike-docs-only",
+            "targets": "doxygen-docs"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "test-common",
+            "description": "Test CMake settings that apply to all configurations",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "stopOnFailure": true
+            }
+        },
+        {
+            "name": "unixlike-gcc-debug",
+            "displayName": "Strict",
+            "description": "Enable output and stop on failure",
+            "inherits": "test-common",
+            "configurePreset": "unixlike-gcc-debug"
+        },
+        {
+            "name": "unixlike-gcc-release",
+            "displayName": "Strict",
+            "description": "Enable output and stop on failure",
+            "inherits": "test-common",
+            "configurePreset": "unixlike-gcc-release"
+        },
+        {
+            "name": "unixlike-clang-debug",
+            "displayName": "Strict",
+            "description": "Enable output and stop on failure",
+            "inherits": "test-common",
+            "configurePreset": "unixlike-clang-debug"
+        },
+        {
+            "name": "unixlike-clang-release",
+            "displayName": "Strict",
+            "description": "Enable output and stop on failure",
+            "inherits": "test-common",
+            "configurePreset": "unixlike-clang-release"
+        }
+    ]
+}

@@ -21,7 +21,7 @@ jobs:
 
       - name: Build Docs
         run: |
-            make docs
+            make build-docs
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
@@ -29,7 +29,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./build/html/
+          path: ./build/unixlike-docs-only/html/
 
   deploy:
     needs: build
