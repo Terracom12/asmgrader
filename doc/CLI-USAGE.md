@@ -7,11 +7,11 @@ This document describes in detail the various ways in which you can interact wit
 
 ## Notation
 
-<!-- FIXME: Highlighted commands, `$` esspecially, would be nice -->
+<!-- FIXME: Highlighted commands, `$` especially, would be nice -->
 
-Unless otherwise specified, anything prefixed with a `$` character in a code block is a command, and all other content is command output. `...` may be used to snip irrelevant output for brevity.
+Unless otherwise specified, anything prefixed with a `$` character in a code block is a command, and all other content is command output. `...` may be used to snip irrelevant output for brevity. `#` is used as an inline comment, and is neither a command nor output.
 
-Most flags have both short and long forms. For instance, the flag to get the program version may be specified by either `-V` or `--version`. This document will mostly provide flags in their long form, as their purpose is always more clear that way.
+Most flags have both short and long forms. For instance, the flag to get the program version may be specified by either `-V` (capital `V`) or `--version`. This document will mostly provide flags in their long form, as their purpose is always more clear that way.
 
 > [!NOTE]
 > All of the command syntax assumes that you have [added the executable to your path](#adding_to_path), which is highly recommended. If you have not, make sure you prefix all invocations with the binary's qualified path, like in the following example, where `grader` is located in the `~` directory:
@@ -22,15 +22,67 @@ Most flags have both short and long forms. For instance, the flag to get the pro
 
 ## Students Only
 
-> [!CAUTION]
-> Coming soon...
+Example usage:
+
+```command
+$ grader lab1-2
+```
+
+> [!TIP]
+> More coming soon...
 > Read the output of `--help` for now
 
 ## Professor Only
 
-> [!CAUTION]
-> Coming soon...
+> [!WARNING]
+> Behavior is undefined if multiple students have the same first and last names.
+
+Example usage:
+
+```command
+$ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions
+```
+
+### Short Form Output
+
+For less verbose output to just get a list of student scores, invoke with the `-q`|`--quiet` flag.
+
+```console
+$ profgrader lab1-2 -q
+Jane Doe: Output score 100.00% (7/7 points)
+John Doe: Output score 71.43% (5/7 points)
+Alice Liddell: Could not locate executable
+Bob Roberts: Output score 57.14% (4/7 points
+```
+
+### Student Database
+
+The student database contains a list of students' first and last names, and is used to aid in locating student lab submissions as well as to provide diagnostics for students with a missing submission. It is recommended to provide a student database; see [not providing a database](#not_providing_a_database) for more info.
+
+By default, a database named `students.csv` in the current working directory will be used if it exists. To specify a database manually, provide the `--database` argument, like as follows:
+
+```command
+$ profgrader lab1-2 --database ~/my-custom-database.csv
+```
+
+#### Not Providing a Database {#not_providing_a_database}
+
+Without a database, `profgrader` will search for submissions according to the specified assignment and file matcher RegEx. By default, the searching behavior is essentially identical to if a database had been provided, except that a student name may be matched by any sequence of alphabetic characters.
+
+For example, the following invocation of `profgrader` will only match the files `doejane_0000_0000_lab1-2.out` and `doejohn_0000_0000_lab1-2.out`.
+
+```command
+$ ls
+doejohn_0000_0000_lab1-2.out    liddellalice_0000_0000_lab3-1.out  
+doejane_0000_0000_lab1-2.out    robertsbob_0000_0000_lab5-3.out  
+
+$ profgrader lab1-2
+```
+
+> [!TIP]
+> More coming soon...
 > Read the output of `--help` for now
+
 
 ## Advanced Usage
 
@@ -95,17 +147,15 @@ $ grader <lab-name> --silent
 
 ##### All {#verbosity_levels_all_desc}
 - **Student** - Lists the result of all tests and requirements
-- **Professor**  - \\\\ for each individual student
-
+- **Professor**  - Same as above, but for each individual student
 
 ##### Extra {#verbosity_levels_extra_desc}
-  
-- **Student** - (Not yet implemented)
-- **Professor** - (Not yet implemented)
+
+(Not yet implemented)
 
 ##### Max {#verbosity_levels_max_desc}
-- **Student** - Same as `Extra`
-- **Professor** - \\\\
+
+(Not yet implemented)
 
 ## Adding to PATH {#adding_to_path}
 

@@ -27,7 +27,7 @@ help: # with thanks to Ben Rady
 #### --- END snip
 
 .PHONY: build
-build: build-debug  ## build in debug mode
+build: build-debug  ## alias for build-debug
 
 $(BUILD_DIR)/configured-debug: $(CMAKE_SOURCES)
 	rm -f ./build/CMakeCache.txt
