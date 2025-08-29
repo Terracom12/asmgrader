@@ -1,8 +1,3 @@
-##### Project configuration
-# For now, just substitutes version numbers as defined in root CMake project() decl
-
-configure_file(version.hpp.in asmgrader/version.hpp)
-
 ##### Variable declarations
 
 set(
@@ -90,7 +85,7 @@ function(create_target basename)
 
         INTERFACE
         "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}/asmgrader"   # For generated `version.hpp`
+        "${CMAKE_BINARY_DIR}/asmgrader"   # For generated `version.hpp`
         # treat `include/asmgrader` as if it's within the  `src/` tree
         "${CMAKE_SOURCE_DIR}/include/asmgrader"
     )
@@ -115,7 +110,7 @@ function(create_target basename)
         ${basename}_core
 
         PUBLIC
-        "${CMAKE_CURRENT_BINARY_DIR}"   # For generated `version.hpp`
+        "${CMAKE_BINARY_DIR}"   # For generated `version.hpp`
         "${CMAKE_SOURCE_DIR}/include"
     )
 

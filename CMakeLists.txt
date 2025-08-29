@@ -31,9 +31,12 @@ project(AsmGrader
 
 enable_language(ASM)
 
+##### Project configuration source file
+# For now, just substitutes version numbers as defined in root CMake project() decl
 
+configure_file(src/version.hpp.in asmgrader/version.hpp @ONLY)
 
-# Setup CMake project options (ASMGRADER_* args)
+# Set up CMake project options (ASMGRADER_* args)
 include(cmake/ProjectOptions.cmake)
 asmgrader_setup_options()
 
