@@ -69,5 +69,5 @@ jobs:
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
           path: reports/junit*.xml
