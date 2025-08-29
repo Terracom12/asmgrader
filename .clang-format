@@ -19,6 +19,8 @@ IndentWidth: 4
 IndentAccessModifiers: false
 AccessModifierOffset: -4
 
+SeparateDefinitionBlocks: Always
+
 ColumnLimit: 120
 
 FixNamespaceComments: true
@@ -36,11 +38,14 @@ SortIncludes: CaseInsensitive
 #
 #   catch2_custom custom (top) as "main" include for tests
 IncludeCategories:
-  - Regex:           '^<(range|boost|fmt|catch2|nlohmann|argparse|gsl)/'
-    Priority:        2
+  - Regex:           '^<(range|boost|fmt|catch2|nlohmann|argparse|gsl|elfio|libassert)/'
+    Priority:        3
     CaseSensitive:   true
   - Regex:           '^<[^\.]+>' # stdlib (C++, no .h)
-    Priority:        3
+    Priority:        4
+
+  - Regex:           '^<asmgrader/.+>' # public project library headers
+    Priority:        1
 
     # other library headers (implicitly last)
 
@@ -48,6 +53,6 @@ IncludeCategories:
     Priority:        -1
 
   - Regex:           '^".*'  # project headers
-    Priority:        1
+    Priority:        2
 
 IncludeBlocks: Regroup

@@ -1,5 +1,6 @@
 CompileFlags:
-    Remove: -fconcepts-diagnostics-depth=3
+    Add: -DPROFESSOR_VERSION
+    Remove: -fconcepts-diagnostics-depth=*
     CompilationDatabase: build/
 
 InlayHints:
@@ -10,6 +11,21 @@ InlayHints:
     DeducedTypes: Yes
     TypeNameLimit: 24
 
+Diagnostics:
+    UnusedIncludes: Strict
+    MissingIncludes: Strict
+
+Style:
+    #QuotedHeaders: "core/.*"
+    AngledHeaders: "(range|boost|fmt|catch2|nlohmann|argparse|gsl|elfio)/.*"
+
 Completion:
     AllScopes: Yes
     ArgumentLists: Delimiters # fo^ completes to foo(^)
+
+---
+
+If:
+    PathMatch: ".*\\.in"
+Diagnostics:
+    Suppress: "*"

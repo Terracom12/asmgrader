@@ -1,21 +1,24 @@
 #include "catch2_custom.hpp"
 
+#include "common/aliases.hpp"
+#include "common/error_types.hpp"
 #include "program/program.hpp"
-#include "util/error_types.hpp"
 
 #include <cstdint>
-#include <tuple>
+#include <string>
 
-using sum = std::uint64_t(std::uint64_t, std::uint64_t);
-using sum_and_write = void(std::uint64_t, std::uint64_t);
+using namespace asmgrader::aliases;
+
+using sum = u64(std::uint64_t, std::uint64_t);
+using sum_and_write = void(u64, std::uint64_t);
 using timeout_fn = void();
 using segfaulting_fn = void();
-using exiting_fn = void(std::uint64_t);
+using exiting_fn = void(u64);
 
 TEST_CASE("Try to call functions that don't exist") {
-    Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
-    using util::ErrorKind::UnresolvedSymbol;
+    using asmgrader::ErrorKind::UnresolvedSymbol;
 
     REQUIRE(prog.call_function<void(void)>("") == UnresolvedSymbol);
 
@@ -25,8 +28,8 @@ TEST_CASE("Try to call functions that don't exist") {
 }
 
 TEST_CASE("Call sum function") {
-    Program prog(ASM_TESTS_EXEC, {});
-    util::Result<std::uint64_t> res;
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Result<u64> res;
 
     res = prog.call_function<sum>("sum", 0, 0);
     REQUIRE(res == 0ull);
@@ -36,11 +39,11 @@ TEST_CASE("Call sum function") {
 
     // unsigned, but overflow with 2's complement gives values as we would expect
     res = prog.call_function<sum>("sum", -1, -12);
-    REQUIRE(res == static_cast<std::uint64_t>(-13));
+    REQUIRE(res == static_cast<u64>(-13));
 }
 
 TEST_CASE("Call sum_and_write function") {
-    Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0, 0));
     REQUIRE(prog.get_subproc().read_stdout() == std::string{"\0\0\0\0\0\0\0\0", 8});
@@ -56,9 +59,9 @@ TEST_CASE("Call sum_and_write function") {
 }
 
 TEST_CASE("Test that timeouts are handled properly with timeout_fn") {
-    Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
-    using util::ErrorKind::TimedOut;
+    using asmgrader::ErrorKind::TimedOut;
 
     REQUIRE(prog.call_function<timeout_fn>("timeout_fn") == TimedOut);
 
@@ -73,9 +76,9 @@ TEST_CASE("Test that timeouts are handled properly with timeout_fn") {
 }
 
 TEST_CASE("Test that segfaults are essentially ignored") {
-    Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
-    using enum util::ErrorKind;
+    using enum asmgrader::ErrorKind;
 
     REQUIRE(prog.call_function<segfaulting_fn>("segfaulting_fn") == UnexpectedReturn);
 
@@ -90,9 +93,9 @@ TEST_CASE("Test that segfaults are essentially ignored") {
 }
 
 TEST_CASE("Test that SYS_exit is properly thwarted") {
-    Program prog(ASM_TESTS_EXEC, {});
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
-    using enum util::ErrorKind;
+    using enum asmgrader::ErrorKind;
 
     REQUIRE(prog.call_function<exiting_fn>("exiting_fn", 42) == UnexpectedReturn);
 

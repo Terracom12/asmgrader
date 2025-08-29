@@ -1,0 +1,105 @@
+# !!DISCLAIMER!!
+# This was adapted from the following source
+#   cpp-best-practices/cmake_template
+#   https://github.com/cpp-best-practices/cmake_template/tree/1015c6b88410df411c0cc0413e3e64c33d7a8331
+#   Courtesy of Jason Turner
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    tags:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen and Graphviz
+        uses: aminya/setup-cpp@v1
+        with:
+          doxygen: 1.12.0
+          graphviz: true
+          cmake: true
+          ninja: true
+
+      - name: Build Docs
+        run: |
+            make docs
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./build/html/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  test:
+    name: ${{ matrix.os }} ${{ matrix.compiler }} ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc-11]  # TODO: Add llvm-14; cpptrace does not work without libgcc's _Unwind though
+        build_type: [debug] # TODO: Add release mode
+        generator: [Ninja] # TODO: Maybe add Unix Makefiles
+        os: [ubuntu-22.04, ubuntu-22.04-arm]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Setup Cache
+        uses: ./.github/actions/setup_cache
+        with:
+          compiler: ${{ matrix.compiler }}
+          build_type: ${{ matrix.build_type }}
+          os: ${{ matrix.os }}
+          generator: ${{ matrix.generator }}
+
+      - name: Install Dependencies
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          cmake: true
+          ninja: true
+          ccache: true
+
+      - name: Configure
+        run: |
+          make configure-${{ matrix.build_type }}
+
+      # We want ccache to be capable of caching PCH
+      - name: Set ccache Config
+        run: |
+          ccache --set-config 'sloppiness=pch_defines,time_macros'
+
+      - name: Build
+        run: |
+          make build-${{ matrix.build_type }}
+
+      - name: ccache Stats
+        run: |
+          ccache -s -v
+
+      - name: Test
+        run: |
+          LOG_LEVEL=trace ctest --test-dir build/ --output-on-failure --output-junit reports/junit-ctest.xml
+
+      - uses: actions/upload-artifact@v4  # upload test results
+        if: ${{ !cancelled() }}           # run this step even if previous step failed
+        with:
+          name: test-results
+          path: reports/junit*.xml

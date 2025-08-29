@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Exit upon error (of build and test scripts)
+set -e
+
+echo "[pre-push] Checking that project builds and that all tests pass"
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+>/dev/null 2>&1 make -f "$REPO_ROOT/Makefile" build || (echo "[pre-push] Build failed!" && exit 1)
+>/dev/null 2>&1 make -f "$REPO_ROOT/Makefile" test || (echo "[pre-push] Test(s) failed!" && exit 1)
+
+echo "[pre-push] Build and tests passed successfully"
