@@ -40,6 +40,20 @@ configure_file(src/version.hpp.in asmgrader/version.hpp @ONLY)
 include(cmake/ProjectOptions.cmake)
 asmgrader_setup_options()
 
+# Set up docs subproject, if option is specified
+if(${ASMGRADER_BUILD_DOCS})
+    include(cmake/Doxygen.cmake)
+
+    asmgrader_enable_doxygen("")
+
+    # Exit early if we ONLY want to build docs
+    if(${ASMGRADER_BUILD_DOCS_ONLY})
+        message(WARNING "Exiting early because ASMGRADER_BUILD_DOCS_ONLY was specified")
+        return()
+    endif()
+endif()
+
+
 asmgrader_global_options()
 
 # Set up project dependencies

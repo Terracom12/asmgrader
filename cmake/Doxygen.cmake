@@ -4,6 +4,8 @@
 #   https://github.com/cpp-best-practices/cmake_template/tree/1015c6b88410df411c0cc0413e3e64c33d7a8331
 #   Courtesy of Jason Turner
 
+include(FetchContent)
+
 # Enable doxygen doc builds of source
 function(asmgrader_enable_doxygen DOXYGEN_THEME)
     # If not specified, use the top readme file as the first page
@@ -45,9 +47,8 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
         set(cpm_deps_dir ${cpm_deps_dir} $ENV{CPM_SOURCE_CACHE})
     endif()
 
-    set(DOXYGEN_EXCLUDE_PATTERNS 
-        "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/*" 
-        "${CMAKE_CURRENT_BINARY_DIR}/_deps/*" 
+    set(DOXYGEN_EXCLUDE_PATTERNS
+        "${CMAKE_SOURCE_DIR}/build"
         ${cpm_deps_dir}
         "cs3b-grader"
         "tests"
@@ -70,14 +71,14 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
 
     ##### Doxygen header extensions:
     # https://jothepro.github.io/doxygen-awesome-css/md_docs_2extensions.html
-    set(DOXYGEN_HTML_HEADER "${PROJECT_SOURCE_DIR}/doc/header.html")
+    set(DOXYGEN_HTML_HEADER "${PROJECT_SOURCE_DIR}/docs/header.html")
 
     set(
         DOXYGEN_HTML_EXTRA_FILES 
         ${DOXYGEN_HTML_EXTRA_FILES} 
         "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-darkmode-toggle.js"
         "${_doxygen_theme_SOURCE_DIR}/doxygen-awesome-paragraph-link.js"
-        "${PROJECT_SOURCE_DIR}/doc/doxygen-awesome-fragment-copy-button-modified.js"
+        "${PROJECT_SOURCE_DIR}/docs/doxygen-awesome-fragment-copy-button-modified.js"
     )
     ##### END Doxygen header extensions
 
