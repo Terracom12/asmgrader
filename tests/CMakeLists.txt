@@ -54,18 +54,18 @@ target_compile_definitions(
 
 include(${Catch2_SOURCE_DIR}/extras/Catch.cmake)
 
-# automatically discover tests that are defined in catch based test files you can modify the unittests. Set TEST_PREFIX
-# to whatever you want, or use different for different binaries
 catch_discover_tests(
     asmgrader_tests
     TEST_PREFIX
     "unittests."
     REPORTER
-    XML
+    "JUnit"
     OUTPUT_DIR
-    .
+    ${CMAKE_SOURCE_DIR}/reports
     OUTPUT_PREFIX
-    "unittests."
+    "junit-unittests."
     OUTPUT_SUFFIX
-    .xml
+    ".xml"
+    EXTRA_ARGS
+    "--reporter console::out=-"
 )

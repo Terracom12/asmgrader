@@ -88,6 +88,12 @@ void PlainTextSerializer::on_test_result(const TestResult& data) {
 }
 
 void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
+    if (should_output_grade_percentage(verbosity_)) {
+        sink_.write("Output score ");
+        output_grade_percentage(data);
+        sink_.write("\n");
+    }
+
     if (!should_output_student_summary(verbosity_)) {
         return;
     }
@@ -105,7 +111,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
         return fmt::format("{} {}", num, pluralize(label_singular, num));
     };
 
-    // Mostly copying Catch2's format for now, so full credit to them
+    // Mostly copying Catch2's result summary format for now, so credit to them for the following
 
     if (data.all_passed()) {
         std::string success_msg = style_str("All tests passed", SUCCESS_STYLE);
@@ -137,6 +143,10 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
         pass_fail_line("Requirements", data.num_requirements_passed(), data.num_requirements_failed());
 
     out += fmt::format("{}\n{}\n", tests_line, requirements_line);
+
+    // Extra line
+    if (APP_MODE == AppMode::Professor) {
+    }
 
     sink_.write(out);
 }
@@ -171,24 +181,37 @@ std::string PlainTextSerializer::pluralize(std::string_view root, int count, std
 }
 
 void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
+
     static bool is_first = true;
 
-    // 4 newlines to separate each student
-    if (!is_first) {
-        sink_.write("\n\n\n\n");
-    }
     is_first = false;
 
     std::string name_text;
 
     if (info.names_known) {
-        name_text = info.first_name + ", " + info.last_name;
+        name_text = info.first_name + " " + info.last_name;
     } else {
         name_text = "<unknown>";
 
         if (!info.first_name.empty()) {
             name_text += fmt::format(" (\"{}\" inferred)", info.first_name);
         }
+    }
+
+    // If we want short form, just output student name with no newline as to have output of the form:
+    // NAME: Output score ...
+    if (!should_output_student_summary(verbosity_)) {
+        std::string out = fmt::format("{}: ", styled(name_text, POP_OUT_STYLE));
+
+        // TODO: DRY
+        if (!info.assignment_path) {
+            out += style_str("Could not locate executable", ERROR_STYLE);
+            out += "\n";
+        }
+
+        sink_.write(out);
+
+        return;
     }
 
     std::string student_label = "Student: ";
@@ -213,10 +236,18 @@ void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
         out += fmt::format(ERROR_STYLE, "Could not locate executable [RegEx matcher: {}]\n", regex_text);
     }
 
+    // 4 newlines to separate each student
+    if (!is_first) {
+        sink_.write("\n\n\n\n");
+    }
     sink_.write(out);
 }
 
 void PlainTextSerializer::on_student_end([[maybe_unused]] const StudentInfo& info) {
+    if (!should_output_student_summary(verbosity_)) {
+        return;
+    }
+
     // Line divider at the end to make it easier to differentiate between students
     std::string out = LINE_DIVIDER_EM(terminal_width_) + "\n";
     sink_.write(out);
@@ -264,6 +295,13 @@ std::size_t PlainTextSerializer::get_terminal_width() {
     }
 
     return width.value_or(DEFAULT_WIDTH);
+}
+
+void PlainTextSerializer::output_grade_percentage(const AssignmentResult& data) {
+    std::string out = fmt::format("{:.2f}% ({}/{} points)", data.get_percentage(), data.num_requirements_passed(),
+                                  data.num_requirements_total);
+
+    sink_.write(out);
 }
 
 } // namespace asmgrader

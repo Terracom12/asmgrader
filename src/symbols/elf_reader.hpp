@@ -8,9 +8,6 @@
 #include <string>
 #include <vector>
 
-#include <gelf.h>
-#include <libelf.h>
-
 namespace asmgrader {
 
 /// Adaptor to (a few) libelf functions

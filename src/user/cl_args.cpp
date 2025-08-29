@@ -2,11 +2,11 @@
 
 #include "api/assignment.hpp"
 #include "common/expected.hpp"
+#include "common/static_string.hpp"
 #include "common/terminal_checks.hpp"
+#include "grading_session.hpp"
 #include "logging.hpp"
-#include "program/program.hpp"
 #include "registrars/global_registrar.hpp"
-#include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
 #include "version.hpp"
 
@@ -22,12 +22,9 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
-#include <regex>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <tuple>
 
 namespace asmgrader {
 
@@ -53,12 +50,11 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    constexpr auto VERSION_FMT = "AsmGrader v{}-g{}"
-#ifdef PROFESSOR_VERSION
-                                 " (Professor's Version)"
-#endif
-        ;
-    arg_parser_.add_description(fmt::format(VERSION_FMT, ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING));
+    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{} {}">(
+        ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING,
+        APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)");
+
+    arg_parser_.add_description(VERSION_STR.str());
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
@@ -79,7 +75,19 @@ void CommandLineArgs::setup_parser() {
         .implicit_value(true)
         .nargs(0)
         .action([&](const auto & /*unused*/) {
-            fmt::println(ASMGRADER_VERSION_STRING);
+            RunMetadata run_info{};
+
+            fmt::println("{} [{}]\n", std::string_view{VERSION_STR}, run_info.version);
+
+            std::string_view compiler_str = "<unknown>";
+
+            if (run_info.compiler_info.kind == CompilerInfo::GCC) {
+                compiler_str = "GCC";
+            } else if (run_info.compiler_info.kind == CompilerInfo::Clang) {
+                compiler_str = "Clang";
+            }
+
+            fmt::println("Built with {} v{}.{}.{}", compiler_str, run_info.compiler_info.major_version, run_info.compiler_info.minor_version, run_info.compiler_info.patch_version);
             std::exit(0);
         })
         .help("prints version information and exits");

@@ -1,0 +1,40 @@
+# !!DISCLAIMER!!
+# This was adapted from the following source
+#   cpp-best-practices/cmake_template
+#   https://github.com/cpp-best-practices/cmake_template/tree/1015c6b88410df411c0cc0413e3e64c33d7a8331
+#   Courtesy of Jason Turner
+
+name: 'setup_cache'
+description: 'sets up the shared cache'
+inputs:
+  compiler:
+    required: true
+    type: string
+  build_type:
+    required: true
+    type: string
+  os:
+    required: true
+    type: string
+  generator:
+    required: true
+    type: string
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/CPM
+          ~/.cache/pip
+          ~/.cache/ccache
+          ~/.ccache
+          ~/.config/ccache
+          ${{ env.LOCALAPPDATA }}/ccache
+          ${{ env.XDG_CACHE_HOME }}/ccache
+        key: ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}
+        restore-keys: |
+          ${{ inputs.os }}-${{ inputs.compiler }}-${{ inputs.build_type }}-${{ inputs.generator }}

@@ -18,8 +18,6 @@
 
 #include <elf.h>
 #include <fcntl.h>
-#include <gelf.h>
-#include <libelf.h>
 
 namespace asmgrader {
 

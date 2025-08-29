@@ -7,7 +7,7 @@ macro(git_version_info version_major_var version_minor_var version_patch_var com
         OUTPUT_VARIABLE GIT_TAG
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    
+
     execute_process(
         COMMAND git log -n 1 --format=%H
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -20,7 +20,7 @@ macro(git_version_info version_major_var version_minor_var version_patch_var com
     if(GIT_HASH STREQUAL "")
         message(WARNING "Somehow failed to obtain hash of latest commit from git repo. Defaulting to \"\"")
     else()
-        message(VERBOSE "Using ${GIT_HASH} as git commit hash")
+        message(STATUS "Using ${GIT_HASH} as git commit hash")
         set(${commit_hash} ${GIT_HASH})
     endif()
 
@@ -30,7 +30,6 @@ macro(git_version_info version_major_var version_minor_var version_patch_var com
 
     if(GIT_TAG STREQUAL "")
         message(WARNING "Git repo does not have a tag to pull version from. Defaulting to v0.0.0")
-        return()
     else()
         message(VERBOSE "Attempting to obtain version from Latest git tag (${GIT_TAG})")
     endif()

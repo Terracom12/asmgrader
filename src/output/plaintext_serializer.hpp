@@ -39,6 +39,8 @@ private:
     static bool process_colorize_opt(ProgramOptions::ColorizeOpt colorize_option);
     static std::size_t get_terminal_width();
 
+    void output_grade_percentage(const AssignmentResult& data);
+
     template <fmt::formattable T>
     auto style(const T& arg, fmt::text_style style) const -> decltype(fmt::styled(arg, style));
 

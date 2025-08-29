@@ -1,6 +1,7 @@
 #include "api/test_context.hpp"
 
 #include "api/asm_buffer.hpp"
+#include "api/metadata.hpp"
 #include "api/registers_state.hpp"
 #include "api/test_base.hpp"
 #include "common/aliases.hpp"
@@ -49,9 +50,17 @@ TestContext::TestContext(TestBase& test, Program program,
     , on_requirement_{std::move(on_requirement)} {}
 
 TestResult TestContext::finalize() {
+    constexpr int DEFAULT_WEIGHT = 1;
+
     result_.num_passed = static_cast<int>(
         ranges::count(result_.requirement_results, true, [](const RequirementResult& res) { return res.passed; }));
     result_.num_total = static_cast<int>(result_.requirement_results.size());
+
+    if (auto weight = associated_test_->get_weight()) {
+        result_.weight = gsl::narrow_cast<int>(weight->points);
+    } else {
+        result_.weight = DEFAULT_WEIGHT;
+    }
 
     return result_;
 }

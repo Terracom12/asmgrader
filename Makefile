@@ -27,7 +27,7 @@ help: # with thanks to Ben Rady
 #### --- END snip
 
 .PHONY: build
-build: build-debug  ## build in debug mode
+build: build-debug  ## alias for build-debug
 
 $(BUILD_DIR)/configured-debug: $(CMAKE_SOURCES)
 	rm -f ./build/CMakeCache.txt
@@ -67,12 +67,12 @@ build-release: configure-release  ## build in release mode (with debug info)
 	cmake --build $(BUILD_DIR)
 
 .PHONY: clean
-clean: ## remove build objects, libraries, and executables
-	rm -f $(BUILD_DIR)/configured-debug $(BUILD_DIR)/configured-release
+clean: ## remove build objects, libraries, executables, and test reports
+	rm -f $(BUILD_DIR)/configured-* reports/*
 	cmake --build $(BUILD_DIR) --target clean
 
 .PHONY: deep-clean
-deep-clean: ## remove all build files and configuration
+deep-clean: clean ## remove all build files and configuration
 	rm -rf $(BUILD_DIR)/
 
 .PHONY: test

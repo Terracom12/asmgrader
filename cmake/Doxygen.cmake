@@ -42,7 +42,7 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     # Exclude the vcpkg files and the files CMake downloads under _deps (like project_options)
     set(cpm_deps_dir ${CMAKE_BINARY_DIR}/CPM)
     if(DEFINED ENV{CPM_SOURCE_CACHE})
-        set(cpm_deps_dir ${cpm_deps_dir} ENV{CPM_SOURCE_CACHE})
+        set(cpm_deps_dir ${cpm_deps_dir} $ENV{CPM_SOURCE_CACHE})
     endif()
 
     set(DOXYGEN_EXCLUDE_PATTERNS 
