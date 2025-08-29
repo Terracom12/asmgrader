@@ -26,12 +26,19 @@
 
 #include <fmt/base.h>
 #include <fmt/compile.h>
+#include <fmt/format.h>
+#include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/copy_n.hpp>
+#include <range/v3/algorithm/find.hpp>
+#include <range/v3/range/access.hpp>
+#include <range/v3/range/concepts.hpp>
 
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <string>
 #include <string_view>
+#include <utility>
 
 namespace asmgrader {
 
@@ -51,10 +58,23 @@ public:
         ranges::copy_n(std::data(input), N + 1, data.begin());
     }
 
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    consteval /*implicit*/ StaticString(const ranges::forward_range auto& rng) {
+        ranges::copy_n(ranges::begin(rng), N + 1, data.begin());
+
+        if (data.back() != '\0') {
+            throw;
+        }
+    }
+
     std::array<char, N + 1> data{};
 
+    consteval std::size_t size() const { return data.size(); }
+
     // NOLINTNEXTLINE(google-explicit-constructor)
-    consteval /*implicit*/ operator std::string_view() const { return {data.begin(), N}; }
+    consteval /*implicit*/ operator std::string_view() const { return data.data(); }
+
+    std::string str() const { return data.data(); }
 
     template <std::size_t OtherSize>
     consteval auto operator<=>(const StaticString<OtherSize>& rhs) const {
@@ -80,20 +100,31 @@ StaticString(const char (&input)[N]) -> StaticString<N - 1>;
 
 static_assert(StaticString("abc") == "abc");
 static_assert("abc" == StaticString("abc"));
+static_assert("abc" == StaticString<3>(std::string_view{"abc"}));
 
-template <StaticString Fmt, fmt::formattable auto... Args>
-consteval auto format_static() {
+// GCC Bug until around version 14
+// See: https://godbolt.org/z/vKEPY1qWT
+#if !defined(__GNUC__) || __GNUC__ >= 14
+static_assert("abc" == std::string_view{StaticString("abc")});
+#endif
+
+template <StaticString Fmt, std::size_t MaxSz = 10 * 1'024, fmt::formattable... Args>
+consteval auto static_format(Args&&... args) {
     constexpr auto COMPILED_FMT = FMT_COMPILE(Fmt.data.begin());
-    constexpr std::size_t SIZE = fmt::formatted_size(COMPILED_FMT, Args...);
 
-    StaticString<SIZE> result;
+    StaticString<MaxSz> result;
 
-    fmt::format_to(result.data.begin(), COMPILED_FMT, Args...);
+    fmt::format_to(result.data.begin(), COMPILED_FMT, std::forward<Args>(args)...);
 
     return result;
 }
 
-static_assert(format_static<"{0} + {0} = {1}", 1, 2>() == "1 + 1 = 2");
-static_assert(format_static<"", 1, 2>() == "");
+static_assert(static_format<"{0} + {0} = {1}">(1, 2) == "1 + 1 = 2");
+static_assert(static_format<"">(1, 2) == "");
+
+template <StaticString String>
+consteval auto operator""_static() {
+    return String;
+}
 
 } // namespace asmgrader

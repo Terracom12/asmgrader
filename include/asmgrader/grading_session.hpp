@@ -8,6 +8,7 @@
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/version.hpp>
 
+#include <boost/config/workaround.hpp>
 #include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>
 #include <gsl/util>
@@ -27,12 +28,44 @@
 
 namespace asmgrader {
 
+struct CompilerInfo
+{
+    enum { Unknown, GCC, Clang } kind;
+
+    int major_version;
+    int minor_version;
+    int patch_version;
+};
+
+static consteval CompilerInfo get_compiler_info() {
+    CompilerInfo compiler_info{};
+
+#if defined(__GNUC__) && !defined(__clang__)
+    compiler_info.kind = CompilerInfo::GCC;
+    compiler_info.major_version = __GNUC__;
+    compiler_info.minor_version = __GNUC_MINOR__;
+    compiler_info.patch_version = __GNUC_PATCHLEVEL__;
+#elif defined(__clang__)
+    compiler_info.kind = CompilerInfo::Clang;
+    compiler_info.major_version = __clang_major__;
+    compiler_info.minor_version = __clang_minor__;
+    compiler_info.patch_version = __clang_patchlevel__;
+#endif
+
+    return compiler_info;
+}
+
 struct RunMetadata
 {
     int version = get_version();
     std::string_view version_string = ASMGRADER_VERSION_STRING;
-    std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
     std::string_view git_hash = BOOST_PP_STRINGIZE(ASMGRADER_VERSION_GIT_HASH);
+
+    std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
+
+    decltype(__cplusplus) cpp_standard = __cplusplus;
+
+    CompilerInfo compiler_info = get_compiler_info();
 };
 
 struct RequirementResult
@@ -63,12 +96,17 @@ struct TestResult
 
     int num_passed{};
     int num_total{};
+    int weight{};
 
     std::optional<ContextInternalError> error;
 
     constexpr bool passed() const noexcept { return !error && num_failed() == 0; }
 
     constexpr int num_failed() const noexcept { return num_total - num_passed; }
+
+    constexpr int total_weighted() const noexcept { return num_total * weight; }
+
+    constexpr int passed_weighted() const noexcept { return num_passed * weight; }
 };
 
 struct AssignmentResult
@@ -76,6 +114,20 @@ struct AssignmentResult
     std::string name;
     std::vector<TestResult> test_results;
     int num_requirements_total{};
+
+    double get_percentage() const noexcept {
+        using ranges::fold_left_first, ranges::views::transform;
+
+        auto total_weight = ranges::fold_left(test_results | transform(&TestResult::total_weighted), 0, std::plus{});
+
+        auto passed_weight = ranges::fold_left(test_results | transform(&TestResult::passed_weighted), 0, std::plus{});
+
+        if (total_weight == 0) {
+            return 0.0;
+        }
+
+        return static_cast<double>(passed_weight) / total_weight * 100;
+    }
 
     bool all_passed() const noexcept { return ranges::all_of(test_results, &TestResult::passed); }
 

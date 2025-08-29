@@ -47,7 +47,7 @@ constexpr auto ProfOnly = ProfOnlyTag{}; // NOLINT
 
 struct Weight
 {
-    std::size_t amt; // you ask: what does this even mean? idk man...
+    std::size_t points;
 
     constexpr bool operator==(const Weight&) const = default;
 };

@@ -31,4 +31,10 @@ constexpr bool should_output_student_summary(ProgramOptions::VerbosityLevel leve
            (APP_MODE == AppMode::Professor && level >= Summary); //
 }
 
+constexpr bool should_output_grade_percentage(ProgramOptions::VerbosityLevel level) {
+    using enum ProgramOptions::VerbosityLevel;
+
+    return (APP_MODE == AppMode::Professor && level >= Quiet);
+}
+
 } // namespace asmgrader
