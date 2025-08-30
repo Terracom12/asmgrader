@@ -1,3 +1,17 @@
+# fmt
+# spdlog
+# argparse
+# boost
+# range
+# gsl
+# nlohmann
+# elfio
+# catch2
+# libassert
+
+# KEEP THIS ^^^
+# Used for scripts/lint.sh
+
 # !!DISCLAIMER!!
 # This was adapted from the following source
 #   cpp-best-practices/cmake_template

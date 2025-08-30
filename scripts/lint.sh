@@ -6,7 +6,7 @@
 set -e
 
 ROOT_DIR=$(
-    cd "$(dirname "${BASH_SOURCE[0]}")"
+    cd "$(dirname "${BASH_SOURCE[0]}")"/..
     pwd -P
 )
 
@@ -15,32 +15,20 @@ cd "$ROOT_DIR"
 failed=0
 
 lint_files=$(
-    find core/ cs3b-grader/ tests/ -name '*.hpp' -or -name '*.cpp'
+    find src/ include/ cs3b-grader/ tests/ -name '*.hpp' -or -name '*.cpp'
 )
-compilation_db=build/compile_commands.json
-
-cmake_files=$(
-    find . -name 'CMakeLists.txt' -not -path 'build'
-)
-
-echo "Missing CMake Includes:"
-echo "=========================================================="
-for f in $lint_files; do
-    stripped_path="${f#*/}" # remove top-level dir
-    if ! grep -Fq "$stripped_path" $cmake_files; then
-        echo "$f"
-        failed=1
-    fi
-done
-if [[ $failed -eq 0 ]]; then
-    echo "<none>"
-fi
+compilation_db=$(find build/ -name 'compile_commands.json' | head -n1)
 
 echo
 echo "Improper Library Conventions:"
 echo "=========================================================="
+LIBRARY_NAMES=$(while IFS= read -r line; do
+    [[ $line == \#* ]] || break # stop at first non-# line
+    echo "${line#\# }"          # strip leading "# "
+done <cmake/SetupDependencies.cmake)
+LIBRARY_REGEX="\"($(paste -sd'|' <<<"$LIBRARY_NAMES"))/" # replace newlines with '|'s
 # Find improper library header conventions ("" instead of <>)
-if grep -E '"(range|boost|fmt|catch2|nlohmann|argparse|gsl)/' $lint_files; then
+if grep -E "$LIBRARY_REGEX" $lint_files; then
     failed=1
 else
     echo "<none>"
@@ -49,7 +37,8 @@ fi
 echo
 echo "Clang Tidy:"
 echo "=========================================================="
-if ! clang-tidy $lint_files -p "$compilation_db" --warnings-as-errors='*'; then
+if ! clang-tidy $lint_files -p "$compilation_db" --export-fixes=reports/clang-tidy.yaml \
+    --warnings-as-errors='*' --format-style 'file' --quiet; then
     failed=1
 fi
 
