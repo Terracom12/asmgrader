@@ -12,7 +12,10 @@
             "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
-            "installDir": "${sourceDir}/install/${presetName}"
+            "installDir": "${sourceDir}/install/${presetName}",
+            "warnings": {
+                "uninitialized": true
+            }
         },
         {
             "name": "conf-variables",
