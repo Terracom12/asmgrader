@@ -5,6 +5,14 @@ enable_testing()
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
 include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
 
+set(
+    CONSTEXPR_TESTS_SRCS
+
+    test_static_expected.cpp
+    test_static_formatters.cpp
+    test_static_tuple_matcher.cpp
+)
+
 ##### Test runner executable
 
 add_executable(
@@ -20,9 +28,17 @@ add_executable(
     test_program.cpp
     test_database_reader.cpp
     test_registers_state.cpp
-    test_formatters.cpp
+
+    ${CONSTEXPR_TESTS_SRCS}
 
     catch_main.cpp
+)
+
+target_compile_definitions(
+    asmgrader_tests
+
+    PUBLIC
+    CATCH_CONFIG_RUNTIME_STATIC_REQUIRE # Make STATIC_REQUIRE behave as REQUIRE
 )
 
 target_link_libraries(
@@ -31,6 +47,22 @@ target_link_libraries(
 
     PRIVATE 
     Catch2::Catch2
+    asmgrader_core_interface
+)
+
+add_executable(
+    asmgrader_constexpr_tests
+    EXCLUDE_FROM_ALL
+
+    ${CONSTEXPR_TESTS_SRCS}
+)
+
+target_link_libraries(
+    asmgrader_constexpr_tests
+    PUBLIC asmgrader_core
+
+    PRIVATE 
+    Catch2::Catch2WithMain
     asmgrader_core_interface
 )
 
@@ -68,4 +100,10 @@ catch_discover_tests(
     ".xml"
     EXTRA_ARGS
     "--reporter console::out=-"
+)
+
+add_test(
+    NAME asmgrader_constexpr_tests
+    COMMAND ${CMAKE_MAKE_PROGRAM} asmgrader_constexpr_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

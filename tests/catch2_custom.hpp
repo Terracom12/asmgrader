@@ -11,6 +11,8 @@
 namespace Catch {
 
 template <fmt::formattable T>
+// inverse of Catch2's conditions as to not cause ambiguity
+    requires(!is_range<T>::value && !::Catch::Detail::IsStreamInsertable<T>::value)
 struct StringMaker<T>
 {
     static std::string convert(const T& t) { return fmt::format("{}", t); }
