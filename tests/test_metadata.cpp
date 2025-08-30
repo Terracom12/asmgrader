@@ -9,20 +9,25 @@
 
 using namespace asmgrader::metadata;
 
-namespace ct_tests {
-
 // deduction guide
-static_assert(std::same_as<decltype(Metadata{ProfOnly}), Metadata<ProfOnlyTag>>);
-static_assert(std::same_as<decltype(Metadata{Assignment{"", ""}}), Metadata<Assignment>>);
+TEST_CASE("Metadata deduction guide") {
+    STATIC_REQUIRE(std::same_as<decltype(Metadata{ProfOnly}), Metadata<ProfOnlyTag>>);
+    STATIC_REQUIRE(std::same_as<decltype(Metadata{Assignment{"", ""}}), Metadata<Assignment>>);
+}
 
-// template ctor doesn't override copy and move ctors
-static_assert(std::same_as<decltype(Metadata{Metadata{ProfOnly}}), Metadata<ProfOnlyTag>>);
-static_assert(requires(Metadata<ProfOnlyTag> data) {
-    { Metadata{data} } -> std::same_as<Metadata<ProfOnlyTag>>;
-});
+TEST_CASE("Metadata copy and move ctors behave as expected") {
+    // template ctor doesn't override copy and move ctors
+    STATIC_REQUIRE(std::same_as<decltype(Metadata{Metadata{ProfOnly}}), Metadata<ProfOnlyTag>>);
+    STATIC_REQUIRE(requires(Metadata<ProfOnlyTag> data) {
+        {
+            Metadata {
+                data
+            }
+        } -> std::same_as<Metadata<ProfOnlyTag>>;
+    });
+}
 
-// std::optional is not constexpr???
-// TODO: Find a new damn std containers library
+namespace {
 
 template <typename Lhs, typename Rhs>
 struct Unchanged
@@ -35,17 +40,17 @@ struct Unchanged
 template <typename Lhs, typename Rhs>
 static constexpr bool unchanged_v = Unchanged<Lhs, Rhs>::value;
 
-} // namespace ct_tests
+} // namespace
 
 TEST_CASE("Missing attributes") {
     // missing attributes
-    static_assert(!Metadata{}.get<ProfOnlyTag>());
-    static_assert(!Metadata{Assignment{"", ""}}.get<ProfOnlyTag>());
-    static_assert(!Metadata{ProfOnly}.get<Assignment>());
-    static_assert(!Metadata{Assignment{"", ""}, ProfOnly}.get<Weight>());
+    STATIC_REQUIRE(!Metadata{}.get<ProfOnlyTag>());
+    STATIC_REQUIRE(!Metadata{Assignment{"", ""}}.get<ProfOnlyTag>());
+    STATIC_REQUIRE(!Metadata{ProfOnly}.get<Assignment>());
+    STATIC_REQUIRE(!Metadata{Assignment{"", ""}, ProfOnly}.get<Weight>());
 
     // missing + get_and
-    static_assert(!Metadata{Assignment{"", ""}, ProfOnly}.get_and<Weight>([](auto /*unused*/) {}));
+    STATIC_REQUIRE(!Metadata{Assignment{"", ""}, ProfOnly}.get_and<Weight>([](auto /*unused*/) {}));
 
     REQUIRE_FALSE(Metadata{}.get<ProfOnlyTag>());
     REQUIRE_FALSE(Metadata{Assignment{"", ""}}.get<ProfOnlyTag>());
@@ -77,7 +82,7 @@ TEST_CASE("Attributes with get_and") {
 TEST_CASE("Combining attributes") {
     constexpr Metadata start{ProfOnly};
 
-    static_assert(ct_tests::unchanged_v<decltype(start), decltype(start | ProfOnly | ProfOnly)>);
+    STATIC_REQUIRE(unchanged_v<decltype(start), decltype(start | ProfOnly | ProfOnly)>);
     REQUIRE((start | ProfOnly).get<ProfOnlyTag>());
 
     REQUIRE((start | Weight{1}).get<Weight>() == Weight{1});
@@ -93,8 +98,8 @@ TEST_CASE("Combining metadata objects") {
     constexpr Metadata weight_only{Weight{1}};
     constexpr Metadata assignment_only{Assignment{"", ""}};
 
-    static_assert(ct_tests::unchanged_v<decltype(start), decltype(start | start)>);
-    static_assert(ct_tests::unchanged_v<decltype(weight_only), decltype(weight_only | weight_only)>);
+    STATIC_REQUIRE(unchanged_v<decltype(start), decltype(start | start)>);
+    STATIC_REQUIRE(unchanged_v<decltype(weight_only), decltype(weight_only | weight_only)>);
 
     REQUIRE_FALSE((start | start).get<ProfOnlyTag>());
     REQUIRE((start | prof_only_only).get<ProfOnlyTag>());
