@@ -11,6 +11,7 @@ set(
     test_static_expected.cpp
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
+    test_static_string.cpp
 )
 
 ##### Test runner executable
