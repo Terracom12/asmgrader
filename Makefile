@@ -76,11 +76,11 @@ test: test-debug  ## alias for test-debug
 
 .PHONY: test-debug
 test-debug: build-debug ## run tests in debug mode
-	 @$(SRC_ENV) && ctest --test-dir $(BUILD_DIR) --progress --output-on-failure
+	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure
 
 .PHONY: test-release
 test-release: build-release  ## run tests in release mode
-	 @$(SRC_ENV) && ctest --preset $() --progress --output-on-failure
+	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure
 
 
 .PHONY: clean
