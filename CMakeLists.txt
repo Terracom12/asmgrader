@@ -71,7 +71,7 @@ if (ASMGRADER_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-if(EXISTS "cs3b-grader/CMakeLists.txt")
+if(EXISTS "${CMAKE_SOURCE_DIR}/cs3b-grader/CMakeLists.txt")
     add_subdirectory(cs3b-grader)
 endif()
 
