@@ -1,7 +1,7 @@
 CompileFlags:
     Add: -DPROFESSOR_VERSION
     Remove: -fconcepts-diagnostics-depth=*
-    CompilationDatabase: build/
+    CompilationDatabase: build/unixlike-gcc-debug
 
 InlayHints:
     BlockEnd: No
