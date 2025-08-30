@@ -75,12 +75,12 @@ struct RequirementResult
 
     struct DebugInfo
     {
-        std::string_view msg;     // stringified condition
-        std::source_location loc; // requirement execution point
+        std::string_view msg;       // stringified condition
+        std::source_location loc{}; // requirement execution point
 
-        static constexpr std::string_view DEFAULT_MSG = "<unknown>";
+        static constexpr std::string_view default_msg = "<unknown>";
 
-        explicit DebugInfo(std::string_view message = DEFAULT_MSG,
+        explicit DebugInfo(std::string_view message = default_msg,
                            std::source_location location = std::source_location::current())
             : msg{message}
             , loc{location} {}

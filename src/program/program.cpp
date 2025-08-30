@@ -55,8 +55,8 @@ Expected<void, std::string> Program::check_is_elf(const std::filesystem::path& p
     std::array<char, 4> first_4_bytes{};
     file.read(first_4_bytes.data(), first_4_bytes.size());
 
-    constexpr std::array<char, 4> EXPECTED_BYTES = {0x7F, 'E', 'L', 'F'};
-    if (first_4_bytes == EXPECTED_BYTES) {
+    constexpr std::array<char, 4> expected_bytes = {0x7F, 'E', 'L', 'F'};
+    if (first_4_bytes == expected_bytes) {
         return {};
     }
 
@@ -86,9 +86,9 @@ Result<RunResult> Program::run() {
 
 std::uintptr_t Program::alloc_mem(std::size_t amt) {
     // Extra offset to not accidentally run into memory issues on border
-    constexpr auto OFFSET_ADDITION = 32;
+    constexpr auto offset_addition = 32;
 
-    auto offset = (alloced_mem_ += amt) + OFFSET_ADDITION;
+    auto offset = (alloced_mem_ += amt) + offset_addition;
 
     ASSERT(alloced_mem_ < Tracer::MMAP_LENGTH * 3 / 4, "Attempting to allocate too much memory in asm program!");
 

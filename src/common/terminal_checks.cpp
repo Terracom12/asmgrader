@@ -21,13 +21,13 @@ namespace asmgrader {
 // Based on: https://github.com/gabime/spdlog
 // Which is subsequently based on: https://github.com/agauniyal/rang/
 bool is_color_terminal() noexcept {
-    static const bool RESULT = []() {
+    static const bool result = []() {
         const char* env_colorterm_p = std::getenv("COLORTERM");
         if (env_colorterm_p != nullptr) {
             return true;
         }
 
-        static constexpr std::array<const char*, 16> TERMS = {{"ansi", "color", "console", "cygwin", "gnome", "konsole",
+        static constexpr std::array<const char*, 16> terms = {{"ansi", "color", "console", "cygwin", "gnome", "konsole",
                                                                "kterm", "linux", "msys", "putty", "rxvt", "screen",
                                                                "vt100", "xterm", "alacritty", "vt102"}};
 
@@ -37,10 +37,10 @@ bool is_color_terminal() noexcept {
             return false;
         }
 
-        return ranges::any_of(TERMS, [&](const char* term) { return std::strstr(env_term_p, term) != nullptr; });
+        return ranges::any_of(terms, [&](const char* term) { return std::strstr(env_term_p, term) != nullptr; });
     }();
 
-    return RESULT;
+    return result;
 }
 
 // Determine if the terminal attached

@@ -50,7 +50,7 @@ TestContext::TestContext(TestBase& test, Program program,
     , on_requirement_{std::move(on_requirement)} {}
 
 TestResult TestContext::finalize() {
-    constexpr int DEFAULT_WEIGHT = 1;
+    constexpr int default_weight = 1;
 
     result_.num_passed = static_cast<int>(
         ranges::count(result_.requirement_results, true, [](const RequirementResult& res) { return res.passed; }));
@@ -59,7 +59,7 @@ TestResult TestContext::finalize() {
     if (auto weight = associated_test_->get_weight()) {
         result_.weight = gsl::narrow_cast<int>(weight->points);
     } else {
-        result_.weight = DEFAULT_WEIGHT;
+        result_.weight = default_weight;
     }
 
     return result_;
@@ -116,13 +116,13 @@ std::size_t TestContext::flush_stdin() {
     UNIMPLEMENTED("SYS_ppoll not defined!");
 #else
     // Buffer to send SYS_read output to
-    static const AsmBuffer READ_BUFFER = create_buffer<32>();
+    static const AsmBuffer read_buffer = create_buffer<32>();
     // struct timespec buffer for ppoll
-    static const AsmBuffer ZERO_TIMESPEC_BUFFER = create_buffer<sizeof(timespec)>();
+    static const AsmBuffer zero_timespec_buffer = create_buffer<sizeof(timespec)>();
     // A fd_set with only STDIN for SYS_select
-    static const AsmBuffer STDIN_ONLY_POLLFD_BUFFER = create_buffer<sizeof(pollfd)>();
+    static const AsmBuffer stdin_only_pollfd_buffer = create_buffer<sizeof(pollfd)>();
 
-    ZERO_TIMESPEC_BUFFER.zero();
+    zero_timespec_buffer.zero();
 
     // Loop until we break due to SYS_select returning 0
     for (std::size_t bytes_read = 0;;) {
@@ -130,13 +130,13 @@ std::size_t TestContext::flush_stdin() {
         pollfd_stdin_only.fd = STDIN_FILENO;
         pollfd_stdin_only.events = POLLIN; // poll only for new data available to be read
 
-        STDIN_ONLY_POLLFD_BUFFER.set_value(ByteArray<sizeof(pollfd)>::bit_cast(pollfd_stdin_only));
+        stdin_only_pollfd_buffer.set_value(ByteArray<sizeof(pollfd)>::bit_cast(pollfd_stdin_only));
 
         // First check that stdin has any data to be read, so that we don't block
         // see ppoll(2)
-        SyscallRecord ppoll_res = TRY_OR_THROW(exec_syscall(SYS_ppoll, {/*fds=*/STDIN_ONLY_POLLFD_BUFFER.get_address(),
+        SyscallRecord ppoll_res = TRY_OR_THROW(exec_syscall(SYS_ppoll, {/*fds=*/stdin_only_pollfd_buffer.get_address(),
                                                                         /*nfds=*/nfds_t{1},
-                                                                        /*tmo_p=*/ZERO_TIMESPEC_BUFFER.get_address(),
+                                                                        /*tmo_p=*/zero_timespec_buffer.get_address(),
                                                                         /*sigmask=*/0}),
                                                "failed to flush stdin");
         if (!ppoll_res.ret.has_value() || ppoll_res.ret->has_error()) {
@@ -153,8 +153,8 @@ std::size_t TestContext::flush_stdin() {
 
         SyscallRecord read_res = TRY_OR_THROW(exec_syscall(SYS_read, {
                                                                          /*fd=*/STDIN_FILENO,
-                                                                         /*buf=*/READ_BUFFER.get_address(),
-                                                                         /*len=*/READ_BUFFER.size(),
+                                                                         /*buf=*/read_buffer.get_address(),
+                                                                         /*len=*/read_buffer.size(),
                                                                      }),
                                               "failed to flush stdin");
 

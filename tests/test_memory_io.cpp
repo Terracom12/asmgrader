@@ -46,9 +46,9 @@ private:
     std::array<std::byte, N> data_{};
 };
 
-constexpr std::size_t MEM_SIZE = 1'024;
+constexpr std::size_t mem_size = 1'024;
 auto make_memory = []() -> std::unique_ptr<asmgrader::MemoryIOBase> {
-    return std::make_unique<StubbedMemoryIO<MEM_SIZE>>();
+    return std::make_unique<StubbedMemoryIO<mem_size>>();
 };
 
 TEST_CASE("Read and write arithmetic types and pointers") {

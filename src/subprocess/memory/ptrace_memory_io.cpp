@@ -22,14 +22,14 @@ Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::
     // NOLINTBEGIN(google-runtime-int) - based on ptrace(2) spec
 
     // Credit: https://unix.stackexchange.com/a/9068
-    static constexpr auto ALIGNMENT = sizeof(long) - 1;
+    static constexpr auto alignment = sizeof(long) - 1;
 
     while (length != 0) {
-        std::size_t todo = std::min(length, sizeof(long) - (address & ALIGNMENT));
-        long res = TRYE(linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0),
+        std::size_t todo = std::min(length, sizeof(long) - (address & alignment));
+        long res = TRYE(linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & alignment), 0),
                         ErrorKind::SyscallFailure);
 
-        std::memcpy(raw_buffer_ptr, reinterpret_cast<char*>(&res) + (address & ALIGNMENT), todo);
+        std::memcpy(raw_buffer_ptr, reinterpret_cast<char*>(&res) + (address & alignment), todo);
 
         raw_buffer_ptr += todo;
         address += todo;
@@ -82,45 +82,5 @@ Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const Byte
 
     return {};
 }
-
-// TODO: Consolidate repeated code in this and other read fn
-// ByteVector PtraceMemoryIO::read_until_impl(std::uintptr_t address, const std::function<bool(std::byte)>& predicate) {
-//     constexpr std::size_t MAX_SIZE = 10 * std::mega::num; // 10 MB
-//     constexpr std::size_t INIT_SIZE = 128;
-//     // TODO: Detetermine whether alignment logic is necessary
-//
-//     // TODO: Use <algorithm> instead of ptr arithmetic
-//     ByteVector result_buffer;
-//     result_buffer.reserve(INIT_SIZE);
-//
-//     // Credit: https://unix.stackexchange.com/a/9068
-//     static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
-//
-//     while (result_buffer.size() < MAX_SIZE) {
-//         size_t todo = sizeof(long) - (address & ALIGNMENT);
-//         auto res = linux::ptrace(PTRACE_PEEKTEXT, get_pid(), address - (address & ALIGNMENT), 0);
-//
-//         if (!res) {
-//             LOG_WARN("PTRACE_PEEKTEXT failed at {:#x}", address - (address & ALIGNMENT));
-//             return {}; // FIXME
-//         }
-//
-//         for (auto byte : std::bit_cast<std::array<std::byte, sizeof(long)>>(res.value())) {
-//             if (predicate(byte)) {
-//                 goto finish;
-//             }
-//
-//             result_buffer.push_back(byte);
-//         }
-//
-//         address += todo;
-//     }
-//
-//     LOG_WARN("Buffer for `PtraceMemoryIO::read_until_impl` exceeded max size of {} bytes", MAX_SIZE);
-//
-// finish:
-//     return result_buffer;
-// }
-//
 
 } // namespace asmgrader

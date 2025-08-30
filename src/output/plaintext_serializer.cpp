@@ -125,7 +125,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
     }
 
     // We would need >99999 requirements for this to look off
-    static constexpr std::size_t FIELD_WIDTH = 12;
+    static constexpr std::size_t field_width = 12;
 
     auto pass_fail_line = [this](std::string_view label, int num_passed, int num_failed) {
         int num_total = num_passed + num_failed;
@@ -135,7 +135,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
         std::string failed_msg = fmt::format("{} failed", num_failed);
 
         return fmt::format("{0:<{4}}: {1:>{4}} | {2:>{4}} | {3:>{4}}", label, total_msg,
-                           style(passed_msg, SUCCESS_STYLE), style(failed_msg, ERROR_STYLE), FIELD_WIDTH);
+                           style(passed_msg, SUCCESS_STYLE), style(failed_msg, ERROR_STYLE), field_width);
     };
 
     std::string tests_line = pass_fail_line("Tests", data.num_tests_passed(), data.num_tests_failed());
@@ -264,9 +264,9 @@ void PlainTextSerializer::on_error(std::string_view what) {
 }
 
 void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
-    constexpr std::string_view HEADER_TEXT = "Execution Info";
-    constexpr std::string_view VERSION_LABEL = "Version: ";
-    constexpr std::string_view DATE_LABEL = "Date and Time: ";
+    constexpr std::string_view header_text = "Execution Info";
+    constexpr std::string_view version_label = "Version: ";
+    constexpr std::string_view date_label = "Date and Time: ";
 
     std::string version_text = fmt::format("{}-g{}", data.version_string, data.git_hash);
 
@@ -279,9 +279,9 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
     std::string local_timepoint_text =
         asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
 
-    std::string out = fmt::format("{:#^{}}\n", HEADER_TEXT, terminal_width_);
-    out += fmt::format("{}{:>{}}\n", VERSION_LABEL, version_text, terminal_width_ - VERSION_LABEL.size());
-    out += fmt::format("{:}{:>{}}\n", DATE_LABEL, local_timepoint_text, terminal_width_ - DATE_LABEL.size());
+    std::string out = fmt::format("{:#^{}}\n", header_text, terminal_width_);
+    out += fmt::format("{}{:>{}}\n", version_label, version_text, terminal_width_ - version_label.size());
+    out += fmt::format("{:}{:>{}}\n", date_label, local_timepoint_text, terminal_width_ - date_label.size());
     out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
 
     sink_.write(out);

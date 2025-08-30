@@ -52,7 +52,7 @@ struct fmt::formatter<std::timespec> : formatter<std::string>
 };
 
 template <>
-struct fmt::formatter<std::source_location> : formatter<std::string>
+struct fmt::formatter<std::source_location> : fmt::formatter<std::string>
 {
     auto format(const std::source_location& from, fmt::format_context& ctx) const {
         return formatter<std::string>::format(

@@ -378,9 +378,9 @@ Result<void> Tracer::setup_function_return() {
 #if defined(ASMGRADER_AARCH64)
     // Instructions must be 4-byte aligned
     // TODO: Create helper for writing aligned data
-    constexpr std::size_t ALIGNMENT = 4;
+    constexpr std::size_t alignment = 4;
     const std::uintptr_t return_loc =
-        (mmaped_address_ + mmaped_used_amt_) + (ALIGNMENT - (mmaped_address_ + mmaped_used_amt_) % ALIGNMENT);
+        (mmaped_address_ + mmaped_used_amt_) + (alignment - (mmaped_address_ + mmaped_used_amt_) % alignment);
 
     // LR
     regs.regs[30] = return_loc;
@@ -459,6 +459,7 @@ Result<SyscallRecord> Tracer::run_next_syscall(std::chrono::microseconds timeout
     const auto start_time = Hrc::now();
 
     struct ptrace_syscall_info entry{};
+
     struct ptrace_syscall_info exit{};
 
     // Syscall enter

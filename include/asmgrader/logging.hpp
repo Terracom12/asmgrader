@@ -82,8 +82,8 @@ struct DebugTimeHelper : NonMovable
         LOG_DEBUG("{} took {:%S}s to execute", str_expr, stop - start);
     }
 
-    std::string_view str_expr;
-    std::chrono::steady_clock::time_point start;
+    std::string_view str_expr{};
+    std::chrono::steady_clock::time_point start{};
 };
 
 } // namespace detail

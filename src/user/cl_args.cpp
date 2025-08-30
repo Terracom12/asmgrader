@@ -50,11 +50,11 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{} {}">(
+    static constexpr auto version_str = static_format<"AsmGrader v{}-g{} {}">(
         ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING,
         APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)");
 
-    arg_parser_.add_description(VERSION_STR.str());
+    arg_parser_.add_description(version_str.str());
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
@@ -77,7 +77,7 @@ void CommandLineArgs::setup_parser() {
         .action([&](const auto & /*unused*/) {
             RunMetadata run_info{};
 
-            fmt::println("{} [{}]\n", std::string_view{VERSION_STR}, run_info.version);
+            fmt::println("{} [{}]\n", std::string_view{version_str}, run_info.version);
 
             std::string_view compiler_str = "<unknown>";
 
@@ -93,7 +93,7 @@ void CommandLineArgs::setup_parser() {
         .help("prints version information and exits");
 
 
-    static constexpr auto ADD_ENUM = [] <typename Enum> (Enum& enumv, int diff) {
+    static constexpr auto add_enum = [] <typename Enum> (Enum& enumv, int diff) {
         auto val = fmt::underlying(enumv);
         enumv = static_cast<Enum>(val + diff);
     };
@@ -101,7 +101,7 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("-v", "--verbose")
         .flag()
         .action([this] (const std::string& /*unused*/) {
-                ADD_ENUM(opts_buffer_.verbosity, 1);
+                add_enum(opts_buffer_.verbosity, 1);
             })
         .append()
         .help("Increase verbosity level");
@@ -109,7 +109,7 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("-q", "--quiet")
         .flag()
         .action([this] (const std::string& /*unused*/) {
-                ADD_ENUM(opts_buffer_.verbosity, -1);
+                add_enum(opts_buffer_.verbosity, -1);
             })
         .append()
         .help("Decrease verbosity level");
