@@ -28,6 +28,7 @@ add_executable(
     test_program.cpp
     test_database_reader.cpp
     test_registers_state.cpp
+    test_file_searcher.cpp
 
     ${CONSTEXPR_TESTS_SRCS}
 
@@ -69,13 +70,14 @@ target_link_libraries(
 ##### Simple assembly executable
 
 
-add_asm_arch_specific_impl(asm_tests simple_asm)
+add_asm_arch_specific_impl(asm_tests resources/simple_asm)
 
 target_compile_definitions(
     asmgrader_tests
 
     PRIVATE
     "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
 )
 
 # !!DISCLAIMER!!
