@@ -11,8 +11,11 @@
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include <array>
 #include <filesystem>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 using Catch::Matchers::UnorderedRangeEquals;
@@ -29,6 +32,14 @@ const auto map_to_filename =
 
 const auto extract_path =
     ranges::views::transform([](const asmgrader::StudentInfo& info) { return info.assignment_path.value(); });
+
+constexpr auto make_student = [](std::string first_name, std::string last_name) {
+    return asmgrader::StudentInfo{.first_name = std::move(first_name),
+                                  .last_name = std::move(last_name),
+                                  .names_known = false,
+                                  .assignment_path = {},
+                                  .subst_regex_string = ""};
+};
 
 TEST_CASE("Find txt files") {
     asmgrader::FileSearcher searcher{".*\\.txt"};
@@ -88,4 +99,42 @@ TEST_CASE("Find assignment files with default search expression") {
 
     auto search_res_recursive = searcher.search_recursive(resources_path);
     REQUIRE_THAT(expected_recursive, UnorderedRangeEquals(search_res_recursive | extract_path | map_to_filename));
+}
+
+TEST_CASE("Find assignment files with specified student names") {
+    asmgrader::AssignmentFileSearcher searcher{assignment};
+
+    const auto tests = std::to_array<std::pair<asmgrader::StudentInfo, std::string_view>>({
+        {make_student("John", "Doe"), "doejohn_0000_0000_exec.foo.out"},
+        {make_student("Jane", "Doe"), "doejane_0000_0000_exec.foo.out"},
+        {make_student("Alice", "Liddell"), "liddellalice_0000_0000_exec.foo.out"},
+        {make_student("Bob", "Roberts"), "robertsbob_0000_0000_exec.foo.out"},
+    });
+
+    for (auto [student, expected_filename] : tests) {
+        auto search_res = searcher.search_recursive(student, resources_path);
+        REQUIRE(search_res);
+        REQUIRE(student.assignment_path->filename().c_str() == expected_filename);
+    }
+
+    auto student_false_test = make_student("Unknown", "Unknown");
+    auto search_res = searcher.search_recursive(student_false_test, resources_path);
+    REQUIRE_FALSE(search_res);
+    REQUIRE(student_false_test.assignment_path->empty());
+}
+
+TEST_CASE("Find assignment files with special student names") {
+    const asmgrader::Assignment special_assignment{"", "special.out"};
+    asmgrader::AssignmentFileSearcher searcher{special_assignment};
+
+    const auto tests = std::to_array<std::pair<asmgrader::StudentInfo, std::string_view>>({
+        {make_student("Jack", "O'Reily"), "o'reilyjack_0000_0000_special.out"},
+        {make_student("Carlos", "De La Cruz"), "de la cruzcarlos_0000_0000_special.out"},
+    });
+
+    for (auto [student, expected_filename] : tests) {
+        auto search_res = searcher.search_recursive(student, resources_path);
+        REQUIRE(search_res);
+        REQUIRE(student.assignment_path->filename().c_str() == expected_filename);
+    }
 }
