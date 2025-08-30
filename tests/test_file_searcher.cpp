@@ -22,6 +22,9 @@ using Catch::Matchers::UnorderedRangeEquals;
 
 const auto resources_path = std::filesystem::path{RESOURCES_DIR} / "file_searching";
 
+// weird file name to test that an extra `.` won't mess up basename / extension extraction logic
+const asmgrader::Assignment assignment{"", "exec.foo.out"};
+
 const auto map_to_basename =
     ranges::views::transform([](const std::filesystem::path& path) { return path.stem().string(); }) |
     ranges::to<std::vector>();
@@ -80,9 +83,6 @@ TEST_CASE("Find txt files with variable substitution") {
     auto search_res_de = de_searcher.search_recursive(resources_path);
     REQUIRE_THAT(expected_de, UnorderedRangeEquals(search_res_de | map_to_basename));
 }
-
-// weird file name to test that an extra `.` won't mess up basename / extension extraction logic
-const asmgrader::Assignment assignment{"", "exec.foo.out"};
 
 TEST_CASE("Find assignment files with default search expression") {
     asmgrader::AssignmentFileSearcher searcher{assignment};
