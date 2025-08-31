@@ -134,20 +134,6 @@ private:
         Expects(ranges::size(range) < Size);
         ranges::transform(std::forward<Range>(range), data.begin(), [](Byte value) { return Byte{value}; });
     }
-
-    static constexpr auto TRY_CONSTEXPR = []<std::size_t>() {};
-
-    // template <ranges::range Range>
-    //     requires requires { TRY_CONSTEXPR.template operator()<ranges::size(Range)>(); }
-    // static constexpr std::size_t get_size_if_constexpr(const Range& range) {
-    //     constexpr std::size_t NOT_CONSTEXPR = std::numeric_limits<std::size_t>::max();
-    //
-    //     if constexpr () {
-    //         return ranges::size(range);
-    //     }
-    //
-    //     return NOT_CONSTEXPR;
-    // }
 };
 
 static_assert(std::is_aggregate_v<ByteArray<1>>);
