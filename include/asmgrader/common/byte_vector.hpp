@@ -7,7 +7,9 @@
 #include <boost/mp11/list.hpp>
 #include <gsl/assert>
 #include <gsl/util>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/copy.hpp>
+#include <range/v3/algorithm/copy_n.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/iterator/concepts.hpp>
 #include <range/v3/range/access.hpp>
@@ -57,25 +59,28 @@ public:
     explicit ByteVector(std::size_t count, Byte value = Byte{})
         : data_(count, Byte{value}) {}
 
+    bool empty() const { return data_.empty(); }
+
     Byte& operator[](size_t idx) { return data_[idx]; }
 
     const Byte& operator[](size_t idx) const { return data_[idx]; }
+
+    Byte& at(size_t idx) { return data_.at(idx); }
+
+    const Byte& at(size_t idx) const { return data_.at(idx); }
 
     template <ranges::input_iterator It>
     auto insert(const_iterator pos, It first, It last) {
         return data_.insert(pos, first, last);
     }
 
-    template <typename ByteLike>
-        requires requires(ByteLike value) { static_cast<Byte>(value); }
-    void push_back(ByteLike value) {
-        data_.push_back(value);
-    }
+    // yes, taking a Byte by reference is a bit strange, but it's done to
+    // match std container conventions, and is going to be optimized away anyways.
+    void push_back(const Byte& value) { data_.push_back(value); }
 
-    template <typename ByteLike>
-        requires requires(ByteLike value) { static_cast<Byte>(value); }
-    void emplace_back(ByteLike value) {
-        data_.emplace_back(value);
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        data_.emplace_back(std::forward<Args>(args)...);
     }
 
     auto begin() { return data_.begin(); }
@@ -116,17 +121,26 @@ public:
     }
 
     template <typename... Types>
-        requires(std::is_trivially_copyable_v<Types> && ...)
+        requires(sizeof...(Types) > 0 && (std::is_trivially_copyable_v<Types> && ...))
     auto bit_cast_to() const
         -> std::conditional_t<sizeof...(Types) == 1, boost::mp11::mp_first<boost::mp11::mp_list<Types...>>,
                               std::tuple<Types...>> {
         constexpr auto TOTAL_SIZE = (sizeof(Types) + ...);
-        Expects(TOTAL_SIZE <= size());
+        ASSERT(TOTAL_SIZE <= size());
 
-        std::array<Byte, TOTAL_SIZE> bytes;
-        ranges::copy(begin(), begin() + TOTAL_SIZE, bytes.begin());
+        std::tuple<std::array<Byte, sizeof(Types)>...> bytes;
 
-        return {std::bit_cast<Types>(bytes)...};
+        std::apply(
+            [&bytes, iter = begin()](auto&&... elems) mutable {
+                ((ranges::copy_n(std::exchange(iter, iter + sizeof(Types)), sizeof(Types), elems.begin())), ...);
+            },
+            bytes);
+
+        if constexpr (sizeof...(Types) == 1) {
+            return {std::bit_cast<Types>(std::get<0>(bytes))...};
+        } else {
+            return std::apply([](auto&&... args) { return std::tuple{(std::bit_cast<Types>(args))...}; }, bytes);
+        }
     }
 
     template <ranges::range Range>
@@ -160,5 +174,7 @@ private:
 
     std::vector<Byte> data_;
 };
+
+static_assert(ranges::range<ByteVector>);
 
 } // namespace asmgrader
