@@ -1,7 +1,9 @@
 #pragma once
 
 #include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/formatters/debug.hpp>
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 #include <gsl/util>
 
@@ -113,3 +115,43 @@ public:
 static_assert(sizeof(Byte) == 1);
 
 } // namespace asmgrader
+
+template <>
+struct fmt::formatter<::asmgrader::Byte> : ::asmgrader::DebugFormatter
+{
+    using UnderlyingT = decltype(::asmgrader::Byte::value);
+    fmt::formatter<UnderlyingT> f;
+
+    bool empty_format_spec{};
+
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        ctx.advance_to(::asmgrader::DebugFormatter::parse(ctx));
+        if (ctx.begin() == ctx.end() || *ctx.begin() == '}') {
+            empty_format_spec = true;
+        }
+        return f.parse(ctx);
+    }
+
+    constexpr auto format(const ::asmgrader::Byte& from, fmt::format_context& ctx) const {
+        if (is_debug_format) {
+            ctx.advance_to(fmt::format_to(ctx.out(), "Byte{{"));
+        }
+
+        // hex formatting by default when nothing else is specified
+        if (empty_format_spec) {
+            if (is_debug_format) {
+                *ctx.out()++ = '0';
+                *ctx.out()++ = 'x';
+            }
+            ctx.advance_to(fmt::format_to(ctx.out(), "{:02X}", from.value));
+        } else {
+            ctx.advance_to(f.format(from.value, ctx));
+        }
+
+        if (is_debug_format) {
+            *ctx.out()++ = '}';
+        }
+
+        return ctx.out();
+    }
+};
