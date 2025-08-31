@@ -1,12 +1,12 @@
 #include "catch2_custom.hpp"
 
 #include "common/aliases.hpp"
+#include "common/byte.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
-#include "common/timespec_operator_eq.hpp" // operator==(timespec, timespec)
-#include "logging.hpp"
+#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep
 #include "subprocess/memory/memory_io_base.hpp"
-#include "subprocess/memory/memory_io_serde.hpp"
+#include "subprocess/memory/memory_io_serde.hpp" // IWYU pragma: keep; document why?
 #include "subprocess/memory/non_terminated_str.hpp"
 
 #include <libassert/assert.hpp>
@@ -43,7 +43,7 @@ private:
         return {};
     }
 
-    std::array<std::byte, N> data_{};
+    std::array<asmgrader::Byte, N> data_{};
 };
 
 constexpr std::size_t MEM_SIZE = 1'024;

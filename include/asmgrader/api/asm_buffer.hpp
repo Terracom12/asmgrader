@@ -1,6 +1,7 @@
 #pragma once
 
 #include <asmgrader/api/asm_data.hpp>
+#include <asmgrader/common/byte.hpp>
 #include <asmgrader/common/byte_array.hpp>
 #include <asmgrader/common/macros.hpp>
 #include <asmgrader/program/program.hpp>
@@ -28,7 +29,7 @@ public:
 
     std::string str() const;
 
-    ByteArray<NumBytes> fill(std::byte byte) const;
+    ByteArray<NumBytes> fill(Byte byte) const;
 
 private:
     static std::uintptr_t get_alloced_address(Program& prog) { return prog.alloc_mem(NumBytes); }
@@ -40,7 +41,7 @@ std::size_t AsmBuffer<NumBytes>::size() const {
 }
 
 template <std::size_t NumBytes>
-ByteArray<NumBytes> AsmBuffer<NumBytes>::fill(std::byte byte) const {
+ByteArray<NumBytes> AsmBuffer<NumBytes>::fill(Byte byte) const {
     auto prev = TRY_OR_THROW(AsmData<ByteArray<NumBytes>>::get_value(), "could not read previous data value");
 
     ByteArray<NumBytes> buf;
@@ -59,7 +60,7 @@ std::string AsmBuffer<NumBytes>::str() const {
 
     auto byte_str = TRY_OR_THROW(mio.read<ByteArray<NumBytes>>(addr), "failed to read buffer");
 
-    return byte_str | ranges::views::transform([](std::byte byte) { return std::to_integer<char>(byte); }) |
+    return byte_str | ranges::views::transform([](Byte byte) { return static_cast<char>(byte.value); }) |
            ranges::views::take_while([](char chr) { return chr != 0; }) | ranges::to<std::string>();
 }
 

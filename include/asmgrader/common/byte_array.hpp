@@ -1,5 +1,7 @@
 #pragma once
 
+#include <asmgrader/common/byte.hpp>
+
 #include <gsl/assert>
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/transform.hpp>
@@ -23,23 +25,23 @@ class ByteArray
 {
 public:
     // A bunch of aliases for use with algorithm templates that check for them
-    using value_type = std::byte;
-    using allocator_type = std::allocator<std::byte>;
+    using value_type = Byte;
+    using allocator_type = std::allocator<Byte>;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
     using reference = value_type&;
     using const_reference = const value_type&;
     using pointer = value_type*;
     using const_pointer = const value_type*;
-    using iterator = std::array<std::byte, Size>::iterator;
-    using const_iterator = std::array<std::byte, Size>::const_iterator;
-    using reverse_iterator = std::array<std::byte, Size>::reverse_iterator;
-    using const_reverse_iterator = std::array<std::byte, Size>::const_reverse_iterator;
+    using iterator = std::array<Byte, Size>::iterator;
+    using const_iterator = std::array<Byte, Size>::const_iterator;
+    using reverse_iterator = std::array<Byte, Size>::reverse_iterator;
+    using const_reverse_iterator = std::array<Byte, Size>::const_reverse_iterator;
 
     // // Conversion constructor from other containers holding "byte-like" objects (char, unsigned char)
     // template <typename T>
     //     requires requires(T::value_type value) {
-    //         { static_cast<std::byte>(value) };
+    //         { static_cast<Byte>(value) };
     //     }
     // explicit constexpr from(const T& container)
     //     : ByteArray{container} {
@@ -69,23 +71,24 @@ public:
     std::size_t size() const { return data.size(); }
 
     /// T should be a stdlib-compatible container type
-    /// where std::byte is convertible to T::value_type
-    template <typename T>
-        requires requires(T rng, std::size_t size, std::byte byte) {
+    /// where Byte is convertible to T::value_type
+    template <ranges::range Range>
+        requires requires(Range rng, std::size_t size, Byte byte) {
             { rng.resize(size) };
-            { std::to_integer<T::value_type>(byte) };
+            { static_cast<ranges::range_value_t<Range>>(byte.value) };
         }
-    constexpr T to() const {
-        T result;
+    constexpr Range to() const {
+        Range result;
         result.resize(size());
 
-        ranges::transform(*this, result.begin(), [](std::byte value) { return std::to_integer<T::value_type>(value); });
+        ranges::transform(*this, result.begin(),
+                          [](Byte byte) { return static_cast<ranges::range_value_t<Range>>(byte.value); });
 
         return result;
     }
 
     // template <typename T>
-    //     requires requires(T rng, std::size_t size, std::byte byte) {
+    //     requires requires(T rng, std::size_t size, Byte byte) {
     //         { rng.resize(size) };
     //         { static_cast<T::value_type>(byte) };
     //     }
@@ -93,7 +96,7 @@ public:
     //     T result;
     //     result.resize(this->size());
     //
-    //     ranges::transform(*this, result.begin(), [](std::byte value) { return static_cast<T::value_type>(value); });
+    //     ranges::transform(*this, result.begin(), [](Byte value) { return static_cast<T::value_type>(value); });
     //
     //     return result;
     // }
@@ -114,22 +117,22 @@ public:
 
         auto it = ranges::begin(result);
 
-        (ranges::copy(std::bit_cast<std::array<std::byte, sizeof(Ts)>>(args), std::exchange(it, it + sizeof(Ts))), ...);
+        (ranges::copy(std::bit_cast<std::array<Byte, sizeof(Ts)>>(args), std::exchange(it, it + sizeof(Ts))), ...);
 
         return result;
     }
 
-    std::array<std::byte, Size> data;
+    std::array<Byte, Size> data;
 
 private:
     template <ranges::range Range>
         requires requires(ranges::range_value_t<Range> value) {
-            { std::byte{value} };
+            { Byte{value} };
         }
     constexpr void from_range(Range&& range) {
         // static_assert(get_size_if_constexpr(range) <= Size, "Passed range is too large for this ByteArray");
         Expects(ranges::size(range) < Size);
-        ranges::transform(std::forward<Range>(range), data.begin(), [](std::byte value) { return std::byte{value}; });
+        ranges::transform(std::forward<Range>(range), data.begin(), [](Byte value) { return Byte{value}; });
     }
 
     static constexpr auto TRY_CONSTEXPR = []<std::size_t>() {};

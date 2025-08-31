@@ -12,6 +12,7 @@ set(
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
     test_static_string.cpp
+    test_static_byte.cpp
 )
 
 ##### Test runner executable

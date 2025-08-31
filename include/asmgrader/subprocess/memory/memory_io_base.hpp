@@ -1,5 +1,6 @@
 #pragma once
 
+#include <asmgrader/common/byte.hpp>
 #include <asmgrader/common/byte_vector.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/meta/remove_all_pointers.hpp>
@@ -11,6 +12,7 @@
 #include <span>
 #include <type_traits>
 
+#include <sched.h>
 #include <sys/types.h>
 
 namespace asmgrader {
@@ -96,9 +98,9 @@ private:
     template <typename T>
     friend struct MemoryIOSerde;
 
-    virtual Result<ByteVector> read_until(std::uintptr_t address, const std::function<bool(std::byte)>& predicate);
+    virtual Result<ByteVector> read_until(std::uintptr_t address, const std::function<bool(Byte)>& predicate);
     virtual Result<ByteVector> read_until(std::uintptr_t address,
-                                          const std::function<bool(std::span<const std::byte>)>& predicate,
+                                          const std::function<bool(std::span<const Byte>)>& predicate,
                                           std::size_t block_size);
 
     virtual Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;

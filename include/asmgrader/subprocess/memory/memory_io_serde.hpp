@@ -1,6 +1,8 @@
 #pragma once
 
+#include <asmgrader/common/byte.hpp>
 #include <asmgrader/common/byte_vector.hpp>
+#include <asmgrader/common/error_types.hpp>
 #include <asmgrader/subprocess/memory/memory_io_base.hpp>
 #include <asmgrader/subprocess/memory/non_terminated_str.hpp>
 
@@ -89,7 +91,7 @@ template <>
 struct MemoryIOSerde<std::string>
 {
     static Result<std::string> read(std::uintptr_t address, MemoryIOBase& mio) {
-        auto is_null_term = [](std::byte chr) { return std::to_integer<char>(chr) == '\0'; };
+        auto is_null_term = [](Byte chr) { return static_cast<char>(chr.value) == '\0'; };
         const auto raw_data = TRY(mio.read_until(address, is_null_term));
 
         return data_to_str(raw_data);
