@@ -198,29 +198,18 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u
 
 static_assert(sizeof(FloatingPointRegister<>) == sizeof(u128));
 
-template <ProcessorKind Arch = SYSTEM_PROCESSOR>
-struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
+/// Derived classes should use Aarch64FlagsBase with the CRTP pattern
+template <typename Base>
+struct Aarch64FlagsBase
 {
-    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
-    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
+    constexpr bool n() const { return Base::negative_set(); }
 
-    constexpr bool negative_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & NEGATIVE_FLAG_BIT) != 0U;
-    }
+    constexpr bool z() const { return Base::zero_set(); }
 
-    constexpr bool zero_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & ZERO_FLAG_BIT) != 0U;
-    }
+    constexpr bool c() const { return Base::carry_set(); }
 
-    constexpr bool carry_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & CARRY_FLAG_BIT) != 0U;
-    }
+    constexpr bool v() const { return Base::overflow_set(); }
 
-    constexpr bool overflow_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & OVERFLOW_FLAG_BIT) != 0U;
-    }
-
-#if defined(ASMGRADER_AARCH64)
     // Specification of pstate (for nzcv) obtained from:
     //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
     static constexpr u64 NZCV_BASE_OFF = 28;
@@ -232,10 +221,20 @@ struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
     constexpr u64 nzcv() const {
         constexpr u64 NZCV_BIT_MASK = 0xF;
 
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
+        return (Base::get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
     }
 
-#elif defined(ASMGRADER_X86_64)
+private:
+    Aarch64FlagsBase() = default;
+    friend Base;
+};
+
+/// Derived classes should use Aarch64FlagsBase with the CRTP pattern
+template <typename Base>
+struct X64FlagsBase
+{
+    // TODO: Implement specific flag getters
+
     // Specification of eflags obtained from:
     //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
     //   Volume 1 - 3.4.3.1 Status Flags
@@ -243,7 +242,45 @@ struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
     static constexpr u64 ZERO_FLAG_BIT = 1U << 6;
     static constexpr u64 NEGATIVE_FLAG_BIT = 1U << 7;
     static constexpr u64 OVERFLOW_FLAG_BIT = 1U << 11;
+
+private:
+    X64FlagsBase() = default;
+    friend Base;
+};
+
+#if defined(ASMGRADER_AARCH64)
+template <typename CrtpBase>
+using FlagsArchBase = Aarch64FlagsBase<CrtpBase>;
+#elif defined(ASMGRADER_X86_64)
+template <typename CrtpBase>
+using FlagsArchBase = X64FlagsBase<CrtpBase>;
 #endif
+
+template <ProcessorKind Arch = SYSTEM_PROCESSOR>
+struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>, FlagsArchBase<FlagsRegister<Arch>>
+{
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
+
+    constexpr bool negative_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::NEGATIVE_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool zero_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::ZERO_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool carry_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::CARRY_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool overflow_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::OVERFLOW_FLAG_BIT) != 0U;
+    }
 };
 
 static_assert(sizeof(FlagsRegister<>) == sizeof(u64));
