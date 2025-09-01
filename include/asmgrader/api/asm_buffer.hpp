@@ -20,7 +20,7 @@
 namespace asmgrader {
 
 template <std::size_t NumBytes>
-class AsmBuffer : public AsmData<ByteArray<NumBytes>>
+class AsmBuffer : public AsmData<NativeByteArray<NumBytes>>
 {
 public:
     explicit AsmBuffer(Program& prog);
@@ -29,7 +29,7 @@ public:
 
     std::string str() const;
 
-    ByteArray<NumBytes> fill(Byte byte) const;
+    NativeByteArray<NumBytes> fill(Byte byte) const;
 
 private:
     static std::uintptr_t get_alloced_address(Program& prog) { return prog.alloc_mem(NumBytes); }
@@ -41,24 +41,24 @@ std::size_t AsmBuffer<NumBytes>::size() const {
 }
 
 template <std::size_t NumBytes>
-ByteArray<NumBytes> AsmBuffer<NumBytes>::fill(Byte byte) const {
-    auto prev = TRY_OR_THROW(AsmData<ByteArray<NumBytes>>::get_value(), "could not read previous data value");
+NativeByteArray<NumBytes> AsmBuffer<NumBytes>::fill(Byte byte) const {
+    auto prev = TRY_OR_THROW(AsmData<NativeByteArray<NumBytes>>::get_value(), "could not read previous data value");
 
-    ByteArray<NumBytes> buf;
+    NativeByteArray<NumBytes> buf;
     ranges::fill(buf, byte);
 
-    AsmData<ByteArray<NumBytes>>::set_value(buf);
+    AsmData<NativeByteArray<NumBytes>>::set_value(buf);
 
     return prev;
 }
 
 template <std::size_t NumBytes>
 std::string AsmBuffer<NumBytes>::str() const {
-    MemoryIOBase& mio = AsmData<ByteArray<NumBytes>>::get_program().get_subproc().get_tracer().get_memory_io();
+    MemoryIOBase& mio = AsmData<NativeByteArray<NumBytes>>::get_program().get_subproc().get_tracer().get_memory_io();
 
-    auto addr = AsmData<ByteArray<NumBytes>>::get_address();
+    auto addr = AsmData<NativeByteArray<NumBytes>>::get_address();
 
-    auto byte_str = TRY_OR_THROW(mio.read<ByteArray<NumBytes>>(addr), "failed to read buffer");
+    auto byte_str = TRY_OR_THROW(mio.read<NativeByteArray<NumBytes>>(addr), "failed to read buffer");
 
     return byte_str | ranges::views::transform([](Byte byte) { return static_cast<char>(byte.value); }) |
            ranges::views::take_while([](char chr) { return chr != 0; }) | ranges::to<std::string>();
@@ -66,6 +66,6 @@ std::string AsmBuffer<NumBytes>::str() const {
 
 template <std::size_t NumBytes>
 AsmBuffer<NumBytes>::AsmBuffer(Program& prog)
-    : AsmData<ByteArray<NumBytes>>{prog, get_alloced_address(prog)} {}
+    : AsmData<NativeByteArray<NumBytes>>{prog, get_alloced_address(prog)} {}
 
 } // namespace asmgrader

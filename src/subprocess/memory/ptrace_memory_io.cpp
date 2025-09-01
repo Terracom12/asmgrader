@@ -12,11 +12,11 @@
 
 namespace asmgrader {
 
-Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
+Result<NativeByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::size_t length) {
     // TODO: Detetermine whether alignment logic is necessary
 
     // TODO: Use <algorithm> instead of ptr arithmetic
-    ByteVector result_buffer(length);
+    NativeByteVector result_buffer(length);
     auto* raw_buffer_ptr = reinterpret_cast<unsigned char*>(result_buffer.data());
 
     // NOLINTBEGIN(google-runtime-int) - based on ptrace(2) spec
@@ -41,7 +41,7 @@ Result<ByteVector> PtraceMemoryIO::read_block_impl(std::uintptr_t address, std::
     return result_buffer;
 }
 
-Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const ByteVector& data) {
+Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const NativeByteVector& data) {
     // TODO: Detetermine whether alignment logic is necessary
     // static constexpr int ALIGNMENT = sizeof(long); // NOLINT(google-runtime-int) - based on ptrace(2) spec
     // ASSERT(/*addr % ALIGNMENT == 0 &&*/ data.size() % ALIGNMENT == 0,
@@ -84,13 +84,13 @@ Result<void> PtraceMemoryIO::write_block_impl(std::uintptr_t address, const Byte
 }
 
 // TODO: Consolidate repeated code in this and other read fn
-// ByteVector PtraceMemoryIO::read_until_impl(std::uintptr_t address, const std::function<bool(std::byte)>& predicate) {
+// NativeByteVector PtraceMemoryIO::read_until_impl(std::uintptr_t address, const std::function<bool(std::byte)>& predicate) {
 //     constexpr std::size_t MAX_SIZE = 10 * std::mega::num; // 10 MB
 //     constexpr std::size_t INIT_SIZE = 128;
 //     // TODO: Detetermine whether alignment logic is necessary
 //
 //     // TODO: Use <algorithm> instead of ptr arithmetic
-//     ByteVector result_buffer;
+//     NativeByteVector result_buffer;
 //     result_buffer.reserve(INIT_SIZE);
 //
 //     // Credit: https://unix.stackexchange.com/a/9068

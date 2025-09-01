@@ -1,5 +1,6 @@
 #pragma once
 
+#include <asmgrader/common/bit_casts.hpp>
 #include <asmgrader/common/byte.hpp>
 #include <asmgrader/common/byte_vector.hpp>
 #include <asmgrader/common/error_types.hpp>
@@ -27,7 +28,7 @@ namespace asmgrader {
 /// {
 /// public:
 ///     static Result<T> read(std::uintptr_t address, TraceeMemory& mio);
-///     static ByteVector to_bytes(const T& data);
+///     static NativeByteVector to_bytes(const T& data);
 /// };
 template <typename T>
 struct MemoryIOSerde;
@@ -37,12 +38,12 @@ namespace detail {
 // FIXME: Some of this is probably UB
 
 template <typename T>
-ByteVector reinterpret_raw(const T& data) {
+NativeByteVector reinterpret_raw(const T& data) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     const auto* first = reinterpret_cast<const std::byte*>(&data);
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    return ByteVector{first, first + sizeof(data)};
+    return NativeByteVector{first, first + sizeof(data)};
 }
 
 template <typename T>
@@ -52,10 +53,10 @@ const T* reinterpret_raw(const std::vector<std::byte>& data) {
 }
 
 template <typename T>
-ByteVector reinterpret_raw_each(const T& range) {
+NativeByteVector reinterpret_raw_each(const T& range) {
     constexpr std::size_t VALUE_SIZE = sizeof(typename T::value_type);
     const std::size_t size = std::size(range) * VALUE_SIZE;
-    ByteVector result(size);
+    NativeByteVector result(size);
 
     for (auto it = result.begin(); const auto& elem : range) {
         it = ranges::copy(reinterpret_raw(elem), it).out;
@@ -67,9 +68,9 @@ ByteVector reinterpret_raw_each(const T& range) {
 } // namespace detail
 
 template <>
-struct MemoryIOSerde<ByteVector>
+struct MemoryIOSerde<NativeByteVector>
 {
-    static ByteVector to_bytes(const ByteVector& data) { return data; }
+    static NativeByteVector to_bytes(const NativeByteVector& data) { return data; }
 };
 
 // "Raw" conversions (essentially just reinterpret_cast)
@@ -84,7 +85,7 @@ struct MemoryIOSerde<T>
         return raw_data.bit_cast_to<T>();
     }
 
-    static ByteVector to_bytes(const T& data) { return detail::reinterpret_raw(data); }
+    static NativeByteVector to_bytes(const T& data) { return detail::reinterpret_raw(data); }
 };
 
 template <>
@@ -97,15 +98,15 @@ struct MemoryIOSerde<std::string>
         return data_to_str(raw_data);
     }
 
-    static ByteVector to_bytes(const std::string& data) {
+    static NativeByteVector to_bytes(const std::string& data) {
         // Include '\0'
-        auto raw_data = ByteVector::from(data);
+        auto raw_data = asmgrader::to_bytes<NativeByteVector>(data);
         raw_data.push_back(static_cast<std::byte>('\0'));
 
         return raw_data;
     }
 
-    static std::string data_to_str(const ByteVector& data) { return data.to_range<std::string>(); }
+    static std::string data_to_str(const NativeByteVector& data) { return data.to_range<std::string>(); }
 };
 
 template <std::size_t Length>
@@ -117,7 +118,7 @@ struct MemoryIOSerde<NonTermString<Length>>
         return {.string = MemoryIOSerde<std::string>::data_to_str(raw_data)};
     }
 
-    static ByteVector to_bytes(const NonTermString<Length>& data) {
+    static NativeByteVector to_bytes(const NonTermString<Length>& data) {
         return detail::reinterpret_raw_each(std::string_view{data.string, data.string + data.LENGTH});
     }
 };

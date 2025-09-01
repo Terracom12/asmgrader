@@ -15,8 +15,8 @@ class PtraceMemoryIO final : public MemoryIOBase
     using MemoryIOBase::MemoryIOBase;
 
 private:
-    Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override;
-    Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) override;
+    Result<NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override;
+    Result<void> write_block_impl(std::uintptr_t address, const NativeByteVector& data) override;
 };
 
 } // namespace asmgrader

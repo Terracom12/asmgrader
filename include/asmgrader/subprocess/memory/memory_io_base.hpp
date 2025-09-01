@@ -64,7 +64,7 @@ public:
         return result;
     }
 
-    Result<ByteVector> read_bytes(std::uintptr_t address, std::size_t length) {
+    Result<NativeByteVector> read_bytes(std::uintptr_t address, std::size_t length) {
         return this->read_block_impl(address, length);
     }
 
@@ -85,7 +85,7 @@ public:
 
     template <MemoryWriteSupported T>
     Result<std::size_t> write(std::uintptr_t address, const T& data) {
-        ByteVector bytes = MemoryIOSerde<T>::to_bytes(data);
+        NativeByteVector bytes = MemoryIOSerde<T>::to_bytes(data);
         TRY(this->write_block_impl(address, bytes));
         return bytes.size();
     }
@@ -98,13 +98,13 @@ private:
     template <typename T>
     friend struct MemoryIOSerde;
 
-    virtual Result<ByteVector> read_until(std::uintptr_t address, const std::function<bool(Byte)>& predicate);
-    virtual Result<ByteVector> read_until(std::uintptr_t address,
-                                          const std::function<bool(std::span<const Byte>)>& predicate,
-                                          std::size_t block_size);
+    virtual Result<NativeByteVector> read_until(std::uintptr_t address, const std::function<bool(Byte)>& predicate);
+    virtual Result<NativeByteVector> read_until(std::uintptr_t address,
+                                            const std::function<bool(std::span<const Byte>)>& predicate,
+                                            std::size_t block_size);
 
-    virtual Result<ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;
-    virtual Result<void> write_block_impl(std::uintptr_t address, const ByteVector& data) = 0;
+    virtual Result<NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;
+    virtual Result<void> write_block_impl(std::uintptr_t address, const NativeByteVector& data) = 0;
 };
 
 } // namespace asmgrader

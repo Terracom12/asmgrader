@@ -1,8 +1,11 @@
 #pragma once
 
 #include <asmgrader/common/byte.hpp>
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/meta/static_size.hpp>
 
 #include <gsl/assert>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/iterator/traits.hpp>
@@ -14,13 +17,12 @@
 #include <array>
 #include <cstddef>
 #include <memory>
-#include <span>
 #include <type_traits>
 #include <utility>
 
 namespace asmgrader {
 
-template <std::size_t Size>
+template <std::size_t Size, EndiannessKind Endianness>
 class ByteArray
 {
 public:
@@ -38,89 +40,29 @@ public:
     using reverse_iterator = std::array<Byte, Size>::reverse_iterator;
     using const_reverse_iterator = std::array<Byte, Size>::const_reverse_iterator;
 
-    // // Conversion constructor from other containers holding "byte-like" objects (char, unsigned char)
-    // template <typename T>
-    //     requires requires(T::value_type value) {
-    //         { static_cast<Byte>(value) };
-    //     }
-    // explicit constexpr from(const T& container)
-    //     : ByteArray{container} {
-    //     static_assert(container.size() <= Size, "Container is to large to fit into this ByteArray");
-    // }
-    //
-    // template <ranges::range Range>
-    // explicit constexpr ByteArray(Range&& range) {
-    //     Expects(range.size() <= Size);
-    //
-    //     from_range(std::forward<Range>(range));
-    // }
-    //
+    Byte& operator[](size_t idx) { return data[idx]; }
 
-    auto begin() { return data.begin(); }
+    const Byte& operator[](size_t idx) const { return data[idx]; }
 
-    auto begin() const { return data.begin(); }
+    constexpr Byte& at(size_t idx) { return data.at(idx); }
 
-    auto cbegin() const { return data.cend(); }
+    const Byte& at(size_t idx) const { return data.at(idx); }
 
-    auto end() { return data.end(); }
+    constexpr bool empty() const { return data.empty(); }
 
-    auto end() const { return data.end(); }
+    constexpr auto begin() { return data.begin(); }
 
-    auto cend() const { return data.cend(); }
+    constexpr auto begin() const { return data.begin(); }
 
-    std::size_t size() const { return data.size(); }
+    constexpr auto cbegin() const { return data.cend(); }
 
-    /// T should be a stdlib-compatible container type
-    /// where Byte is convertible to T::value_type
-    template <ranges::range Range>
-        requires requires(Range rng, std::size_t size, Byte byte) {
-            { rng.resize(size) };
-            { static_cast<ranges::range_value_t<Range>>(byte.value) };
-        }
-    constexpr Range to() const {
-        Range result;
-        result.resize(size());
+    constexpr auto end() { return data.end(); }
 
-        ranges::transform(*this, result.begin(),
-                          [](Byte byte) { return static_cast<ranges::range_value_t<Range>>(byte.value); });
+    constexpr auto end() const { return data.end(); }
 
-        return result;
-    }
+    constexpr auto cend() const { return data.cend(); }
 
-    // template <typename T>
-    //     requires requires(T rng, std::size_t size, Byte byte) {
-    //         { rng.resize(size) };
-    //         { static_cast<T::value_type>(byte) };
-    //     }
-    // constexpr T to() const {
-    //     T result;
-    //     result.resize(this->size());
-    //
-    //     ranges::transform(*this, result.begin(), [](Byte value) { return static_cast<T::value_type>(value); });
-    //
-    //     return result;
-    // }
-
-    template <ranges::range Range>
-    static constexpr ByteArray bit_cast_range(Range&& range) {
-        auto raw_bytes = std::as_bytes(
-            std::span{ranges::begin(std::forward<Range>(range)), ranges::end(std::forward<Range>(range))});
-
-        ByteArray<Size> res{};
-        res.from_range(raw_bytes);
-        return res;
-    }
-
-    template <typename... Ts>
-    static constexpr ByteArray bit_cast(const Ts&... args) {
-        ByteArray result{};
-
-        auto it = ranges::begin(result);
-
-        (ranges::copy(std::bit_cast<std::array<Byte, sizeof(Ts)>>(args), std::exchange(it, it + sizeof(Ts))), ...);
-
-        return result;
-    }
+    constexpr std::size_t size() const { return data.size(); }
 
     std::array<Byte, Size> data;
 
@@ -130,12 +72,73 @@ private:
             { Byte{value} };
         }
     constexpr void from_range(Range&& range) {
-        // static_assert(get_size_if_constexpr(range) <= Size, "Passed range is too large for this ByteArray");
-        Expects(ranges::size(range) < Size);
+        ASSERT(get_static_size_or<Range>(ranges::size(range)) <= Size);
+
         ranges::transform(std::forward<Range>(range), data.begin(), [](Byte value) { return Byte{value}; });
     }
 };
 
-static_assert(std::is_aggregate_v<ByteArray<1>>);
+/// Deduction guide
+template <typename T, typename... U>
+ByteArray(T, U...) -> ByteArray<sizeof...(U) + 1, EndiannessKind::Native>;
+
+template <std::size_t N>
+using NativeByteArray = ByteArray<N, EndiannessKind::Native>;
+
+static_assert(std::is_aggregate_v<NativeByteArray<0>>);
+static_assert(std::is_aggregate_v<NativeByteArray<1>>);
+static_assert(std::is_aggregate_v<NativeByteArray<10>>);
 
 } // namespace asmgrader
+
+namespace std {
+
+/// Specialization of tuple_size to play nice with algorithms that work on tuple-like types
+template <std::size_t Size>
+// See: https://en.cppreference.com/w/cpp/utility/tuple_size.html
+// NOLINTNEXTLINE(cert-dcl58-cpp) - this is well defined and probably a clang-tidy bug
+struct tuple_size<::asmgrader::NativeByteArray<Size>> : public std::integral_constant<std::size_t, Size>
+{
+};
+
+/// Specialization of tuple_element to play nice with algorithms that work on tuple-like types
+template <std::size_t I, std::size_t N>
+    requires(I < N)
+// See: https://en.cppreference.com/w/cpp/container/array/tuple_element.html
+// NOLINTNEXTLINE(cert-dcl58-cpp) - this is well defined and probably a clang-tidy bug
+struct tuple_element<I, ::asmgrader::NativeByteArray<N>>
+{
+    using type = asmgrader::Byte;
+};
+
+} // namespace std
+
+/// Specialization of get to play nice with algorithms that work on tuple-like types
+template <std::size_t I, std::size_t N>
+    requires(I < N)
+constexpr ::asmgrader::Byte& get(::asmgrader::NativeByteArray<N>& arr) {
+    return arr.data.at(I);
+}
+
+/// \overload
+template <std::size_t I, std::size_t N>
+    requires(I < N)
+constexpr const ::asmgrader::Byte& get(const ::asmgrader::NativeByteArray<N>& arr) {
+    return arr.data.at(I);
+}
+
+/// \overload
+template <std::size_t I, std::size_t N>
+    requires(I < N)
+// TODO: double check this rvalue usage
+// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved) - I think this is correct?
+constexpr ::asmgrader::Byte&& get(::asmgrader::NativeByteArray<N>&& arr) {
+    return arr.data.at(I);
+}
+
+/// \overload
+template <std::size_t I, std::size_t N>
+    requires(I < N)
+constexpr const ::asmgrader::Byte&& get(const ::asmgrader::NativeByteArray<N>&& arr) {
+    return arr.data.at(I);
+}

@@ -31,12 +31,12 @@ public:
         : MemoryIOBase(-1) {}
 
 private:
-    asmgrader::Result<asmgrader::ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
+    asmgrader::Result<asmgrader::NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
         ASSERT(address + length < N);
-        return asmgrader::ByteVector{begin(data_) + address, begin(data_) + address + length};
+        return asmgrader::NativeByteVector{begin(data_) + address, begin(data_) + address + length};
     }
 
-    asmgrader::Result<void> write_block_impl(std::uintptr_t address, const asmgrader::ByteVector& data) override {
+    asmgrader::Result<void> write_block_impl(std::uintptr_t address, const asmgrader::NativeByteVector& data) override {
         ASSERT(address + data.size() < N);
         ranges::copy(data, begin(data_) + address);
 

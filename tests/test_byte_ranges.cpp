@@ -1,6 +1,7 @@
 #include "catch2_custom.hpp"
 
 #include "common/aliases.hpp"
+#include "common/bit_casts.hpp"
 #include "common/byte.hpp"
 #include "common/byte_vector.hpp"
 
@@ -16,33 +17,31 @@
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/view/transform.hpp>
 
-#include <any>
 #include <array>
-#include <cstddef>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
 
-using asmgrader::ByteVector, asmgrader::Byte;
+using asmgrader::NativeByteVector, asmgrader::Byte, asmgrader::to_bytes;
 using namespace asmgrader::aliases;
 
 using Catch::Matchers::RangeEquals, Catch::Matchers::IsEmpty;
 
-TEST_CASE("ByteVector constructors") {
+TEST_CASE("NativeByteVector constructors") {
     const std::vector<Byte> source{1, 2, 3};
 
-    REQUIRE_THAT(ByteVector(source.begin(), source.end()), RangeEquals(source));
+    REQUIRE_THAT(NativeByteVector(source.begin(), source.end()), RangeEquals(source));
 
-    REQUIRE_THAT((ByteVector{1, 2, 3}), RangeEquals(source));
+    REQUIRE_THAT((NativeByteVector{1, 2, 3}), RangeEquals(source));
 
-    REQUIRE_THAT(ByteVector(0, 1), IsEmpty());
+    REQUIRE_THAT(NativeByteVector(0, 1), IsEmpty());
 
-    REQUIRE_THAT(ByteVector(1, 0x1), RangeEquals(std::vector<Byte>{1}));
+    REQUIRE_THAT(NativeByteVector(1, 0x1), RangeEquals(std::vector<Byte>{1}));
 
-    REQUIRE_THAT(ByteVector(3, 0xA), RangeEquals(std::vector<Byte>{0xA, 0xA, 0xA}));
+    REQUIRE_THAT(NativeByteVector(3, 0xA), RangeEquals(std::vector<Byte>{0xA, 0xA, 0xA}));
 }
 
-TEST_CASE("ByteVector standard operations") {
+TEST_CASE("NativeByteVector standard operations") {
     std::vector<Byte> vec{1, 2, 3};
 
     SECTION("Size access and resize") {
@@ -93,7 +92,7 @@ TEST_CASE("ByteVector standard operations") {
     }
 }
 
-TEST_CASE("ByteVector bit casting conversions") {
+TEST_CASE("bit casting conversions") {
     struct S
     {
         int i;
@@ -103,7 +102,7 @@ TEST_CASE("ByteVector bit casting conversions") {
 
     SECTION("from and to simple arg") {
         auto val = GENERATE(0x0, 0x1234, 0x0ABCDEF123456789);
-        auto vec = ByteVector::from(val);
+        auto vec = to_bytes<NativeByteVector>(val);
 
         REQUIRE(vec.size() == sizeof(val));
         REQUIRE(vec.bit_cast_to<decltype(val)>() == val);
@@ -111,7 +110,7 @@ TEST_CASE("ByteVector bit casting conversions") {
 
     SECTION("from and to structured arg") {
         auto val = GENERATE(S{0, 0.0}, S{42, 3.141592}, S{999999, 0.000000001});
-        auto vec = ByteVector::from(val);
+        auto vec = to_bytes<NativeByteVector>(val);
 
         REQUIRE(vec.size() == sizeof(val));
         REQUIRE(vec.bit_cast_to<decltype(val)>() == val);
@@ -119,7 +118,7 @@ TEST_CASE("ByteVector bit casting conversions") {
 
     SECTION("from and to simple multi args") {
         auto val = GENERATE(S{0, 0.0}, S{42, 3.141592}, S{999999, 0.000000001});
-        auto vec = ByteVector::from(val.i, val.d);
+        auto vec = to_bytes<NativeByteVector>(val.i, val.d);
 
         REQUIRE(vec.size() == sizeof(int) + sizeof(double));
         REQUIRE(vec.bit_cast_to<int>() == val.i);
@@ -136,7 +135,7 @@ TEST_CASE("ByteVector bit casting conversions") {
 
         auto val =
             GENERATE(G{{0, 0.0}, 0, 0.0}, G{{42, 3.141592}, 2837, 1.4141}, G{{999999, 0.000000001}, -12345, 354e300});
-        auto vec = ByteVector::from(val.s, val.i, val.d);
+        auto vec = to_bytes<NativeByteVector>(val.s, val.i, val.d);
 
         REQUIRE(vec.size() == sizeof(S) + sizeof(int) + sizeof(double));
         REQUIRE(vec.bit_cast_to<S>() == val.s);
@@ -146,17 +145,17 @@ TEST_CASE("ByteVector bit casting conversions") {
 
     SECTION("from ranges") {
         std::array src{S{0, 0.0}, S{42, 3.141592}, S{999999, 0.000000001}};
-        auto vec = ByteVector::from(src);
+        auto vec = to_bytes<NativeByteVector>(src);
 
         REQUIRE(vec.size() == sizeof(src));
         REQUIRE(vec.bit_cast_to<decltype(src)>() == src);
 
         std::vector<int> empty{};
-        REQUIRE_THAT(ByteVector::from(empty), IsEmpty());
+        REQUIRE_THAT(to_bytes<NativeByteVector>(empty), IsEmpty());
     }
     SECTION("to ranges") {
         std::vector<u8> src{0x01, 0x23, 0x45, 0x67, 0x89};
-        auto vec = ByteVector::from(src);
+        auto vec = to_bytes<NativeByteVector>(src);
 
         REQUIRE(vec.size() == src.size());
         REQUIRE_THAT(vec.to_range<std::vector<u8>>(), RangeEquals(src));

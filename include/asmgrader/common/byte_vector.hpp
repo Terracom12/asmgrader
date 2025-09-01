@@ -2,6 +2,7 @@
 
 #include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/byte.hpp>
+#include <asmgrader/common/os.hpp>
 
 #include <boost/mp11/detail/mp_list.hpp>
 #include <boost/mp11/list.hpp>
@@ -21,7 +22,6 @@
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
-#include <span>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -29,6 +29,7 @@
 
 namespace asmgrader {
 
+template <EndiannessKind Endianness>
 class ByteVector
 {
 public:
@@ -143,26 +144,6 @@ public:
         }
     }
 
-    template <ranges::range Range>
-    static ByteVector from(const Range& range) {
-        auto raw_bytes = std::as_bytes(std::span{range});
-
-        static_assert(ranges::input_iterator<decltype(raw_bytes.begin())>);
-
-        return {raw_bytes.begin(), raw_bytes.end()};
-    }
-
-    template <typename... Ts>
-    static ByteVector from(const Ts&... args) {
-        ByteVector result((sizeof(Ts) + ...));
-
-        auto it = ranges::begin(result);
-
-        (ranges::copy(std::bit_cast<std::array<Byte, sizeof(Ts)>>(args), std::exchange(it, it + sizeof(Ts))), ...);
-
-        return result;
-    }
-
 private:
     template <ranges::range Range>
         requires requires(ranges::range_value_t<Range> value) { static_cast<Byte>(value); }
@@ -173,8 +154,12 @@ private:
     }
 
     std::vector<Byte> data_;
+    // TODO:
+    // Endianness endianness_ = Endianness::Native;
 };
 
-static_assert(ranges::range<ByteVector>);
+using NativeByteVector = ByteVector<EndiannessKind::Native>;
+
+static_assert(ranges::range<NativeByteVector>);
 
 } // namespace asmgrader
