@@ -86,8 +86,9 @@ test-release: build-release  ## run tests in release mode
 .PHONY: clean
 clean: ## remove build objects, libraries, executables, and test reports
 	rm -rf reports/*
-	cmake --build --preset $(DEBUG_PRESET) --target clean
-	cmake --build --preset $(RELEASE_PRESET) --target clean
+	-cmake --build --preset $(DEBUG_PRESET) --target clean
+	-cmake --build --preset $(RELEASE_PRESET) --target clean
+	-cmake --build --preset $(DOCS_PRESET) --target clean
 
 .PHONY: deep-clean
 deep-clean: ## remove all build files and configuration
