@@ -1,7 +1,10 @@
 #pragma once
 
-#include <boost/endian.hpp>
-#include <boost/endian/detail/order.hpp>
+#include <asmgrader/common/aliases.hpp>
+
+#include <libassert/assert.hpp>
+
+#include <bit>
 
 namespace asmgrader {
 
@@ -18,9 +21,29 @@ constexpr auto SYSTEM_PROCESSOR = ProcessorKind::x86_64;
 #error "Unsupported system architecture!"
 #endif
 
-enum class EndiannessKind { Little, Big };
+consteval bool is_little_endian() {
+    struct S
+    {
+        u8 msb;
+        u8 lsb;
+    };
 
-constexpr auto ENDIANNESS =
-    (boost::endian::order::native == boost::endian::order::little ? EndiannessKind::Little : EndiannessKind::Big);
+    static_assert(sizeof(S) == 2, "Strange, unsupported system. struct { u8; u8; } is not packed as 2 bytes.");
+
+    u16 one = 0x00'01;
+
+    auto check = std::bit_cast<S>(one);
+
+    if (check.msb == 1 && check.lsb == 0) {
+        return true;
+    }
+    if (check.msb == 0 && check.lsb == 1) {
+        return false;
+    }
+
+    UNREACHABLE("Unsupported system endianness!");
+}
+
+enum class EndiannessKind { Little = 0, Big = 1, Native = (is_little_endian() ? Little : Big) };
 
 } // namespace asmgrader
