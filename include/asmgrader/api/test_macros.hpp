@@ -71,3 +71,9 @@
         return ::asmgrader::metadata::Metadata{__VA_ARGS__};                                                           \
     }                                                                                                                  \
     } // namespace metadata
+
+// Macros for registers and flags
+
+#define REGS_MACRO_IMPL(ident) ctx.get_registers().ident()
+
+#define X0 ctx.get_registers
