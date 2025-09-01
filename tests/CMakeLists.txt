@@ -6,22 +6,14 @@ enable_testing()
 include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
 
 set(
-    CONSTEXPR_TESTS_SRCS
+    TESTS_SRCS
 
     test_static_expected.cpp
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
     test_static_string.cpp
     test_static_byte.cpp
-)
-
-##### Test runner executable
-
-add_executable(
-    asmgrader_tests
-
-    catch2_custom.hpp
-
+    test_bit_casts.cpp
     test_metadata.cpp
     test_subprocess.cpp
     test_expected.cpp
@@ -32,8 +24,16 @@ add_executable(
     test_registers_state.cpp
     test_file_searcher.cpp
     test_byte_ranges.cpp
+)
 
-    ${CONSTEXPR_TESTS_SRCS}
+##### Test runner executable
+
+add_executable(
+    asmgrader_tests
+
+    catch2_custom.hpp
+
+    ${TESTS_SRCS}
 
     catch_main.cpp
 )
@@ -54,11 +54,14 @@ target_link_libraries(
     asmgrader_core_interface
 )
 
+# TODO: Migh want to look into changing this later.
+# Just attempt to compile all tests in the constexpr version for simplicity,
+# since there really aren't that many.
 add_executable(
     asmgrader_constexpr_tests
     EXCLUDE_FROM_ALL
 
-    ${CONSTEXPR_TESTS_SRCS}
+    ${TESTS_SRCS}
 )
 
 target_link_libraries(
@@ -68,6 +71,14 @@ target_link_libraries(
     PRIVATE 
     Catch2::Catch2WithMain
     asmgrader_core_interface
+)
+
+target_compile_definitions(
+    asmgrader_constexpr_tests
+
+    PRIVATE
+    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
 )
 
 ##### Simple assembly executable
