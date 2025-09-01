@@ -68,10 +68,12 @@ add_subdirectory(src)
 include(CTest)
 
 if (ASMGRADER_BUILD_TESTS)
+    message(STATUS "Building asmgrader_tests")
     add_subdirectory(tests)
 endif()
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/cs3b-grader/CMakeLists.txt")
+    message(STATUS "Including subproject cs3b-grader")
     add_subdirectory(cs3b-grader)
 endif()
 
