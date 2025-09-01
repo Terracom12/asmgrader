@@ -84,4 +84,11 @@ StudentInfo AssignmentFileSearcher::infer_student_names_from_file(const std::fil
             .subst_regex_string = ""};
 }
 
+std::vector<StudentInfo> AssignmentFileSearcher::search(const std::filesystem::path& base) {
+    return search_recursive(base, 0);
+}
+
+bool AssignmentFileSearcher::search(StudentInfo& student, const std::filesystem::path& base) {
+    return search_recursive(student, base, 0);
+}
 } // namespace asmgrader

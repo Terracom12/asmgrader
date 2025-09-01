@@ -8,6 +8,7 @@
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/traced_subprocess.hpp"
 
+#include <catch2/catch_test_macros.hpp>
 #include <fmt/ranges.h>
 
 #include <chrono>
@@ -17,17 +18,20 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-static_assert(requires(asmgrader::Result<std::timespec> r, std::timespec t) {
-    t == t;
-    r == r;
-    r == t;
-    t == r;
-});
+TEST_CASE("timespec operator== is defined correctly") {
+    STATIC_REQUIRE(requires(asmgrader::Result<std::timespec> r, std::timespec t) {
+        t == t;
+        r == r;
+        r == t;
+        t == r;
+    });
 
-static_assert(requires(std::variant<asmgrader::Result<std::timespec>, double> a, asmgrader::Result<std::timespec> r) {
-    a == a;
-    a != a;
-});
+    STATIC_REQUIRE(
+        requires(std::variant<asmgrader::Result<std::timespec>, double> a, asmgrader::Result<std::timespec> r) {
+            a == a;
+            a != a;
+        });
+}
 
 TEST_CASE("Read /bin/echo stdout") {
     using namespace std::chrono_literals;

@@ -5,13 +5,15 @@ enable_testing()
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
 include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
 
-##### Test runner executable
+set(
+    TESTS_SRCS
 
-add_executable(
-    asmgrader_tests
-
-    catch2_custom.hpp
-
+    test_static_expected.cpp
+    test_static_formatters.cpp
+    test_static_tuple_matcher.cpp
+    test_static_string.cpp
+    test_static_byte.cpp
+    test_bit_casts.cpp
     test_metadata.cpp
     test_subprocess.cpp
     test_expected.cpp
@@ -20,9 +22,27 @@ add_executable(
     test_program.cpp
     test_database_reader.cpp
     test_registers_state.cpp
-    test_formatters.cpp
+    test_file_searcher.cpp
+    test_byte_ranges.cpp
+)
+
+##### Test runner executable
+
+add_executable(
+    asmgrader_tests
+
+    catch2_custom.hpp
+
+    ${TESTS_SRCS}
 
     catch_main.cpp
+)
+
+target_compile_definitions(
+    asmgrader_tests
+
+    PUBLIC
+    CATCH_CONFIG_RUNTIME_STATIC_REQUIRE # Make STATIC_REQUIRE behave as REQUIRE
 )
 
 target_link_libraries(
@@ -34,16 +54,44 @@ target_link_libraries(
     asmgrader_core_interface
 )
 
+# TODO: Migh want to look into changing this later.
+# Just attempt to compile all tests in the constexpr version for simplicity,
+# since there really aren't that many.
+add_executable(
+    asmgrader_constexpr_tests
+    EXCLUDE_FROM_ALL
+
+    ${TESTS_SRCS}
+)
+
+target_link_libraries(
+    asmgrader_constexpr_tests
+    PUBLIC asmgrader_core
+
+    PRIVATE 
+    Catch2::Catch2WithMain
+    asmgrader_core_interface
+)
+
+target_compile_definitions(
+    asmgrader_constexpr_tests
+
+    PRIVATE
+    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
+)
+
 ##### Simple assembly executable
 
 
-add_asm_arch_specific_impl(asm_tests simple_asm)
+add_asm_arch_specific_impl(asm_tests resources/simple_asm)
 
 target_compile_definitions(
     asmgrader_tests
 
     PRIVATE
     "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
 )
 
 # !!DISCLAIMER!!
@@ -68,4 +116,10 @@ catch_discover_tests(
     ".xml"
     EXTRA_ARGS
     "--reporter console::out=-"
+)
+
+add_test(
+    NAME asmgrader_constexpr_tests
+    COMMAND ${CMAKE_MAKE_PROGRAM} asmgrader_constexpr_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )

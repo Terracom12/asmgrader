@@ -1,12 +1,12 @@
 #include "catch2_custom.hpp"
 
 #include "common/aliases.hpp"
+#include "common/byte.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
-#include "common/timespec_operator_eq.hpp" // operator==(timespec, timespec)
-#include "logging.hpp"
+#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep
 #include "subprocess/memory/memory_io_base.hpp"
-#include "subprocess/memory/memory_io_serde.hpp"
+#include "subprocess/memory/memory_io_serde.hpp" // IWYU pragma: keep; document why?
 #include "subprocess/memory/non_terminated_str.hpp"
 
 #include <libassert/assert.hpp>
@@ -31,19 +31,19 @@ public:
         : MemoryIOBase(-1) {}
 
 private:
-    asmgrader::Result<asmgrader::ByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
+    asmgrader::Result<asmgrader::NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
         ASSERT(address + length < N);
-        return asmgrader::ByteVector{begin(data_) + address, begin(data_) + address + length};
+        return asmgrader::NativeByteVector{begin(data_) + address, begin(data_) + address + length};
     }
 
-    asmgrader::Result<void> write_block_impl(std::uintptr_t address, const asmgrader::ByteVector& data) override {
+    asmgrader::Result<void> write_block_impl(std::uintptr_t address, const asmgrader::NativeByteVector& data) override {
         ASSERT(address + data.size() < N);
         ranges::copy(data, begin(data_) + address);
 
         return {};
     }
 
-    std::array<std::byte, N> data_{};
+    std::array<asmgrader::Byte, N> data_{};
 };
 
 constexpr std::size_t MEM_SIZE = 1'024;

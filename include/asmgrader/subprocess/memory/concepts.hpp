@@ -25,7 +25,7 @@ concept MemoryReadSupported = requires(std::uintptr_t address, MemoryIOBase& mio
 };
 template <typename T>
 concept MemoryWriteSupported = requires(const T& data) {
-    { MemoryIOSerde<T>::to_bytes(data) } -> std::same_as<ByteVector>;
+    { MemoryIOSerde<T>::to_bytes(data) } -> std::same_as<NativeByteVector>;
 };
 template <typename T>
 concept MemoryRWSupported = MemoryReadSupported<T> && MemoryWriteSupported<T>;

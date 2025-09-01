@@ -337,8 +337,8 @@ inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, Data
     if (errno) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("ptrace(req={}, pid={}, addr={}, data={}) failed: '{}'", request, pid, fmt_or_unknown(addr),
-                  fmt_or_unknown(data), err);
+        LOG_DEBUG("ptrace(req={}, pid={}, addr={}, data={}) failed: '{}'", request, pid, format_or_unknown(addr),
+                  format_or_unknown(data), err);
 
         return err;
     }

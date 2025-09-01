@@ -2,23 +2,25 @@
 
 set -e
 
+BUILD_DIR="./build/unixlike-gcc-debug"
+
 if [[ $1 == "tests" || $1 == "t" ]]; then
     # Tell catch2 to break upon failure, allowing gdb to attach
-    EXEC="./build/tests/asmgrader_tests"
+    EXEC="$BUILD_DIR/tests/asmgrader_tests"
     EXEC_ARGS=(--break)
     shift
 elif [[ $1 == "prof" || $1 == "p" ]]; then
-    EXEC="./build/cs3b-grader/profgrader"
+    EXEC="$BUILD_DIR/cs3b-grader/profgrader"
     shift
 else
-    EXEC="./build/cs3b-grader/grader"
+    EXEC="$BUILD_DIR/cs3b-grader/grader"
     EXEC_ARGS=()
 fi
 
 if [[ $# ]]; then
     GDB_ARGS=("$@")
 fi
-for d in ./build/_deps/*-src; do
+for d in "$BUILD_DIR"/_deps/*-src; do
     GDB_ARGS=("--directory" "$d" "${GDB_ARGS[@]}")
 done
 

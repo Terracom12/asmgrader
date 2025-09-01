@@ -1,6 +1,7 @@
 #pragma once
 
 #include <asmgrader/common/formatters/debug.hpp>
+#include <asmgrader/common/formatters/unknown.hpp>
 
 #include <boost/describe.hpp>
 #include <boost/describe/enum.hpp>
@@ -83,10 +84,10 @@ struct fmt::formatter<std::optional<T>> : ::asmgrader::DebugFormatter
         }
 
         if (is_debug_format) {
-            return fmt::format_to(ctx.out(), "Optional({})", from.value());
+            return asmgrader::format_to_or_unknown(ctx.out(), from.value(), "Optional({})");
         }
 
-        return fmt::format_to(ctx.out(), "{}", from.value());
+        return asmgrader::format_to_or_unknown(ctx.out(), from.value(), "{}");
     }
 };
 
@@ -100,7 +101,7 @@ struct fmt::formatter<std::variant<Ts...>> : ::asmgrader::DebugFormatter
                 if constexpr (std::convertible_to<decltype(val), std::string_view>) {
                     inner = fmt::format("{:?}", val);
                 } else {
-                    inner = fmt::format("{}", val);
+                    inner = asmgrader::format_or_unknown(val, "{}");
                 }
                 return std::tuple{boost::typeindex::type_id<decltype(val)>().pretty_name(), inner};
             },
