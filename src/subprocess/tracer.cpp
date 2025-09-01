@@ -1,5 +1,7 @@
 #include "subprocess/tracer.hpp"
 
+#include "common/aliases.hpp"
+#include "common/bit_casts.hpp"
 #include "common/byte_vector.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
@@ -251,8 +253,8 @@ Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64
     // Encoding for:
     //   svc 0         - d4000001
     //   nop           - d503201f
-    ByteVector new_instrs = ByteVector::from<u32, std::uint32_t>(0xD4000001, //
-                                                                 0xD503201F);
+    NativeByteVector new_instrs = to_bytes<NativeByteVector, u32, u32>(0xD4000001, //
+                                                                       0xD503201F);
     TRY(memory_io_->write(instr_ptr, new_instrs));
 #elif defined(ASMGRADER_X86_64)
     // syscall args are rdi, rsi, rdx, r10, r8, r9
@@ -269,7 +271,7 @@ Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64
 
     // Encoding for:
     //   syscall - 0f05
-    ByteVector new_instrs = {0x0F, 0x05};
+    NativeByteVector new_instrs = {0x0F, 0x05};
     new_instrs.resize(8); // To keep proper alignment
 
     TRY(memory_io_->write(orig_regs.rip, new_instrs));
@@ -389,7 +391,7 @@ Result<void> Tracer::setup_function_return() {
     //   brk 0x1234    - d4224680
     //   nop           - d503201f
     // 32-bit alignment is required
-    auto instrs = ByteVector::from<u32, std::uint32_t>( //
+    auto instrs = to_bytes<NativeByteVector, u32, u32>( //
         0xD4224680,                                     //
         0xD503201F                                      //
     );
@@ -403,8 +405,8 @@ Result<void> Tracer::setup_function_return() {
     // Encoding for:
     //   int3 - 0xcc
     //   nop  - 0x90
-    ByteVector instrs = {0xCC, 0x90, 0x90, 0x90, //
-                         0x90, 0x90, 0x90, 0x90};
+    NativeByteVector instrs = {0xCC, 0x90, 0x90, 0x90, //
+                               0x90, 0x90, 0x90, 0x90};
 #endif
     // NOLINTEND(readability-magic-numbers)
 

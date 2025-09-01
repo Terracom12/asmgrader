@@ -5,6 +5,7 @@
 #include "api/registers_state.hpp"
 #include "api/test_base.hpp"
 #include "common/aliases.hpp"
+#include "common/bit_casts.hpp"
 #include "common/byte_array.hpp"
 #include "common/error_types.hpp"
 #include "common/macros.hpp"
@@ -28,6 +29,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -130,7 +132,7 @@ std::size_t TestContext::flush_stdin() {
         pollfd_stdin_only.fd = STDIN_FILENO;
         pollfd_stdin_only.events = POLLIN; // poll only for new data available to be read
 
-        STDIN_ONLY_POLLFD_BUFFER.set_value(ByteArray<sizeof(pollfd)>::bit_cast(pollfd_stdin_only));
+        STDIN_ONLY_POLLFD_BUFFER.set_value(to_bytes<NativeByteArray>(pollfd_stdin_only));
 
         // First check that stdin has any data to be read, so that we don't block
         // see ppoll(2)

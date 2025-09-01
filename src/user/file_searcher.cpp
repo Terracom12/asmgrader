@@ -29,7 +29,7 @@ std::string FileSearcher::set_arg(const std::string& key, std::string_view value
 }
 
 std::vector<std::filesystem::path> FileSearcher::search(const std::filesystem::path& base) {
-    return search_recursive(base, 1);
+    return search_recursive(base, 0);
 }
 
 std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::filesystem::path& base, int max_depth) {
