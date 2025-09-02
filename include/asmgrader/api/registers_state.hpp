@@ -202,14 +202,21 @@ static_assert(sizeof(FloatingPointRegister<>) == sizeof(u128));
 template <typename Base>
 struct Aarch64FlagsBase
 {
-    constexpr bool n() const { return Base::negative_set(); }
+    constexpr bool n() const { return get_base().negative_set(); }
 
-    constexpr bool z() const { return Base::zero_set(); }
+    constexpr bool z() const { return get_base().zero_set(); }
 
-    constexpr bool c() const { return Base::carry_set(); }
+    constexpr bool c() const { return get_base().carry_set(); }
 
-    constexpr bool v() const { return Base::overflow_set(); }
+    constexpr bool v() const { return get_base().overflow_set(); }
 
+    constexpr u64 nzcv() const {
+        constexpr u64 NZCV_BIT_MASK = 0xF;
+
+        return (get_base().get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
+    }
+
+protected:
     // Specification of pstate (for nzcv) obtained from:
     //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
     static constexpr u64 NZCV_BASE_OFF = 28;
@@ -218,13 +225,11 @@ struct Aarch64FlagsBase
     static constexpr u64 CARRY_FLAG_BIT = 1U << (NZCV_BASE_OFF + 1);
     static constexpr u64 OVERFLOW_FLAG_BIT = 1U << (NZCV_BASE_OFF + 0);
 
-    constexpr u64 nzcv() const {
-        constexpr u64 NZCV_BIT_MASK = 0xF;
-
-        return (Base::get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
-    }
-
 private:
+    Base& get_base() { return *static_cast<Base*>(this); }
+
+    const Base& get_base() const { return *static_cast<const Base*>(this); }
+
     Aarch64FlagsBase() = default;
     friend Base;
 };
@@ -233,6 +238,7 @@ private:
 template <typename Base>
 struct X64FlagsBase
 {
+protected:
     // TODO: Implement specific flag getters
 
     // Specification of eflags obtained from:
@@ -251,13 +257,19 @@ private:
 #if defined(ASMGRADER_AARCH64)
 template <typename CrtpBase>
 using FlagsArchBase = Aarch64FlagsBase<CrtpBase>;
+template <typename CrtpBase>
+using FlagsArchBaseAlternative = X64FlagsBase<CrtpBase>;
 #elif defined(ASMGRADER_X86_64)
 template <typename CrtpBase>
 using FlagsArchBase = X64FlagsBase<CrtpBase>;
+template <typename CrtpBase>
+using FlagsArchBaseAlternative = Aarch64FlagsBase<CrtpBase>;
 #endif
 
 template <ProcessorKind Arch = SYSTEM_PROCESSOR>
-struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>, FlagsArchBase<FlagsRegister<Arch>>
+struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>,
+                       FlagsArchBase<FlagsRegister<Arch>>,
+                       FlagsArchBaseAlternative<FlagsRegister<Arch>>
 {
     using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
     using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
@@ -596,9 +608,11 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             //   Volume 1 - 3.4.3.1 Status Flags
             std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
 
+            // i.e., OVERFLOW_FLAG_BIT
+            constexpr auto FIRST_FLAG_OFF = 11;
+
             // 32 bits - starting bit# of labels + len('0b')
-            constexpr auto LABEL_INIT_OFFSET =
-                32 - std::bit_width(::asmgrader::FlagsRegister<Arch>::OVERFLOW_FLAG_BIT) + 2;
+            constexpr auto LABEL_INIT_OFFSET = 32 - FIRST_FLAG_OFF + 2;
 
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "O   SZ     C";
