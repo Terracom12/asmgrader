@@ -1,7 +1,9 @@
 #pragma once
 
 #include <asmgrader/api/asm_function.hpp>
+#include <asmgrader/api/asm_symbol.hpp>
 #include <asmgrader/api/stringize_fwd.hpp>
+#include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/formatters/unknown.hpp>
 #include <asmgrader/common/static_string.hpp>
 #include <asmgrader/logging.hpp>
@@ -10,6 +12,7 @@
 #include <boost/type_index.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <libassert/assert.hpp>
 
 #include <array>
 #include <concepts>
@@ -34,16 +37,16 @@ template <typename OpFn, StaticString Rep, typename... Args>
 struct NAryOp
 {
     // NOLINTNEXTLINE(readability-identifier-naming)
-    constexpr NAryOp(std::tuple<Args...> args_, std::array<std::string_view, sizeof...(Args)> arg_strs_)
+    NAryOp(std::tuple<Args...> args_, std::array<std::string_view, sizeof...(Args)> arg_strs_)
         : args{std::move(args_)}
         , arg_strs{std::move(arg_strs_)} {}
 
     std::tuple<Args...> args;
     std::array<std::string_view, sizeof...(Args)> arg_strs;
 
-    using EvalResT = std::invoke_result_t<OpFn, Args...>;
+    using EvalResT = std::decay_t<std::invoke_result_t<OpFn, Args...>>;
 
-    constexpr EvalResT eval() { return std::apply(OpFn{}, args); }
+    constexpr EvalResT eval() const { return std::apply(OpFn{}, args); }
 
     static constexpr std::string_view raw_str = Rep;
 
@@ -65,14 +68,8 @@ constexpr auto make(Args&&... args) {
     return make<Op>({}, std::forward<Args>(args)...);
 }
 
-namespace detail {
-
-constexpr auto noop_impl = []<typename... Args>(Args&&...) -> void {};
-
-} // namespace detail
-
-template <typename... Args>
-using Noop = NAryOp<decltype(detail::noop_impl), "", Args...>;
+template <typename Args>
+using Noop = NAryOp<std::identity, "", Args>;
 
 template <typename Arg>
 using LogicalNot = NAryOp<std::logical_not<>, "!", Arg>;
@@ -106,9 +103,6 @@ concept Operator = requires(T op) {
 
 // sanity checks
 static_assert(Operator<LogicalNot<int>>);
-static_assert(!make<LogicalNot>(1).eval());
-static_assert(!make<LogicalNot>({}, 1).eval());
-static_assert(make<Greater>(5, 2).eval());
 
 /// Representation of an expression with all components stringized
 struct ExpressionRepr
@@ -162,17 +156,6 @@ struct ExpressionRepr
 
 namespace stringize {
 
-/// Attempt to stringize arg. If a matching overload is not found, will
-/// delegate serialization to \ref format_or_unknown
-template <typename Arg>
-inline std::string try_stringize(Arg&& arg) {
-    if constexpr (Stringizable<Arg>) {
-        return stringize(std::forward<Arg>(arg));
-    } else {
-        return format_or_unknown(std::forward<Arg>(arg));
-    }
-}
-
 /// Serializes strings with surrounding quotes ("") and escapes characters.
 ///
 /// e.g., "abc\t123\n"
@@ -182,13 +165,41 @@ inline std::string stringize(const Str& str) {
     return fmt::format("{:?}", std::string_view{str});
 }
 
-template <typename Ret>
-inline std::string stringize(const AsmFunctionResult<Ret>& fn_res) {
-    std::array stringized_args =
-        std::apply([]<typename... Args>(Args&&... args) { return std::array{stringize(std::forward<Args>(args))...}; },
-                   fn_res.args);
+// TODO: Little bit unDRY
+
+template <typename T>
+inline std::string stringize(const AsmSymbolResult<T> symbol_res) {
+    if (symbol_res.has_error()) {
+        ASSERT(symbol_res.error() == ErrorKind::UnresolvedSymbol);
+        return fmt::format("Symbol {} could not be resolved", symbol_res.symbol_name);
+    }
+    return fmt::format("({} = {})", symbol_res.symbol_name, try_stringize(symbol_res.value()));
+}
+
+template <typename Ret, typename... Ts>
+inline std::string stringize(const AsmFunctionResult<Ret, Ts...>& fn_res) {
+    std::array stringized_args = std::apply(
+        []<typename... Args>(Args&&... args) { return std::array{try_stringize(std::forward<Args>(args))...}; },
+        fn_res.args);
 
     return fmt::format("{}({})", fn_res.function_name, fmt::join(stringized_args, ", "));
+}
+
+/// I love this name
+template <typename Arg>
+concept Stringizable = requires(Arg arg) {
+    { stringize(arg) } -> std::convertible_to<std::string>;
+};
+
+/// Attempt to stringize arg. If a matching overload is not found, will
+/// delegate serialization to \ref format_or_unknown
+template <typename Arg>
+inline std::string try_stringize(Arg&& arg) {
+    if constexpr (Stringizable<Arg>) {
+        return stringize(std::forward<Arg>(arg));
+    } else {
+        return format_or_unknown(std::forward<Arg>(arg));
+    }
 }
 
 } // namespace stringize
@@ -201,15 +212,28 @@ class Requirement
 public:
     static constexpr auto default_description = "<no description provided>";
 
-    [[deprecated("Please consider providing a requirement description")]]
+    [[deprecated("====================================================================================================="
+                 "=========================================================== !!!!!!!!!!!!!!!!! "
+                 "Please consider providing a requirement description by using REQUIRE(..., \"<description here>\")"
+                 " !!!!!!!!!!!!!!!!! "
+                 "====================================================================================================="
+                 "=========================================================== ")]]
     explicit Requirement(Op op)
         : Requirement(op, default_description) {}
 
-    explicit Requirement(Op op, std::string_view description)
+    explicit Requirement(Op op, std::string description)
         : op_{op}
-        , description_{description} {}
+        , description_{std::move(description)} {}
 
     std::string get_description() const { return description_; }
+
+    bool get_res() const {
+        static_assert(
+            requires { static_cast<bool>(std::declval<std::invoke_result_t<decltype(&Op::eval), Op>>()); },
+            "Requirement expressions must be convertible to bool (for now)");
+
+        return static_cast<bool>(op_.eval());
+    }
 
     exprs::ExpressionRepr get_expr_repr() const {
         // Only supporting a single unary or binary op for now, so this is pretty simple
@@ -224,13 +248,13 @@ public:
 
         // Special case for noop to just get the value
         if constexpr (IsTemplate<Op, exprs::Noop>) {
-            using Arg0T = std::tuple_element<0, decltype(op_.args)>;
+            // using Arg0T = std::tuple_element<0, decltype(op_.args)>;
             const auto& arg0_str = op_.arg_strs.at(0);
 
-            result.expression = make_expr_value(std::forward<Arg0T>(std::get<0>(op_.args)), arg0_str);
+            result.expression = make_expr_value(std::get<0>(op_.args), arg0_str);
         } else {
             exprs::ExpressionRepr::Repr repr{.repr = "", //
-                                             .raw_str{Op::raw_str},
+                                             .raw_str = std::string{Op::raw_str},
                                              .type_index = boost::typeindex::type_id_with_cvr<decltype(op_.eval())>()};
 
             std::vector operands = std::apply(
@@ -250,8 +274,8 @@ public:
 private:
     template <typename Value>
     exprs::ExpressionRepr::Repr make_repr_value(Value&& value, std::string_view raw_str) const {
-        return {.repr = stringize::stringize(std::forward<Value>(value)),
-                .raw_str{raw_str},
+        return {.repr = stringize::try_stringize(std::forward<Value>(value)),
+                .raw_str = std::string{raw_str},
                 .type_index = boost::typeindex::type_id_with_cvr<Value>()};
     }
 
@@ -259,7 +283,7 @@ private:
     exprs::ExpressionRepr::Expression make_expr_value(Value& value, std::string_view raw_str) const {
         using LValue = exprs::ExpressionRepr::LValue;
 
-        return LValue{.repr = make_expr_value(value, raw_str)};
+        return LValue{.repr = make_repr_value(value, raw_str)};
     }
 
     template <typename Value>

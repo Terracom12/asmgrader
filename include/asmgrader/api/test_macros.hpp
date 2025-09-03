@@ -55,12 +55,10 @@
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
 #define REQUIRE_IMPL(condition, unq_ident, ...)                                                                        \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto& unq_ident = (condition);                                                                           \
-        bool CONCAT(bool_, unq_ident) = ctx.require(static_cast<bool>(unq_ident), #condition,                          \
-                                                    ::asmgrader::RequirementResult::DebugInfo{#condition});            \
-        if (!CONCAT(bool_, unq_ident)) {                                                                               \
-            LOG_DEBUG("Requirement failed: {}", unq_ident);                                                            \
-        }                                                                                                              \
+        const auto& CONCAT(op_, unq_ident) = ::asmgrader::exprs::make<::asmgrader::exprs::Noop>((condition));          \
+        const auto& unq_ident =                                                                                        \
+            ::asmgrader::Requirement{CONCAT(op_, unq_ident) __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};                    \
+        bool CONCAT(bool_, unq_ident) = ctx.require(unq_ident, ::asmgrader::RequirementResult::DebugInfo{#condition}); \
     } while (false);
 
 #define REQUIRE(condition, ...) REQUIRE_IMPL(condition, CONCAT(require_unq_, __COUNTER__), __VA_ARGS__)
@@ -69,16 +67,11 @@
 
 #define REQUIRE_EQ_IMPL(lhs, rhs, unq_ident, ...)                                                                      \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto& CONCAT(lhs_, unq_ident) = (lhs);                                                                   \
-        const auto& CONCAT(rhs_, unq_ident) = (rhs);                                                                   \
+        const auto& CONCAT(op_, unq_ident) = ::asmgrader::exprs::make<::asmgrader::exprs::Equal>((lhs), (rhs));        \
+        const auto& unq_ident =                                                                                        \
+            ::asmgrader::Requirement{CONCAT(op_, unq_ident) __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};                    \
         bool CONCAT(bool_, unq_ident) =                                                                                \
-            ctx.require(static_cast<bool>(CONCAT(rhs_, unq_ident) == CONCAT(lhs_, unq_ident)), #lhs " == " #rhs,       \
-                        ::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});                                  \
-        if (!CONCAT(bool_, unq_ident)) {                                                                               \
-            LOG_INFO("{} != {}", CONCAT(lhs_, unq_ident), CONCAT(rhs_, unq_ident));                                    \
-        } else {                                                                                                       \
-            LOG_INFO("{} == {}", CONCAT(lhs_, unq_ident), CONCAT(rhs_, unq_ident));                                    \
-        }                                                                                                              \
+            ctx.require(unq_ident, ::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});                       \
     } while (false);
 
 #define REQUIRE_EQ(lhs, rhs, ...) REQUIRE_EQ_IMPL(lhs, rhs, CONCAT(require_eq_unq_, __COUNTER__), __VA_ARGS__)

@@ -26,6 +26,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -127,10 +128,7 @@ private:
 
 template <exprs::Operator Op>
 bool TestContext::require(const Requirement<Op>& req, RequirementResult::DebugInfo debug_info) {
-    static_assert(std::convertible_to<decltype(Op::eval), bool>,
-                  "Expressions within REQUIRE* must be convertible to bool (for now)");
-
-    return require_impl(static_cast<bool>(req.eval()), req.get_description(), req.get_expr_repr(), debug_info);
+    return require_impl(static_cast<bool>(req.get_res()), req.get_description(), req.get_expr_repr(), debug_info);
 }
 
 template <std::size_t NumBytes>

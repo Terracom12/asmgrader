@@ -15,10 +15,7 @@ inline std::string stringize() {
     return "";
 }
 
-/// I love this name
 template <typename Arg>
-concept Stringizable = requires(Arg arg) {
-    { stringize(arg) } -> std::same_as<std::string>;
-};
+inline std::string try_stringize(Arg&& arg);
 
 } // namespace asmgrader::stringize

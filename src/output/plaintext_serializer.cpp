@@ -1,5 +1,7 @@
 #include "output/plaintext_serializer.hpp"
 
+#include "api/requirement.hpp"
+#include "common/overloaded.hpp"
 #include "common/terminal_checks.hpp"
 #include "common/time.hpp"
 #include "grading_session.hpp"
@@ -14,16 +16,20 @@
 #include <fmt/color.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/all_of.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include <cctype>
 #include <chrono>
-#include <concepts>
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
+#include <functional>
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -52,6 +58,37 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     }
 
     std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.description, VALUE_STYLE));
+
+    if (data.expression_repr.has_value() /* && should_output_extra_info*/) {
+        using Expression = exprs::ExpressionRepr::Expression;
+        using LValue = exprs::ExpressionRepr::LValue;
+        using RValue = exprs::ExpressionRepr::RValue;
+        using Operator = exprs::ExpressionRepr::Operator;
+
+        std::function<std::string(const Expression&)> basic_serialize = [&basic_serialize](const Expression& expr) {
+            auto serialize_impl = Overloaded{
+                [](const LValue& lvalue) { return lvalue.repr.repr; }, //
+                [](const RValue& rvalue) { return rvalue.repr.repr; }, //
+                [&](const Operator& op) {
+                    ASSERT(op.operands.size() == 2);
+
+                    return fmt::format("{} {} {}", basic_serialize(op.operands[0]), op.repr.raw_str,
+                                       basic_serialize(op.operands[1]));
+                } //
+            };
+
+            return std::visit(serialize_impl, expr);
+        };
+
+        std::string eval_verb;
+        if (std::holds_alternative<Operator>(data.expression_repr->expression)) {
+            eval_verb = "is";
+        } else {
+            eval_verb = "evaluates to";
+        }
+        out += fmt::format("  Where:\n    {} {} {}\n\n", basic_serialize(data.expression_repr->expression), eval_verb,
+                           style(data.passed, data.passed ? SUCCESS_STYLE : ERROR_STYLE));
+    }
 
     sink_.write(out);
 }

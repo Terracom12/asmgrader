@@ -16,3 +16,5 @@
         }                                                                                                              \
         res__ref.value();                                                                                              \
     });
+
+#define ONLY_FIRST(first, ...) first
