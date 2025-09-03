@@ -8,6 +8,7 @@
 #include "logging.hpp"
 #include "output/serializer.hpp"
 #include "program/program.hpp"
+#include "version.hpp"
 
 #include <range/v3/view/map.hpp>
 
@@ -36,6 +37,10 @@ AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::pa
     }
 
     for (TestBase& test : assignment_->get_tests()) {
+        // Skip tests that are marked as professor-only if we're not in professor mode
+        if (test.get_is_prof_only() && APP_MODE != AppMode::Professor) {
+            continue;
+        }
         const std::string_view assignment_name = test.get_assignment().get_name();
 
         const TestResult test_result = run_one(test);
