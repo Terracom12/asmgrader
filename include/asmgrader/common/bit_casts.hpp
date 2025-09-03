@@ -5,7 +5,7 @@
 #include <asmgrader/common/byte_vector.hpp>
 #include <asmgrader/common/os.hpp>
 #include <asmgrader/common/to_static_range.hpp>
-#include <asmgrader/meta/concept_wrapper.hpp>
+#include <asmgrader/meta/concepts.hpp>
 #include <asmgrader/meta/static_size.hpp>
 
 #include <range/v3/algorithm/copy_n.hpp>
