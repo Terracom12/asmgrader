@@ -51,7 +51,7 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
         req_result_str = style_str("FAILED", ERROR_STYLE);
     }
 
-    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.msg, VALUE_STYLE));
+    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.description, VALUE_STYLE));
 
     sink_.write(out);
 }

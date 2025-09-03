@@ -5,8 +5,9 @@
 #include <range/v3/all.hpp> // IWYU pragma: export
 //
 
-#include <asmgrader/api/assignment.hpp> // IWYU pragma: export
-#include <asmgrader/api/test_base.hpp>  // IWYU pragma: export
+#include <asmgrader/api/assignment.hpp>  // IWYU pragma: export
+#include <asmgrader/api/requirement.hpp> // IWYU pragma: export
+#include <asmgrader/api/test_base.hpp>   // IWYU pragma: export
 #include <asmgrader/api/test_context.hpp>
 #include <asmgrader/common/macros.hpp>
 #include <asmgrader/grading_session.hpp> // IWYU pragma: export
@@ -40,41 +41,52 @@
 
 #define TEST(name, ...) TEST_IMPL(CONCAT(TEST__, __COUNTER__), name __VA_OPT__(, ) __VA_ARGS__)
 
-// Simple way to ensure that no instructions are generated for prof-only tests when
-// compiling for the students' version
+/// Define a test that runs only in professor mode.
+///
+/// Usage of this is prefered over `TEST("...", ProfOnly)` because with this macro, the test body and name will
+/// not show up in the final binary. This might allow some determined students to figure out what tests are run
+/// on the professor's end through some in-depth analysis.
 #ifdef PROFESSOR_VERSION
 #define PROF_ONLY_TEST(name, ...) TEST(name, ProfOnly __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define PROF_ONLY_TEST(name, ...) [[maybe_unused]] static void CONCAT(prof_test_unused, __COUNTER__)(TestContext & ctx)
 #endif // PROFESSOR_VERSION
 
-#define REQUIRE(condition, ...)                                                                                        \
-    __extension__({                                                                                                    \
-        auto cond__var = condition;                                                                                    \
-        bool cond__bool__val = static_cast<bool>(cond__var);                                                           \
-        if (!cond__bool__val) {                                                                                        \
-            LOG_DEBUG("Requirement failed: {}", cond__var);                                                            \
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
+#define REQUIRE_IMPL(condition, unq_ident, ...)                                                                        \
+    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
+        const auto& unq_ident = (condition);                                                                           \
+        bool CONCAT(bool_, unq_ident) = ctx.require(static_cast<bool>(unq_ident), #condition,                          \
+                                                    ::asmgrader::RequirementResult::DebugInfo{#condition});            \
+        if (!CONCAT(bool_, unq_ident)) {                                                                               \
+            LOG_DEBUG("Requirement failed: {}", unq_ident);                                                            \
         }                                                                                                              \
-        ctx.require(cond__bool__val, __VA_ARGS__ __VA_OPT__(, )::asmgrader::RequirementResult::DebugInfo{#condition}); \
-    })
+    } while (false);
 
-#define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
-    __extension__({                                                                                                    \
-        const auto& req_eq_lhs__ = (lhs);                                                                              \
-        const auto& req_eq_rhs__ = (rhs);                                                                              \
-        bool req_eq_res__ =                                                                                            \
-            ctx.require(req_eq_lhs__ == req_eq_rhs__,                                                                  \
-                        __VA_ARGS__ __VA_OPT__(, )::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});        \
-        if (!req_eq_res__) {                                                                                           \
-            LOG_DEBUG("{} != {}", (req_eq_lhs__), (req_eq_rhs__));                                                     \
+#define REQUIRE(condition, ...) REQUIRE_IMPL(condition, CONCAT(require_unq_, __COUNTER__), __VA_ARGS__)
+
+// FIXME: DRY
+
+#define REQUIRE_EQ_IMPL(lhs, rhs, unq_ident, ...)                                                                      \
+    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
+        const auto& CONCAT(lhs_, unq_ident) = (lhs);                                                                   \
+        const auto& CONCAT(rhs_, unq_ident) = (rhs);                                                                   \
+        bool CONCAT(bool_, unq_ident) =                                                                                \
+            ctx.require(static_cast<bool>(CONCAT(rhs_, unq_ident) == CONCAT(lhs_, unq_ident)), #lhs " == " #rhs,       \
+                        ::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});                                  \
+        if (!CONCAT(bool_, unq_ident)) {                                                                               \
+            LOG_INFO("{} != {}", CONCAT(lhs_, unq_ident), CONCAT(rhs_, unq_ident));                                    \
+        } else {                                                                                                       \
+            LOG_INFO("{} == {}", CONCAT(lhs_, unq_ident), CONCAT(rhs_, unq_ident));                                    \
         }                                                                                                              \
-        req_eq_res__;                                                                                                  \
-    })
+    } while (false);
+
+#define REQUIRE_EQ(lhs, rhs, ...) REQUIRE_EQ_IMPL(lhs, rhs, CONCAT(require_eq_unq_, __COUNTER__), __VA_ARGS__)
 
 #define FILE_METADATA(...)                                                                                             \
     namespace asmgrader::metadata {                                                                                    \
     consteval auto global_file_metadata() {                                                                            \
-        using ::asmgrader::metadata::Assignment, metadata::Weight, metadata::ProfOnly;                                 \
+        using namespace ::asmgrader; /* NOLINT(google-build-using-namespace) */                                        \
         return ::asmgrader::metadata::Metadata{__VA_ARGS__};                                                           \
     }                                                                                                                  \
     } // namespace metadata

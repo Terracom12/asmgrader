@@ -4,6 +4,8 @@
 
 // TODO: Rename this file
 
+#include <asmgrader/api/requirement.hpp>
+#include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/version.hpp>
@@ -71,7 +73,10 @@ struct RunMetadata
 struct RequirementResult
 {
     bool passed;
-    std::string msg;
+    std::string description;
+
+    // these are only used when verbosity >= Extra
+    std::optional<exprs::ExpressionRepr> expression_repr;
 
     struct DebugInfo
     {
