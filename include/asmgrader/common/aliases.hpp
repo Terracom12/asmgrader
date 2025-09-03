@@ -4,7 +4,7 @@
 
 namespace asmgrader::inline aliases {
 
-// u64, etc. is way to verbose when u64 will suffice
+// std::uint64_t, etc. is way to verbose when u64 will suffice
 
 // We define aliases for all sized integer and floating point types,
 // including compiler extensions
