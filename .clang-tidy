@@ -37,9 +37,9 @@ WarningsAsErrors: ""
 CheckOptions:
   # Conventional use of `os` and `is` for std::ostream and std::istream stream operator overloads
   - key: "readability-identifier-length.IgnoredVariableNames"
-    value: '^(id|fd|nr|it|fn|tc)$'
+    value: '^(id|fd|nr|it|fn|tc|op)$'
   - key: "readability-identifier-length.IgnoredParameterNames"
-    value: '^(os|is|id|fd|nr|it|fn|tc)$'
+    value: '^(os|is|id|fd|nr|it|fn|tc|op)$'
   # Allow small, recognizable integer values. Not EVERYTHING has to be a constant, especially in academia
   - key: "readability-magic-numbers.IgnoredIntegerValues"
     value: "1;2;3;4;5;6;7;8;9;10;100"
