@@ -18,3 +18,6 @@
     });
 
 #define ONLY_FIRST(first, ...) first
+
+#define IDENTITY(...) __VA_ARGS__
+#define STRIP_PARENS(parens) IDENTITY parens

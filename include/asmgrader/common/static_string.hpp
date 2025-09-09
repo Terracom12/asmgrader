@@ -32,10 +32,13 @@
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
+#include <range/v3/view/subrange.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -44,30 +47,53 @@ namespace asmgrader {
 
 /// A fully compile-time capable string type
 /// Guaranteed to be null-terminated
-template <std::size_t N>
+template <std::size_t Size>
 class StaticString
 {
 public:
     constexpr StaticString() = default;
 
     // NOLINTNEXTLINE(google-explicit-constructor,*-avoid-c-arrays)
-    constexpr /*implicit*/ StaticString(const char (&input)[N + 1]) {
-        if (input[N] != '\0') {
+    constexpr /*implicit*/ StaticString(const char (&input)[Size + 1]) {
+        if (input[Size] != '\0') {
             throw;
         }
-        ranges::copy_n(std::data(input), N + 1, data.begin());
+        ranges::copy_n(std::data(input), Size + 1, data.begin());
     }
 
+    /// Do not include '\0'
     // NOLINTNEXTLINE(google-explicit-constructor)
     constexpr /*implicit*/ StaticString(const ranges::forward_range auto& rng) {
-        ranges::copy_n(ranges::begin(rng), N + 1, data.begin());
+        ranges::copy_n(ranges::begin(rng), Size, data.begin());
 
-        if (data.back() != '\0') {
-            throw;
-        }
+        data.back() = '\0';
     }
 
-    std::array<char, N + 1> data{};
+    std::array<char, Size + 1> data{};
+
+    template <std::size_t Pos, std::size_t Len = std::numeric_limits<std::size_t>::max()>
+        requires(Pos <= Size)
+    constexpr auto substr() {
+        // exclude '\0' from ctor call
+        constexpr auto end = std::min(Size, Pos + Len);
+        constexpr auto substr_size = std::min(Size - Pos, Len);
+
+        return StaticString<substr_size>{ranges::subrange{data.begin() + Pos, data.begin() + end}};
+    }
+
+    template <std::size_t N>
+        requires(N <= Size)
+    constexpr StaticString<Size - N> remove_prefix() {
+        // exclude '\0' from ctor call
+        return {ranges::subrange{data.begin() + N, data.end() - 1}};
+    }
+
+    template <std::size_t N>
+        requires(N <= Size)
+    constexpr StaticString<Size - N> remove_suffix() {
+        // exclude '\0' from ctor call
+        return {ranges::subrange{data.begin(), data.end() - 1 - N}};
+    }
 
     constexpr std::size_t size() const { return data.size(); }
 

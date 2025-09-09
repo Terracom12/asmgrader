@@ -2,6 +2,7 @@
 
 #include "common/bit_casts.hpp"
 #include "common/formatters/formatters.hpp" // IWYU pragma: keep
+#include "common/macros.hpp"
 #include "common/os.hpp"
 
 #include <boost/preprocessor/facilities/identity.hpp>
@@ -57,9 +58,6 @@ template <typename... Types, std::size_t N>
 constexpr auto make_tests(const std::tuple<Types...> (&init)[N]) {
     return std::to_array(init);
 }
-
-#define IDENTITY(...) __VA_ARGS__
-#define STRIP_PARENS(parens) IDENTITY parens
 
 #define STATIC_TABLE_TESTS_IMPL(table, parenthesized_elems, fn_body)                                                   \
     []<std::size_t... I>(std::index_sequence<I...>) {                                                                  \

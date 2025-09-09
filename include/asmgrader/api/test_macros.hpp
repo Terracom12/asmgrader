@@ -53,17 +53,17 @@
 #endif // PROFESSOR_VERSION
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-#define REQUIRE_IMPL(condition, unq_ident, ...)                                                                        \
+#define REQUIRE_IMPL(unq_ident, op, op_args, op_args_raw_strs, ...)                                                    \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto& CONCAT(op_, unq_ident) = ::asmgrader::exprs::make<::asmgrader::exprs::Noop>((condition));          \
+        const auto& CONCAT(op_, unq_ident) =                                                                           \
+            ::asmgrader::exprs::make<::asmgrader::exprs::op>(STRIP_PARENS(op_args_raw_strs), STRIP_PARENS(op_args));   \
         const auto& unq_ident =                                                                                        \
             ::asmgrader::Requirement{CONCAT(op_, unq_ident) __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};                    \
-        bool CONCAT(bool_, unq_ident) = ctx.require(unq_ident, ::asmgrader::RequirementResult::DebugInfo{#condition}); \
+        bool CONCAT(bool_, unq_ident) = ctx.require(unq_ident);                                                        \
     } while (false);
 
-#define REQUIRE(condition, ...) REQUIRE_IMPL(condition, CONCAT(require_unq_, __COUNTER__), __VA_ARGS__)
-
-// FIXME: DRY
+#define REQUIRE(condition, ...)                                                                                        \
+    REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), Noop, ((condition)), ({#condition}), __VA_ARGS__)
 
 #define REQUIRE_EQ_IMPL(lhs, rhs, unq_ident, ...)                                                                      \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
@@ -74,7 +74,8 @@
             ctx.require(unq_ident, ::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});                       \
     } while (false);
 
-#define REQUIRE_EQ(lhs, rhs, ...) REQUIRE_EQ_IMPL(lhs, rhs, CONCAT(require_eq_unq_, __COUNTER__), __VA_ARGS__)
+#define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
+    REQUIRE_IMPL(CONCAT(require_eq_unq_, __COUNTER__), Equal, ((lhs), (rhs)), ({#lhs, #rhs}), __VA_ARGS__)
 
 #define FILE_METADATA(...)                                                                                             \
     namespace asmgrader::metadata {                                                                                    \

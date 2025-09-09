@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api/requirement.hpp"
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
@@ -36,6 +37,8 @@ public:
     void finalize() override;
 
 private:
+    std::string serialize_req_expr(const exprs::ExpressionRepr& expr);
+
     static bool process_colorize_opt(ProgramOptions::ColorizeOpt colorize_option);
     static std::size_t get_terminal_width();
 
