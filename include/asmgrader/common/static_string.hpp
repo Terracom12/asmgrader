@@ -48,10 +48,10 @@ template <std::size_t N>
 class StaticString
 {
 public:
-    consteval StaticString() = default;
+    constexpr StaticString() = default;
 
     // NOLINTNEXTLINE(google-explicit-constructor,*-avoid-c-arrays)
-    consteval /*implicit*/ StaticString(const char (&input)[N + 1]) {
+    constexpr /*implicit*/ StaticString(const char (&input)[N + 1]) {
         if (input[N] != '\0') {
             throw;
         }
@@ -59,7 +59,7 @@ public:
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    consteval /*implicit*/ StaticString(const ranges::forward_range auto& rng) {
+    constexpr /*implicit*/ StaticString(const ranges::forward_range auto& rng) {
         ranges::copy_n(ranges::begin(rng), N + 1, data.begin());
 
         if (data.back() != '\0') {
@@ -69,15 +69,15 @@ public:
 
     std::array<char, N + 1> data{};
 
-    consteval std::size_t size() const { return data.size(); }
+    constexpr std::size_t size() const { return data.size(); }
 
     // NOLINTNEXTLINE(google-explicit-constructor)
-    consteval /*implicit*/ operator std::string_view() const { return data.data(); }
+    constexpr /*implicit*/ operator std::string_view() const { return data.data(); }
 
     std::string str() const { return data.data(); }
 
     template <std::size_t OtherSize>
-    consteval auto operator<=>(const StaticString<OtherSize>& rhs) const {
+    constexpr auto operator<=>(const StaticString<OtherSize>& rhs) const {
         return std::string_view{*this} <=> std::string_view{rhs};
     }
 
@@ -85,12 +85,12 @@ public:
     constexpr auto operator<=>(std::string_view rhs) const { return std::string_view{*this} <=> rhs; }
 
     template <std::size_t OtherSize>
-    consteval bool operator==(const StaticString<OtherSize>& rhs) const {
+    constexpr bool operator==(const StaticString<OtherSize>& rhs) const {
         return std::string_view{*this} == std::string_view{rhs};
     }
 
     // Support comparison with string_view-convertable objects
-    consteval bool operator==(std::string_view rhs) const { return std::string_view{*this} == rhs; }
+    constexpr bool operator==(std::string_view rhs) const { return std::string_view{*this} == rhs; }
 };
 
 // Deduction guide
@@ -109,7 +109,7 @@ static_assert("abc" == std::string_view{StaticString("abc")});
 #endif
 
 template <StaticString Fmt, std::size_t MaxSz = 10 * 1'024, fmt::formattable... Args>
-consteval auto static_format(Args&&... args) {
+constexpr auto static_format(Args&&... args) {
     constexpr auto COMPILED_FMT = FMT_COMPILE(Fmt.data.begin());
 
     StaticString<MaxSz> result;
@@ -128,3 +128,18 @@ consteval auto operator""_static() {
 }
 
 } // namespace asmgrader
+
+template<std::size_t N>
+struct fmt::formatter<::asmgrader::StaticString<N>>  {
+    fmt::formatter<std::string_view> underlying;
+
+
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        return underlying.parse(ctx);
+    }
+
+    constexpr auto format(const ::asmgrader::StaticString<N>& from, fmt::format_context& ctx) const {
+        return underlying.format(from, ctx);
+    }
+
+};

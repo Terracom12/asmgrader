@@ -147,10 +147,10 @@ struct fmt::formatter<::asmgrader::PtraceEvent> : ::asmgrader::DebugFormatter
         auto res = enum_to_str(from);
 
         if (res) {
-            return format_to(ctx.out(), "{}", *res);
+            return fmt::format_to(ctx.out(), "{}", *res);
         }
 
-        return format_to(ctx.out(), "<unknown ({})>", fmt::underlying(from));
+        return fmt::format_to(ctx.out(), "<unknown ({})>", fmt::underlying(from));
     }
 
 private:

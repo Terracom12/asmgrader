@@ -227,7 +227,7 @@ struct fmt::formatter<::asmgrader::Expected<T, E>> : ::asmgrader::DebugFormatter
 
     auto format(const ::asmgrader::Expected<T, E>& from, fmt::format_context& ctx) const {
         // TODO: Use a `copy` algo. `ranges::copy` has stricter iter reqs than the `ctx.out()` type impls
-        return format_to(ctx.out(), "{}", format_impl(from));
+        return fmt::format_to(ctx.out(), "{}", format_impl(from));
     }
 
 private:
