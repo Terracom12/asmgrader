@@ -3,6 +3,7 @@
 #include <asmgrader/common/formatters/debug.hpp>
 #include <asmgrader/common/formatters/fmt_appender_adaptor.hpp>
 #include <asmgrader/common/formatters/generic_impl.hpp>
+#include <asmgrader/common/pair.hpp>
 #include <asmgrader/common/static_string.hpp>
 
 #include <boost/describe/enum.hpp>
@@ -22,8 +23,8 @@
 
 namespace asmgrader::detail {
 
-/// \tparam Fields - std::pair<StaticString, Enum>
-///                            field name    field value
+/// \tparam Fields - asmgrader::pair<StaticString, Enum>
+///                                  field name    field value
 ///                  Very annoying to declare manually, so use the macro instead!
 template <typename Enum, StaticString EnumName, auto... Enumerators>
 struct EnumFormatter
@@ -37,7 +38,7 @@ struct EnumFormatter
 
     constexpr auto get_enumerator(const Enum& from) const {
         auto val = [from] {
-            std::optional<std::pair<std::string_view, Enum>> res;
+            std::optional<::asmgrader::pair<std::string_view, Enum>> res;
             ((Enumerators.second == from ? res = Enumerators : res), ...);
             return res;
         }();

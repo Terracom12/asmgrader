@@ -3,6 +3,7 @@
 #include <asmgrader/common/formatters/debug.hpp>
 #include <asmgrader/common/formatters/fmt_appender_adaptor.hpp>
 #include <asmgrader/common/formatters/generic_impl.hpp>
+#include <asmgrader/common/pair.hpp>
 #include <asmgrader/common/static_string.hpp>
 
 #include <boost/describe/enumerators.hpp>
@@ -22,8 +23,8 @@
 
 namespace asmgrader::detail {
 
-/// \tparam Fields - std::pair<StaticString, Aggregate::*>
-///                            field name    field ptr
+/// \tparam Fields - asmgrader::pair<StaticString, Aggregate::*>
+///                                  field name    field ptr
 ///                  Very annoying to declare manually, so use the macro below!
 template <typename Aggregate, StaticString AggregateName, auto... Fields>
 struct AggregateFormatter
@@ -38,7 +39,7 @@ struct AggregateFormatter
     constexpr auto get_fields(const Aggregate& from) const { return std::tuple{((&from)->*(Fields.second))...}; }
 
     constexpr auto get_named_fields(const Aggregate& from) const {
-        return std::tuple{std::pair{Fields.first, ((&from)->*(Fields.second))}...};
+        return std::tuple{asmgrader::pair{Fields.first, ((&from)->*(Fields.second))}...};
     }
 
     constexpr auto normal_format(const Aggregate& from, fmt::format_context& ctx) const {
