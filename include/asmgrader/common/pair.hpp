@@ -47,9 +47,6 @@ struct pair // NOLINT(readability-identifier-naming)
 
     T1 first{};
     T2 second{};
-
-    constexpr bool operator==(const pair& rhs) const = default;
-    constexpr auto operator<=>(const pair& rhs) const = default;
 };
 
 template <typename T1, typename T2>
