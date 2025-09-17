@@ -101,3 +101,7 @@ TEST_CASE("Test that SYS_exit is properly thwarted") {
 
     REQUIRE(prog.get_subproc().is_alive());
 }
+
+TEST_CASE("Test that executables with 'weird' file names work") {
+    asmgrader::Program prog(ASM_TESTS_WEIRD_NAME_EXEC, {});
+}

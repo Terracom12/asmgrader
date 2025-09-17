@@ -26,6 +26,18 @@ set(
     test_byte_ranges.cpp
 )
 
+##### Simple assembly executable
+
+add_asm_arch_specific_impl(asm_tests resources/simple_asm)
+
+set(asm_tests_weird_name_exec "${CMAKE_CURRENT_BINARY_DIR}/(asm_tests () weird \\(name) ~`")
+
+add_custom_command(
+    TARGET asm_tests POST_BUILD
+    COMMAND cp $<TARGET_FILE:asm_tests> "${asm_tests_weird_name_exec}"
+    VERBATIM
+)
+
 ##### Test runner executable
 
 add_executable(
@@ -43,6 +55,11 @@ target_compile_definitions(
 
     PUBLIC
     CATCH_CONFIG_RUNTIME_STATIC_REQUIRE # Make STATIC_REQUIRE behave as REQUIRE
+
+    PRIVATE
+    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
+    "ASM_TESTS_WEIRD_NAME_EXEC=R\"abc(${asm_tests_weird_name_exec})abc\""
 )
 
 target_link_libraries(
@@ -79,19 +96,7 @@ target_compile_definitions(
     PRIVATE
     "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
     "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
-)
-
-##### Simple assembly executable
-
-
-add_asm_arch_specific_impl(asm_tests resources/simple_asm)
-
-target_compile_definitions(
-    asmgrader_tests
-
-    PRIVATE
-    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
-    "RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\""
+    "ASM_TESTS_WEIRD_NAME_EXEC=R\"abc(${asm_tests_weird_name_exec})abc\""
 )
 
 # !!DISCLAIMER!!

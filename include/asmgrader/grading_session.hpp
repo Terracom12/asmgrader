@@ -7,6 +7,7 @@
 #include <asmgrader/api/requirement.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
+#include <asmgrader/common/formatters/macros.hpp>
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/version.hpp>
 
@@ -32,7 +33,7 @@ namespace asmgrader {
 
 struct CompilerInfo
 {
-    enum { Unknown, GCC, Clang } kind;
+    enum Vendor { Unknown, GCC, Clang } kind;
 
     int major_version;
     int minor_version;
@@ -121,11 +122,11 @@ struct AssignmentResult
     int num_requirements_total{};
 
     double get_percentage() const noexcept {
-        using ranges::fold_left_first, ranges::views::transform;
+        using ranges::fold_left, ranges::views::transform;
 
-        auto total_weight = ranges::fold_left(test_results | transform(&TestResult::total_weighted), 0, std::plus{});
+        auto total_weight = fold_left(test_results | transform(&TestResult::total_weighted), 0, std::plus{});
 
-        auto passed_weight = ranges::fold_left(test_results | transform(&TestResult::passed_weighted), 0, std::plus{});
+        auto passed_weight = fold_left(test_results | transform(&TestResult::passed_weighted), 0, std::plus{});
 
         if (total_weight == 0) {
             return 0.0;
@@ -179,15 +180,15 @@ struct MultiStudentResult
 
 } // namespace asmgrader
 
-template <>
-struct fmt::formatter<::asmgrader::RequirementResult::DebugInfo> : ::asmgrader::DebugFormatter
-{
-    constexpr auto format(const ::asmgrader::RequirementResult::DebugInfo& from, fmt::format_context& ctx) const {
-        // Explicitly called "DebugInfo", so fmt to an empty string if not debug mode
-        if (!is_debug_format) {
-            return ctx.out();
-        }
-
-        return fmt::format_to(ctx.out(), "{{{} at {}}}", from.msg, from.loc);
-    }
-};
+// I'm crying, please give me reflection :(
+FMT_SERIALIZE_CLASS(::asmgrader::CompilerInfo, kind, major_version, minor_version);
+FMT_SERIALIZE_ENUM(::asmgrader::CompilerInfo::Vendor, Unknown, GCC, Clang);
+FMT_SERIALIZE_CLASS(::asmgrader::RunMetadata, version, version_string, git_hash, start_time, cpp_standard,
+                    compiler_info);
+FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult, passed, msg, debug_info);
+FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult::DebugInfo, msg, loc);
+FMT_SERIALIZE_CLASS(::asmgrader::TestResult, name, requirement_results, num_passed, num_total, weight, error);
+FMT_SERIALIZE_CLASS(::asmgrader::AssignmentResult, name, test_results, num_requirements_total);
+FMT_SERIALIZE_CLASS(::asmgrader::StudentInfo, first_name, last_name, names_known, assignment_path, subst_regex_string);
+FMT_SERIALIZE_CLASS(::asmgrader::StudentResult, info, result);
+FMT_SERIALIZE_CLASS(::asmgrader::MultiStudentResult, results);

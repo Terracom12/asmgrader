@@ -1,6 +1,10 @@
 #pragma once
 
+#include <asmgrader/common/formatters/debug.hpp>
+#include <asmgrader/common/formatters/fmt_appender_adaptor.hpp>
 #include <asmgrader/common/formatters/generic_impl.hpp>
+#include <asmgrader/common/pair.hpp>
+#include <asmgrader/common/static_string.hpp>
 
 #include <boost/describe/enum.hpp>
 #include <boost/describe/enumerators.hpp>
@@ -9,40 +13,67 @@
 #include <boost/type_index.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <range/v3/algorithm/copy.hpp>
+#include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/range/concepts.hpp>
 
 #include <optional>
-#include <type_traits>
+#include <string_view>
+#include <utility>
 
 namespace asmgrader::detail {
 
-// See: https://www.boost.org/doc/libs/1_81_0/libs/describe/doc/html/describe.html#example_printing_enums_ct
-template <typename Enum>
-    requires(std::is_enum_v<Enum> && boost::describe::has_describe_enumerators<Enum>::value)
-constexpr std::optional<const char*> enum_to_string(Enum enumerator) {
-    std::optional<const char*> res;
-
-    boost::mp11::mp_for_each<boost::describe::describe_enumerators<Enum>>([&](auto descriptor) {
-        if (enumerator == descriptor.value) {
-            res = descriptor.name;
-        }
-    });
-
-    return res;
-}
-
-template <typename Enum>
-    requires requires(Enum scoped_enum) { enum_to_string(scoped_enum); }
-struct FormatterImpl<Enum>
+/// \tparam Fields - asmgrader::pair<StaticString, Enum>
+///                                  field name    field value
+///                  Very annoying to declare manually, so use the macro instead!
+template <typename Enum, StaticString EnumName, auto... Enumerators>
+struct EnumFormatter
 {
-    static auto format(const Enum& from, fmt::format_context& ctx) {
-        auto res = enum_to_string(from);
+    DebugFormatter debug_parser;
 
-        if (res) {
-            return fmt::format_to(ctx.out(), "{}", *res);
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        // parse a potential '?' spec
+        return debug_parser.parse(ctx);
+    }
+
+    constexpr auto get_enumerator(const Enum& from) const {
+        auto val = [from] {
+            std::optional<::asmgrader::pair<std::string_view, Enum>> res;
+            ((Enumerators.second == from ? res = Enumerators : res), ...);
+            return res;
+        }();
+
+        return val;
+    }
+
+    constexpr auto normal_format(const Enum& from, fmt::format_context& ctx) const {
+        auto val = get_enumerator(from);
+
+        if (val.has_value()) {
+            return fmt::format_to(ctx.out(), "{}", val->first);
         }
 
         return fmt::format_to(ctx.out(), "<unknown ({})>", fmt::underlying(from));
+    }
+
+    constexpr auto debug_format(const Enum& from, fmt::format_context& ctx) const {
+        fmt_appender_wrapper ctx_iter{ctx.out()};
+
+        fmt::format_to(ctx_iter, "{}{{", EnumName);
+
+        ctx.advance_to(normal_format(from, ctx));
+
+        ranges::copy("}", ctx_iter);
+
+        return ctx_iter.out;
+    }
+
+    constexpr auto format(const Enum& from, fmt::format_context& ctx) const {
+        if (debug_parser.is_debug_format) {
+            return debug_format(from, ctx);
+        }
+        // else
+        return normal_format(from, ctx);
     }
 };
 

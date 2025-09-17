@@ -498,11 +498,11 @@ struct fmt::formatter<::asmgrader::IntRegister<Arch>> : ::asmgrader::DebugFormat
             constexpr auto ALIGN_10 = ::asmgrader::digits10_max_count<IntType>;
             constexpr auto ALIGN_16 = sizeof(IntType) * 2;
             constexpr auto ALIGN_2 = sizeof(IntType) * 8;
-            return format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
+            return fmt::format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
                              ALIGN_2);
         }
 
-        return format_to(ctx.out(), "{}", from.get_value());
+        return fmt::format_to(ctx.out(), "{}", from.get_value());
     }
 };
 
@@ -511,11 +511,11 @@ struct fmt::formatter<::asmgrader::FloatingPointRegister<Arch>> : ::asmgrader::D
 {
     auto format(const ::asmgrader::FloatingPointRegister<Arch>& from, format_context& ctx) const {
         if (!is_debug_format) {
-            return format_to(ctx.out(), "{}", double{from});
+            return fmt::format_to(ctx.out(), "{}", double{from});
         }
 
         const auto max_sz = formatted_size("{}", std::numeric_limits<double>::min());
-        return format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.get_value());
+        return fmt::format_to(ctx.out(), "{:>{}} (f64) | 0x{:032X}", double{from}, max_sz, from.get_value());
     }
 };
 
@@ -591,9 +591,9 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "NZCV";
 
-            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+            ctx.advance_to(fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
         } else {
-            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+            ctx.advance_to(fmt::format_to(ctx.out(), "{}", short_flags_str));
         }
 
         return ctx.out();
@@ -617,9 +617,9 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "O   SZ     C";
 
-            ctx.advance_to(format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+            ctx.advance_to(fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
         } else {
-            ctx.advance_to(format_to(ctx.out(), "{}", short_flags_str));
+            ctx.advance_to(fmt::format_to(ctx.out(), "{}", short_flags_str));
         }
 
         return ctx.out();
@@ -653,12 +653,12 @@ struct fmt::formatter<::asmgrader::RegistersState> : ::asmgrader::DebugFormatter
         auto print_named_field = [this, &ctx, field_sep, MAX_NAME_LEN](std::string_view name, const auto& what,
                                                                        bool print_sep = true) {
             if (is_debug_format) {
-                ctx.advance_to(format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
+                ctx.advance_to(fmt::format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
             } else {
-                ctx.advance_to(format_to(ctx.out(), "{}", name));
+                ctx.advance_to(fmt::format_to(ctx.out(), "{}", name));
             }
 
-            ctx.advance_to(format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
+            ctx.advance_to(fmt::format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
         };
 
         auto print_reg = [this, print_named_field](std::string_view name, const auto& reg) {
@@ -734,12 +734,12 @@ struct fmt::formatter<::asmgrader::RegistersState> : ::asmgrader::DebugFormatter
         auto print_named_field = [this, &ctx, field_sep, MAX_NAME_LEN](std::string_view name, const auto& what,
                                                                        bool print_sep = true) {
             if (is_debug_format) {
-                ctx.advance_to(format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
+                ctx.advance_to(fmt::format_to(ctx.out(), "{:<{}}", name, MAX_NAME_LEN));
             } else {
-                ctx.advance_to(format_to(ctx.out(), "{}", name));
+                ctx.advance_to(fmt::format_to(ctx.out(), "{}", name));
             }
 
-            ctx.advance_to(format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
+            ctx.advance_to(fmt::format_to(ctx.out(), " = {}{}", what, (print_sep ? field_sep : "")));
         };
 
         auto print_reg = [this, print_named_field](std::string_view name, const auto& reg) {

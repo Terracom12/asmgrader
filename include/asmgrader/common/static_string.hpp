@@ -141,3 +141,18 @@ consteval auto operator""_static() {
 }
 
 } // namespace asmgrader
+
+template<std::size_t N>
+struct fmt::formatter<::asmgrader::StaticString<N>>  {
+    fmt::formatter<std::string_view> underlying;
+
+
+    constexpr auto parse(fmt::format_parse_context& ctx) {
+        return underlying.parse(ctx);
+    }
+
+    constexpr auto format(const ::asmgrader::StaticString<N>& from, fmt::format_context& ctx) const {
+        return underlying.format(from, ctx);
+    }
+
+};
