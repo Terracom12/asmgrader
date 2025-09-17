@@ -2,6 +2,10 @@
 
 #include "common/static_string.hpp"
 
+#include <fmt/base.h>
+#include <fmt/compile.h>
+#include <fmt/ranges.h>
+
 #include <string_view>
 
 using asmgrader::StaticString, asmgrader::static_format;
@@ -47,3 +51,17 @@ TEST_CASE("Basic static_format checks") {
     STATIC_REQUIRE(static_format<"{0} + {0} = {1}">(1, 2) == "1 + 1 = 2");
     STATIC_REQUIRE(static_format<"">(1, 2) == "");
 }
+
+TEST_CASE("Static string is formattable") {
+    static_assert(fmt::formattable<asmgrader::StaticString<1>>);
+
+    constexpr StaticString a = [] {
+        StaticString<10> a{};
+        fmt::format_to(a.begin(), FMT_COMPILE("{}"), StaticString("Hello!"));
+        return a;
+    }();
+
+    STATIC_REQUIRE(a == "Hello!");
+}
+
+// TODO: More tests
