@@ -185,7 +185,7 @@ FMT_SERIALIZE_CLASS(::asmgrader::CompilerInfo, kind, major_version, minor_versio
 FMT_SERIALIZE_ENUM(::asmgrader::CompilerInfo::Vendor, Unknown, GCC, Clang);
 FMT_SERIALIZE_CLASS(::asmgrader::RunMetadata, version, version_string, git_hash, start_time, cpp_standard,
                     compiler_info);
-FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult, passed, msg, debug_info);
+FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult, passed, description, expression_repr, debug_info);
 FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult::DebugInfo, msg, loc);
 FMT_SERIALIZE_CLASS(::asmgrader::TestResult, name, requirement_results, num_passed, num_total, weight, error);
 FMT_SERIALIZE_CLASS(::asmgrader::AssignmentResult, name, test_results, num_requirements_total);
