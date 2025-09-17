@@ -48,7 +48,7 @@ template <>
 struct fmt::formatter<std::timespec> : formatter<std::string>
 {
     auto format(const std::timespec& from, fmt::format_context& ctx) const {
-        return format_to(ctx.out(), "timespec{{tv_sec={}, tv_nsec={}}}", from.tv_sec, from.tv_nsec);
+        return fmt::format_to(ctx.out(), "timespec{{tv_sec={}, tv_nsec={}}}", from.tv_sec, from.tv_nsec);
     }
 };
 
@@ -71,7 +71,7 @@ template <>
 struct fmt::formatter<std::error_code> : ::asmgrader::DebugFormatter
 {
     auto format(const std::error_code& from, format_context& ctx) const {
-        return format_to(ctx.out(), "{} : {}", strerrorname_np(from.value()), from.message());
+        return fmt::format_to(ctx.out(), "{} : {}", strerrorname_np(from.value()), from.message());
     }
 };
 

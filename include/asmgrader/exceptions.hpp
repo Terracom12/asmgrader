@@ -33,6 +33,6 @@ template <>
 struct fmt::formatter<::asmgrader::ContextInternalError> : ::asmgrader::DebugFormatter
 {
     auto format(const ::asmgrader::ContextInternalError& from, format_context& ctx) const {
-        return format_to(ctx.out(), "{} : {}", from.what(), fmt::underlying(from.get_error()));
+        return fmt::format_to(ctx.out(), "{} : {}", from.what(), fmt::underlying(from.get_error()));
     }
 };
