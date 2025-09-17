@@ -12,7 +12,9 @@
 #include <libassert/assert.hpp>
 
 #include <cctype>
+#include <cmath>
 #include <concepts>
+#include <cstdlib>
 #include <functional>
 #include <limits>
 #include <type_traits>
@@ -33,25 +35,11 @@ consteval decltype(auto) resolve_overload(auto&& overloaded) {
 
 namespace cctype {
 
-template <std::invocable<int> auto Func>
-consteval auto make_safe_cctype_wrapper() {
-    return [](char c) { return static_cast<bool>(std::invoke(Func, static_cast<unsigned char>(c))); };
-}
-
-constexpr bool isdigit(char c) {
-    return c >= '0' && c <= '9';
-}
-
-constexpr char tolower(char c) {
-    return c += ('a' - 'A');
-}
-
-constexpr char toupper(char c) {
-    return c -= ('a' - 'A');
-}
-
-constexpr bool isxdigit(char c) {
-    return isdigit(c) || in_range(tolower(c), 'a', 'f');
+template <typename Ret, typename... ExtraArgs>
+consteval auto make_safe_wrapper(int (&cfunc)(int, ExtraArgs...)) {
+    return [&cfunc](char c, ExtraArgs... other_args) -> Ret {
+        return static_cast<Ret>(std::invoke(cfunc, static_cast<unsigned char>(c), other_args...));
+    };
 }
 
 constexpr bool islower(char c) {
@@ -60,6 +48,28 @@ constexpr bool islower(char c) {
 
 constexpr bool isupper(char c) {
     return in_range(c, 'A', 'Z');
+}
+
+constexpr char tolower(char c) {
+    if (isupper(c)) {
+        return c += ('a' - 'A');
+    }
+    return c;
+}
+
+constexpr char toupper(char c) {
+    if (islower(c)) {
+        return c -= ('a' - 'A');
+    }
+    return c;
+}
+
+constexpr bool isdigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+constexpr bool isxdigit(char c) {
+    return isdigit(c) || in_range(tolower(c), 'a', 'f');
 }
 
 constexpr bool isalpha(char c) {
@@ -74,7 +84,7 @@ constexpr bool isalnum(char c) {
 // See the table at the bottom of https://en.cppreference.com/w/cpp/string/byte/isgraph.html
 
 constexpr bool iscntrl(char c) {
-    return c <= '\x1F';
+    return c <= '\x1F' || c == '\x7F';
 }
 
 constexpr bool isgraph(char c) {
@@ -101,65 +111,59 @@ constexpr bool ispunct(char c) {
 
 } // namespace cctype
 
-template <auto ConstexprFunc, auto CFunc, typename... Args>
-consteval auto make_cfunc_wrapper() {
-    return [](Args... args) {
-        if (std::is_constant_evaluated()) {
-            return std::invoke(ConstexprFunc, args...);
-        }
-        return std::invoke(CFunc, args...);
-    };
-}
-
-template <template <typename...> typename ConstexprFunc, auto CFunc, typename... Args>
-consteval auto make_cfunc_wrapper() {
-    return [](Args... args) {
-        if (std::is_constant_evaluated()) {
-            return ConstexprFunc<Args...>(args...);
-        }
-        return std::invoke(CFunc, args...);
-    };
-}
-
 } // namespace detail
 
-CCTYPE_IMPL(isdigit);
-CCTYPE_IMPL(isxdigit);
-CCTYPE_IMPL(islower);
-CCTYPE_IMPL(isupper);
-CCTYPE_IMPL(isalpha);
-CCTYPE_IMPL(isalnum);
-CCTYPE_IMPL(iscntrl);
-CCTYPE_IMPL(isgraph);
-CCTYPE_IMPL(isprint);
-CCTYPE_IMPL(isblank);
-CCTYPE_IMPL(isspace);
-CCTYPE_IMPL(ispunct);
+#define CCTYPE_IMPL(name, ret_type)                                                                                    \
+    constexpr ret_type name(char c) {                                                                                  \
+        if (std::is_constant_evaluated()) {                                                                            \
+            return detail::cctype::name(c);                                                                            \
+        }                                                                                                              \
+        return detail::cctype::make_safe_wrapper<ret_type>(std::name)(c);                                              \
+    }
+
+CCTYPE_IMPL(isdigit, bool);
+CCTYPE_IMPL(isxdigit, bool);
+CCTYPE_IMPL(islower, bool);
+CCTYPE_IMPL(isupper, bool);
+CCTYPE_IMPL(isalpha, bool);
+CCTYPE_IMPL(isalnum, bool);
+CCTYPE_IMPL(iscntrl, bool);
+CCTYPE_IMPL(isgraph, bool);
+CCTYPE_IMPL(isprint, bool);
+CCTYPE_IMPL(isblank, bool);
+CCTYPE_IMPL(isspace, bool);
+CCTYPE_IMPL(ispunct, bool);
+
+CCTYPE_IMPL(toupper, char);
+CCTYPE_IMPL(tolower, char);
 
 #undef CCTYPE_IMPL
 
-namespace detail::cmath {
-
 template <typename T>
     requires std::is_arithmetic_v<T>
-consteval T abs(T val) {
-    if constexpr (std::integral<T> && std::is_signed_v<T>) {
-        ASSERT(val != std::numeric_limits<T>::min(), "abs of signed minimum would be UB");
+constexpr T abs(T val) {
+    if (std::is_constant_evaluated()) {
+        if constexpr (std::integral<T> && std::is_signed_v<T>) {
+            ASSERT(val != std::numeric_limits<T>::min(), "abs of signed minimum would be UB");
+        }
+        return (val < 0 ? -val : val);
     }
-    return (val < 0 ? -val : val);
+
+    return std::abs(val);
 }
 
-template <std::integral BaseT, std::unsigned_integral ExpT>
-consteval std::common_type_t<BaseT, ExpT> pow(BaseT base, ExpT exp) {
-    auto val = 1;
-    while (exp-- > 0) {
-        val *= base;
+template <typename BaseT, std::unsigned_integral ExpT>
+    requires std::is_arithmetic_v<BaseT>
+constexpr std::common_type_t<BaseT, ExpT> pow(BaseT base, ExpT exp) {
+    if (std::is_constant_evaluated()) {
+        auto val = 1;
+        while (exp-- > 0) {
+            val *= base;
+        }
+        return val;
     }
-    return val;
+
+    return std::pow(base, exp);
 }
-
-} // namespace detail::cmath
-
-constexpr auto(abs) = detail ::make_cfunc_wrapper<detail ::cmath ::abs, std ::abs, int>();
 
 } // namespace asmgrader

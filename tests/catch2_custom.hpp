@@ -80,3 +80,26 @@ constexpr auto make_tests(const std::tuple<Types...> (&init)[N]) {
 ///     }));
 #define STATIC_TABLE_TESTS(table, parenthesized_elems, fn_body)                                                        \
     STATIC_TABLE_TESTS_IMPL(table, parenthesized_elems, fn_body)
+
+namespace detail {
+template </*range w/ tuple_size & std::get*/ auto Range>
+struct ConstexprRangeUnrollImpl
+{
+    using IdxSeq = std::make_index_sequence<std::tuple_size_v<decltype(Range)>>;
+
+    ConstexprRangeUnrollImpl(auto lambda) {
+        loop_impl([&lambda]<auto... Args>() { lambda.template operator()<Args...>(); }, IdxSeq{});
+    }
+
+    template <std::size_t... Idxes>
+    void loop_impl(auto Callable, std::index_sequence<Idxes...>) {
+        using std::get;
+        (Callable.template operator()<get<Idxes>(Range)>(), ...);
+    }
+};
+} // namespace detail
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#define CONSTEXPR_RANGE_FOR(item_decl, range_init)                                                                     \
+    _Pragma("GCC diagnostic ignored \"-Wold-style-cast\"")(detail::ConstexprRangeUnrollImpl<range_init>)[&]<item_decl>()
