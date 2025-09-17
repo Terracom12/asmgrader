@@ -22,10 +22,10 @@ namespace mp = boost::mp11;
 using sized_uint_map = mp::mp_list<u8, u16, u32, u64>;
 using sized_int_map = mp::mp_list<i8, i16, i32, i64>;
 
-template <std::size_t I>
+template <int I>
 using sized_int_impl = mp::mp_at<sized_int_map, mp::mp_int<I>>;
 
-template <std::size_t I>
+template <int I>
 using sized_uint_impl = mp::mp_at<sized_uint_map, mp::mp_int<I>>;
 } // namespace detail
 
