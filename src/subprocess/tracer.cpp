@@ -16,11 +16,13 @@
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <gsl/util>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <range/v3/view/zip.hpp>
 
+#include <cctype>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -28,6 +30,7 @@
 #include <ios>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -111,7 +114,7 @@ void Tracer::assert_invariants() const {
 
     std::fstream proc_stat(proc_stat_pathname, std::ios::in);
 
-    // see the proc(5) manpage
+    // see the proc_pid_stat(5) manpage
     struct ProcStatInfo
     {
         int pid;
@@ -120,7 +123,36 @@ void Tracer::assert_invariants() const {
         int ppid;
     } info{};
 
-    proc_stat >> info.pid >> info.comm >> info.state >> info.ppid;
+    std::string full_proc_data;
+
+    {
+        std::string tmp;
+        while (std::getline(proc_stat, tmp)) {
+            full_proc_data += tmp;
+        }
+    }
+
+    std::istringstream stream{full_proc_data};
+
+    stream >> info.pid;
+
+    // As explained by https://unix.stackexchange.com/a/558252, /proc/$pid/stat is REQUIRED to be unambiguous,
+    // thus the only places that parenthesis may exist are in and surrounding the filename field. Following is
+    // the fact that the first and last parenthesis MUST enclose the filename field.
+    const auto first_paren_pos = full_proc_data.find('(');
+    const auto last_paren_pos = full_proc_data.find_last_of(')');
+
+    if (first_paren_pos == std::string::npos || last_paren_pos == std::string::npos) {
+        LOG_FATAL("Internal error reading /proc/{}/stat! pid={}, parens=({}, {})", pid_, info.pid, first_paren_pos,
+                  last_paren_pos);
+        std::abort();
+    }
+
+    info.comm = full_proc_data.substr(first_paren_pos + 1, last_paren_pos - first_paren_pos - 1);
+
+    // Stream now has all data AFTER filename field
+    stream = std::istringstream{full_proc_data.substr(last_paren_pos + 1)};
+    stream >> info.state >> info.ppid;
 
     // Check for invalid states:
     //   Z   - zombie
