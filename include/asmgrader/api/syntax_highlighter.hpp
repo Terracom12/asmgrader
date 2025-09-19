@@ -7,12 +7,17 @@
 
 #include <fmt/base.h>
 #include <fmt/color.h>
+#include <fmt/format.h>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/concepts.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <range/v3/range/primitives.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include <array>
 #include <cstddef>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -63,17 +68,13 @@ struct Options
 
 // If unspecified, uses the default of whatever text rendering method is in use
 
-inline auto highlight(const inspection::Token& token, const Options& opts = {}) {
-    return fmt::styled(token, opts[token.kind].style);
+inline std::string highlight(const inspection::Token& token, const Options& opts = {}) {
+    return fmt::to_string(fmt::styled(token, opts[token.kind].style));
 }
 
-inline auto highlight(const ranges::sized_range auto& tokens, const Options& opts = {}) {
-    std::vector<decltype(fmt::styled(std::declval<inspection::Token>(), std::declval<fmt::text_style>()))> result(
-        ranges::size(tokens));
-
-    ranges::transform(tokens, result.begin(), [&opts](const inspection::Token& tok) { return highlight(tok, opts); });
-
-    return result;
+inline std::string highlight(const ranges::sized_range auto& tokens, const Options& opts = {}) {
+    return tokens | ranges::views::transform([&opts](const inspection::Token& tok) { return highlight(tok, opts); }) |
+           ranges::views::join | ranges::to<std::string>();
 }
 
 } // namespace asmgrader::highlight
