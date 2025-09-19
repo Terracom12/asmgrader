@@ -11,6 +11,7 @@ set(
     test_static_expected.cpp
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
+    test_expression_inspection.cpp
     test_cconstexpr.cpp
     test_static_string.cpp
     test_static_byte.cpp
@@ -50,6 +51,8 @@ add_executable(
 
     catch_main.cpp
 )
+
+add_dependencies(asmgrader_tests asm_tests)
 
 target_compile_definitions(
     asmgrader_tests

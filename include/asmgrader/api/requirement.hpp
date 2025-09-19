@@ -2,7 +2,7 @@
 
 #include <asmgrader/api/asm_function.hpp>
 #include <asmgrader/api/asm_symbol.hpp>
-#include <asmgrader/api/expr_inspection.hpp>
+#include <asmgrader/api/expression_inspection.hpp>
 #include <asmgrader/api/stringize_fwd.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/formatters/unknown.hpp>

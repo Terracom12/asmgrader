@@ -763,7 +763,7 @@ constexpr bool matches<Grouping>(const Stream& stream) {
             return false;
         }
 
-        auto num_operator_opening = ranges::count(stream.ctx.prevs, Token{.kind = Operator, .str = ")"});
+        auto num_operator_opening = ranges::count(stream.ctx.prevs, Token{.kind = Operator, .str = "("});
         auto num_operator_closing = ranges::count(stream.ctx.prevs, Token{.kind = Operator, .str = ")"});
 
         // there cannot be more closing than opening. That would imply a parsing error
@@ -780,23 +780,30 @@ constexpr bool matches<Grouping>(const Stream& stream) {
     }
 
     // very basic heuristic for checking if '<' / '>' are being used to surround tparams:
-    //   for '<': if a '>' is found in the stream and there is no logical operator in-between
+    //   for '<': if an excess '>' is found further in the stream, before any other '<' chars, there is no logical
+    //   operator in-between, and there is no opening parenthesis in-between
     //     (just includes '&&', '||')
     //   for '>': an unmatched '<' exists
 
+    // FIXME: This is not worth implementing properly right now
+    //        as long as expressions like the following forms can be parsed:
+    //        `ident<simple-expr>`
+    //        `ident<simple-expr> </> ident<simple-expr>`
+    //        `ident<simple-expr> </> ident`
+    //        `ident </> ident<simple-expr>`
+    // TODO: handle bitshift ambiguity and '<' / '>' operators nested within a tparam
     if (tok == '<') {
         auto first_logical_op = std::min(stream.str().find("&&"), stream.str().find("||"));
-        // FIXME: This could be within a string or character literal
-        auto first_closing_angled = stream.str().find('>');
+        auto first_opening_paren = stream.str().find('(');
+        auto next_closing_angled = stream.str().find('>');
 
-        if (first_closing_angled == std::string_view::npos) {
+        if (next_closing_angled > first_logical_op || next_closing_angled > first_opening_paren) {
             return false;
         }
-        if (first_logical_op == std::string_view::npos) {
-            return true;
-        }
 
-        return first_closing_angled < first_logical_op;
+        auto next_opening_angled = stream.str().substr(1).find('<');
+
+        return next_opening_angled > next_closing_angled;
     }
 
     if (tok == '>') {
@@ -941,6 +948,47 @@ static_assert(test_parse<RawStringLiteral>(R"---(R"(("))")---") == R"---(R"(("))
 static_assert(test_parse<RawStringLiteral>(R"---(R"a()a")---") == R"---(R"a()a")---");
 static_assert(test_parse<RawStringLiteral>(R"---(R"a()a)a")---") == R"---(R"a()a)a")---");
 static_assert(test_parse<RawStringLiteral>(R"---(R"123( 28%\di\""" 2)123")---") == R"---(R"123( 28%\di\""" 2)123")---");
+
+/// \overload
+/// See \ref Token::Kind::StringLiteral for details
+template <>
+constexpr std::string_view parse<CharLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<CharLiteral>(stream));
+
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
+
+    // Exact same strategy used in parse<StringLiteral>, simply replacing " with '
+
+    // Consume through first '
+    stream.consume_through('\'');
+
+    auto is_chr_end = [prev_backslash = false](char c) mutable {
+        if (prev_backslash) {
+            prev_backslash = false;
+            return false;
+        }
+
+        if (c == '\\') {
+            prev_backslash = true;
+        }
+
+        return c == '\'';
+    };
+
+    stream.consume_until(is_chr_end);
+    stream.consume(1);
+
+    return get_res();
+}
+
+static_assert(test_parse<CharLiteral>("''") == "''");
+static_assert(test_parse<CharLiteral>("u''") == "u''");
+static_assert(test_parse<CharLiteral>("u8''") == "u8''");
+static_assert(test_parse<CharLiteral>("L''") == "L''");
+static_assert(test_parse<CharLiteral>("'a'") == "'a'");
+static_assert(test_parse<CharLiteral>(R"('\\')") == R"('\\')");
+static_assert(test_parse<CharLiteral>(R"('\'')") == R"('\'')");
+static_assert(test_parse<CharLiteral>("'abcd'") == "'abcd'");
 
 /// \overload
 /// See \ref Token::Kind::IntLiteral for details
@@ -1203,6 +1251,9 @@ constexpr auto parse_all(Stream input_stream) {
     std::array<Token, MaxNumTokens> tokens{};
 
     for (std::size_t i = 0; auto& tok : tokens) {
+        // strip any leading whitespace (only ' ' and '\t')
+        input_stream.consume_through(isblank);
+
         if (input_stream.empty()) {
             tok.kind = EndDelimiter;
             break;
