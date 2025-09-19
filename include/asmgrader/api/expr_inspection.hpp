@@ -9,8 +9,8 @@
 #include <asmgrader/common/formatters/macros.hpp>
 #include <asmgrader/logging.hpp>
 
-#include <fmt/color.h>
 #include <fmt/format.h>
+#include <gsl/narrow>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/contains.hpp>
@@ -22,7 +22,10 @@
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
+#include <range/v3/view/any_view.hpp>
+#include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
+#include <range/v3/view/take_while.hpp>
 #include <range/v3/view/transform.hpp>
 
 #include <algorithm>
@@ -166,7 +169,6 @@ struct Token
         Operator,
 
         /// Deliminates the end of the token sequence.
-        /// With the current implementation, this is *never* accessible by the user.
         EndDelimiter
     };
 
@@ -174,8 +176,6 @@ struct Token
     std::string_view str;
 
     constexpr bool operator==(const Token&) const = default;
-
-    static constexpr auto parse(std::string_view str);
 };
 
 constexpr std::string_view format_as(const Token::Kind token_kind) {
@@ -206,7 +206,7 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
     }
 }
 
-constexpr std::string format_as(const Token& tok) {
+inline std::string format_as(const Token& tok) {
     return fmt::format("{:?}:{}", tok.str, tok.kind);
 }
 
@@ -304,8 +304,8 @@ public:
         : str_{string} {}
 
     /// This overload is just used for writing tests
-    constexpr Stream(std::string_view& string, StreamContext ctx)
-        : ctx{ctx}
+    constexpr Stream(std::string_view& string, StreamContext context)
+        : ctx{context}
         , str_{string} {}
 
     constexpr std::size_t size() const { return str().size(); }
@@ -835,7 +835,8 @@ constexpr bool matches<Operator>(const Stream& stream) {
     // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
     // e.g., "-=" is always picked over "-"
     auto max_munch_tokens = operator_tokens;
-    ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
+    // FIXME:...
+    // ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
 
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     return ranges::any_of(max_munch_tokens, check_stream_starts);
@@ -1185,7 +1186,8 @@ constexpr std::string_view parse<Operator>(Stream& stream) {
     // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
     // e.g., "-=" is always picked over "-"
     auto max_munch_tokens = operator_tokens;
-    ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
+    // FIXME:...
+    // ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
 
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     const auto* iter = ranges::find_if(max_munch_tokens, check_stream_starts);
@@ -1195,6 +1197,75 @@ constexpr std::string_view parse<Operator>(Stream& stream) {
     return stream.consume(iter->size());
 }
 
+/// Implementation for parsing the entirety of an input stream, accepting a list of parsable tokens as tparams
+template <std::size_t MaxNumTokens, Token::Kind... ParsableTokenKinds>
+constexpr auto parse_all(Stream input_stream) {
+    std::array<Token, MaxNumTokens> tokens{};
+
+    for (std::size_t i = 0; auto& tok : tokens) {
+        if (input_stream.empty()) {
+            tok.kind = EndDelimiter;
+            break;
+        }
+
+        // An expression of, uhh, questionable coding standards and cleanliness
+        // It is very concise though.
+        ((tok.kind = ParsableTokenKinds,
+          matches<ParsableTokenKinds>(input_stream) && !(tok.str = parse<ParsableTokenKinds>(input_stream)).empty()) ||
+         ...);
+
+        input_stream.ctx.prevs = std::span(tokens.begin(), ++i);
+    }
+
+    ASSERT(input_stream.empty(), input_stream, tokens);
+
+    return tokens;
+}
+
 } // namespace tokenize
+
+template <std::size_t MaxNumTokens>
+constexpr auto parse_tokens(std::string_view str) {
+    using enum Token::Kind;
+
+    return tokenize::parse_all<MaxNumTokens, StringLiteral, RawStringLiteral, CharLiteral, IntLiteral,
+                               FloatingPointLiteral, Identifier, Grouping, Operator>(str);
+}
+
+template <std::size_t MaxNumTokens = 1'024>
+class Tokenizer
+{
+public:
+    constexpr explicit(false) Tokenizer(std::string_view str)
+        : tokens_{parse_tokens<MaxNumTokens>(str)}
+        , num_tokens_{find_end_delim_idx()} {}
+
+    constexpr auto size() const { return num_tokens_; }
+
+    constexpr auto empty() const { return num_tokens_ == 0; }
+
+    constexpr auto begin() const { return tokens_.begin(); }
+
+    constexpr auto end() const { return tokens_.begin() + num_tokens_; }
+
+    constexpr bool operator==(const ranges::forward_range auto& other) const { return ranges::equal(*this, other); }
+
+    constexpr const Token& operator[](std::size_t idx) const {
+        ASSERT(idx < num_tokens_);
+        return tokens_[idx];
+    }
+
+private:
+    constexpr std::size_t find_end_delim_idx() const {
+        auto iter =
+            std::ranges::find_if(tokens_, [](const Token& tok) { return tok.kind == Token::Kind::EndDelimiter; });
+        ASSERT(iter != ranges::end(tokens_), tokens_);
+
+        return gsl::narrow_cast<std::size_t>(iter - ranges::begin(tokens_));
+    }
+
+    std::array<Token, MaxNumTokens> tokens_;
+    std::size_t num_tokens_;
+};
 
 } // namespace asmgrader::inspection
