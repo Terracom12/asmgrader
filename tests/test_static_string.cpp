@@ -55,13 +55,13 @@ TEST_CASE("Basic static_format checks") {
 TEST_CASE("Static string is formattable") {
     static_assert(fmt::formattable<asmgrader::StaticString<1>>);
 
-    constexpr StaticString a = [] {
+    constexpr StaticString str = [] {
         StaticString<10> a{};
         fmt::format_to(a.begin(), FMT_COMPILE("{}"), StaticString("Hello!"));
         return a;
     }();
 
-    STATIC_REQUIRE(a == "Hello!");
+    STATIC_REQUIRE(str == "Hello!");
 }
 
 // TODO: More tests
