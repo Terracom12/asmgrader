@@ -698,7 +698,9 @@ constexpr bool matches<IntOctLiteral>(const Stream& stream) {
 
     // Non-hex int digit-seq proceeded by a 'e' is ALWAYS interpreted as an exponent,
     // as it is defined as such as part of the lexical grammar
-    return !after_digits.starts_with('e', case_insensitive) && !after_digits.starts_with('.');
+    // int digit-seq proceeded by a 'x' is ALWAYS interpreted as a hex literal, for same reason as above
+    return !after_digits.starts_with('x', case_insensitive) && !after_digits.starts_with('e', case_insensitive) &&
+           !after_digits.starts_with('.');
 }
 
 /// \overload
@@ -719,7 +721,9 @@ constexpr bool matches<IntDecLiteral>(const Stream& stream) {
 
     // Non-hex int digit-seq proceeded by a 'e' is ALWAYS interpreted as an exponent,
     // as it is defined as such as part of the lexical grammar
-    return !after_digits.starts_with('e', case_insensitive) && !after_digits.starts_with('.');
+    // int digit-seq proceeded by a 'x' is ALWAYS interpreted as a hex literal, for same reason as above
+    return !after_digits.starts_with('x', case_insensitive) && !after_digits.starts_with('e', case_insensitive) &&
+           !after_digits.starts_with('.');
 }
 
 static_assert(matches<IntDecLiteral>("123"));
@@ -733,6 +737,14 @@ static_assert(matches<IntOctLiteral>("01'2"));
 static_assert(matches<IntOctLiteral>("0'1'2345'123"));
 static_assert(matches<IntHexLiteral>("0x1'A'b3F5'123"));
 static_assert(!matches<IntOctLiteral>("'0"));
+static_assert(!matches<IntDecLiteral>("0x123p3"));
+static_assert(!matches<IntDecLiteral>("0x123.0x23"));
+static_assert(!matches<IntDecLiteral>("0x123.0x23p3"));
+static_assert(!matches<IntHexLiteral>("0x123p3"));
+static_assert(!matches<IntHexLiteral>("0x123.0x23"));
+static_assert(!matches<IntHexLiteral>("0x123.0x23p3"));
+static_assert(!matches<IntOctLiteral>("0x123"));
+static_assert(!matches<IntOctLiteral>("0XABC"));
 static_assert(!matches<IntOctLiteral>("0.123"));
 static_assert(!matches<IntDecLiteral>("10.123"));
 static_assert(!matches<IntDecLiteral>(".123"));
@@ -758,6 +770,9 @@ constexpr bool matches<FloatHexLiteral>(const Stream& stream) {
 /// See \ref Token::Kind::FloatLiteral for details
 template <>
 constexpr bool matches<FloatLiteral>(const Stream& stream) {
+    if (matches<FloatHexLiteral>(stream)) {
+        return false;
+    }
     // stream starts with '.' and then a digit
     if (stream.starts_with('.') && stream.size() > 1 && isdigit(stream.str().at(1))) {
         return true;
@@ -779,15 +794,25 @@ static_assert(matches<FloatLiteral>("0.123"));
 static_assert(matches<FloatLiteral>("10.123e31"));
 static_assert(matches<FloatLiteral>("12e42"));
 static_assert(matches<FloatLiteral>("10.123f"));
+static_assert(matches<FloatLiteral>("0.fl"));
+static_assert(matches<FloatLiteral>("0'123.1'2345'6fl"));
+static_assert(matches<FloatLiteral>(".0FL"));
+
 static_assert(matches<FloatHexLiteral>("0xAEFp3"));
 static_assert(matches<FloatHexLiteral>("0xAEFp+3"));
 static_assert(matches<FloatHexLiteral>("0xAEFp-3"));
 static_assert(matches<FloatHexLiteral>("0xAEF.0x123p3"));
 static_assert(matches<FloatHexLiteral>(".0x123p3"));
-static_assert(matches<FloatLiteral>("0.fl"));
-static_assert(matches<FloatLiteral>("0'123.1'2345'6fl"));
 static_assert(matches<FloatHexLiteral>("0x12'1EF.p0x123"));
-static_assert(matches<FloatLiteral>(".0FL"));
+static_assert(matches<FloatHexLiteral>("0x123.0xABCp10"));
+
+static_assert(!matches<FloatLiteral>("0xAEFp3"));
+static_assert(!matches<FloatLiteral>("0xAEFp+3"));
+static_assert(!matches<FloatLiteral>("0xAEFp-3"));
+static_assert(!matches<FloatLiteral>("0xAEF.0x123p3"));
+static_assert(!matches<FloatLiteral>(".0x123p3"));
+static_assert(!matches<FloatLiteral>("0x12'1EF.p0x123"));
+static_assert(!matches<FloatLiteral>("0x123.0xABCp10"));
 static_assert(!matches<FloatLiteral>("123"));
 static_assert(!matches<FloatLiteral>("0"));
 static_assert(!matches<FloatLiteral>("0b10"));
@@ -1288,6 +1313,7 @@ static_assert(test_parse<FloatHexLiteral>("0Xabcdef1.0Xabcdef1P1") == "0Xabcdef1
 static_assert(test_parse<FloatHexLiteral>("0x1p12345") == "0x1p12345");
 static_assert(test_parse<FloatHexLiteral>("0x1p12345f") == "0x1p12345f");
 static_assert(test_parse<FloatHexLiteral>("0x1p12345l") == "0x1p12345l");
+static_assert(test_parse<FloatHexLiteral>("0x123.0xABCp10") == "0x123.0xABCp10");
 // test (normal) suffixes
 static_assert(test_parse<FloatLiteral>("1.f") == "1.f");
 static_assert(test_parse<FloatLiteral>("1.l") == "1.l");

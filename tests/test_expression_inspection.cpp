@@ -219,6 +219,17 @@ TEST_CASE("Operator tokens") {
 }
 
 TEST_CASE("Literal tokens") {
+    STATIC_REQUIRE(Tokenizer("0b1010") == toks(int2lit("0b1010")));
+    STATIC_REQUIRE(Tokenizer("0") == toks(int8lit("0")));
+    STATIC_REQUIRE(Tokenizer("0755") == toks(int8lit("0755")));
+    STATIC_REQUIRE(Tokenizer("1'999'543") == toks(int10lit("1'999'543")));
+    STATIC_REQUIRE(Tokenizer("0x123ABCDEF321") == toks(int16lit("0x123ABCDEF321")));
+
+    STATIC_REQUIRE(Tokenizer("1e5") == toks(floatlit("1e5")));
+    STATIC_REQUIRE(Tokenizer("1.f") == toks(floatlit("1.f")));
+    STATIC_REQUIRE(Tokenizer(".1e-2l") == toks(floatlit(".1e-2l")));
+    STATIC_REQUIRE(Tokenizer("0x123.0xABCp10") == toks(float16lit("0x123.0xABCp10")));
+
     STATIC_REQUIRE(Tokenizer(R"("abc" "123\n\t")") == toks(strlit(R"("abc")"), strlit(R"("123\n\t")")));
 
     STATIC_REQUIRE(Tokenizer(R"-(R"(abc)" R"defg1(123\"\)defg1")-") ==
