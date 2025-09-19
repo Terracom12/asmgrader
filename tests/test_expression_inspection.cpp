@@ -22,7 +22,7 @@ constexpr Token make_token(Token::Kind kind, std::string_view str) {
 
 constexpr auto strlit = std::bind_front(make_token, StringLiteral);
 constexpr auto rstrlit = std::bind_front(make_token, RawStringLiteral);
-constexpr auto chrlit = std::bind_front(make_token, CharLiteral);
+constexpr auto charlit = std::bind_front(make_token, CharLiteral);
 constexpr auto boollit = std::bind_front(make_token, BoolLiteral);
 constexpr auto int2lit = bind_front(make_token, IntBinLiteral);
 constexpr auto int8lit = bind_front(make_token, IntOctLiteral);
@@ -53,7 +53,7 @@ TEST_CASE("Single token strings") {
 
     STATIC_REQUIRE(Tokenizer(R"("hi")") == toks(strlit(R"("hi")")));
     STATIC_REQUIRE(Tokenizer(R"-(R"(\hi\)")-") == toks(rstrlit(R"-(R"(\hi\)")-")));
-    STATIC_REQUIRE(Tokenizer("'a'") == toks(chrlit("'a'")));
+    STATIC_REQUIRE(Tokenizer("'a'") == toks(charlit("'a'")));
     STATIC_REQUIRE(Tokenizer("true") == toks(boollit("true")));
     STATIC_REQUIRE(Tokenizer("123") == toks(int10lit("123")));
     STATIC_REQUIRE(Tokenizer("123.456e2") == toks(floatlit("123.456e2")));
@@ -230,6 +230,10 @@ TEST_CASE("Literal tokens") {
     STATIC_REQUIRE(Tokenizer(".1e-2l") == toks(floatlit(".1e-2l")));
     STATIC_REQUIRE(Tokenizer("0x123.0xABCp10") == toks(float16lit("0x123.0xABCp10")));
 
+    STATIC_REQUIRE(Tokenizer("'h'") == toks(charlit("'h'")));
+    STATIC_REQUIRE(Tokenizer(R"(u8'\\')") == toks(charlit(R"(u8'\\')")));
+    STATIC_REQUIRE(Tokenizer(R"(L'\'\\\'')") == toks(charlit(R"(L'\'\\\'')")));
+
     STATIC_REQUIRE(Tokenizer(R"("abc" "123\n\t")") == toks(strlit(R"("abc")"), strlit(R"("123\n\t")")));
 
     STATIC_REQUIRE(Tokenizer(R"-(R"(abc)" R"defg1(123\"\)defg1")-") ==
@@ -237,4 +241,79 @@ TEST_CASE("Literal tokens") {
 
     STATIC_REQUIRE(Tokenizer(R"-("CT"_static R"(VIEW)"sv)-") ==
                    toks(strlit(R"("CT")"), id("_static"), rstrlit(R"-(R"(VIEW)")-"), id("sv")));
+}
+
+// test the kinds of cases users of this library might have
+TEST_CASE("Basic use-case tokenization") {
+    // clang-format off
+    STATIC_REQUIRE(Tokenizer(R"(std::cout << "Hello, world!" << '\n')") == toks(
+        id("std"), op("::"), id("cout"),
+        op("<<"),
+        strlit(R"("Hello, world!")"),
+        op("<<"),
+        charlit(R"('\n')")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("x < y") == toks(
+        id("x"),
+        op("<"),
+        id("y")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("umask == 0755 || (umask & 07) == 1") == toks(
+        id("umask"), op("=="), int8lit("0755"),
+        op("||"),
+        grp("("), 
+            id("umask"), op("&"), int8lit("07"),
+        grp(")"),
+        op("=="),
+        int10lit("1")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("V == true") == toks(
+        id("V"), op("=="), boollit("true")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("!V") == toks(
+        op("!"), id("V")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("X30 & 0x8000000000000000") == toks(
+        id("X30"), op("&"), int16lit("0x8000000000000000")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("my_func(10)") == toks(
+        id("my_func"), op("("), int10lit("10"), op(")")
+    ));
+
+    STATIC_REQUIRE(Tokenizer(R"(str_func("Thing?", 6))") == toks(
+        id("str_func"), op("("), strlit(R"("Thing?")"), op(","), int10lit("6"), op(")")
+    ));
+
+    STATIC_REQUIRE(Tokenizer(R"(str_func("Thing?", 2) == "Th"sv)") == toks(
+        id("str_func"), op("("), strlit(R"("Thing?")"), op(","), int10lit("2"), op(")"),
+        op("=="),
+        strlit(R"("Th")"),
+        id("sv")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("syscalls.size() == test_cases.size()") == toks(
+        id("syscalls"), op("."), id("size"), op("("), op(")"),
+        op("=="),
+        id("test_cases"), op("."), id("size"), op("("), op(")")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("res.get_code() == 0") == toks(
+        id("res"), op("."), id("get_code"), op("("), op(")"),
+        op("=="),
+        int8lit("0")
+    ));
+
+    // potential ReGex matching operator/ in the future
+    STATIC_REQUIRE(Tokenizer(R"---(str / R"(\w+\\_([0-9]*)?\.exe?)")---") == toks(
+        id("str"),
+        op("/"),
+        rstrlit(R"---(R"(\w+\\_([0-9]*)?\.exe?)")---")
+    ));
+    // clang-format on
 }
