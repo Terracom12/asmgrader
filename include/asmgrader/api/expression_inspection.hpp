@@ -97,6 +97,18 @@ struct Token
         /// trivial to implement.
         CharLiteral,
 
+        /// 'true' or 'false'. That's it.
+        BoolLiteral,
+
+        /// https://en.cppreference.com/w/cpp/language/integer_literal.html
+        /// See \ref IntDecLiteral
+        IntBinLiteral,
+
+        /// https://en.cppreference.com/w/cpp/language/integer_literal.html
+        /// See \ref IntDecLiteral
+        /// This includes '0'
+        IntOctLiteral,
+
         /// https://en.cppreference.com/w/cpp/language/integer_literal.html
         ///
         /// Not all terminals are defined, but they should be rather obvious anyways.
@@ -110,29 +122,44 @@ struct Token
         ///
         /// integer-suffix = 'u'i  [ 'l'i | 'll'i ]
         /// DIGIT_SEP = "'"
-        IntLiteral,
+        IntDecLiteral,
+
+        /// https://en.cppreference.com/w/cpp/language/integer_literal.html
+        /// See \ref IntDecLiteral
+        IntHexLiteral,
 
         /// https://en.cppreference.com/w/cpp/language/floating_literal.html
         ///
-        /// FloatingPointLiteral = ( dec-value | hex-val ) floating-point-suffix
+        /// FloatLiteral = dec-value floating-point-suffix
         ///
         /// dec-value = dec-digits dec-exp
         ///           | dec-digits '.' [ dec-exp ]
         ///           | [ dec-digits ] '.' dec-digits [ dec-exp ]
+        ///
+        /// dec-digits = ( '1'..'9' ) { '0'..'9'  | DIGIT_SEP }
+        /// dec-exp = 'e'i [ SIGN ] dec-seq
+        ///
+        /// SIGN = '+' | '-'
+        ///
+        /// floating-point-suffix = 'f'i | 'l'i
+        FloatLiteral,
+
+        /// https://en.cppreference.com/w/cpp/language/floating_literal.html
+        ///
+        /// FloatHexLiteral = hex-val floating-point-suffix
+        ///
         /// hex-value = '0x'i hex-val-nopre
         /// hex-val-nopre = hex-digits hex-exp
         ///               | hex-digits '.' hex-exp
         ///               | [ hex-digits ] '.' hex-digits hex-exp
         ///
-        /// dec-digits = ( '1'..'9' ) { '0'..'9'  | DIGIT_SEP }
-        /// dec-exp = 'e'i [ SIGN ] dec-seq
         /// hex-digits = ( '0'..'9' | 'a'i..'f'i ) { '0'..'9' | 'a'i..'f'i | DIGIT_SEP }
         /// hex-exp = 'p'i [ SIGN ] dec-seq
         ///
         /// SIGN = '+' | '-'
         ///
         /// floating-point-suffix = 'f'i | 'l'i
-        FloatingPointLiteral,
+        FloatHexLiteral,
 
         /// https://en.cppreference.com/w/cpp/language/identifiers.html
         ///
@@ -189,10 +216,18 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
         return "RawStringLiteral";
     case CharLiteral:
         return "CharLiteral";
-    case IntLiteral:
-        return "IntLiteral";
-    case FloatingPointLiteral:
-        return "FloatingPointLiteral";
+    case IntBinLiteral:
+        return "IntBinLiteral";
+    case IntOctLiteral:
+        return "IntOctLiteral";
+    case IntDecLiteral:
+        return "IntDecLiteral";
+    case IntHexLiteral:
+        return "IntHexLiteral";
+    case FloatLiteral:
+        return "FloatLiteral";
+    case FloatHexLiteral:
+        return "FloatHexLiteral";
     case Identifier:
         return "Identifier";
     case Grouping:
@@ -206,8 +241,8 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
     }
 }
 
-inline std::string format_as(const Token& tok) {
-    return fmt::format("{:?}:{}", tok.str, tok.kind);
+constexpr std::pair<Token::Kind, std::string_view> format_as(const Token& tok) {
+    return {tok.kind, tok.str};
 }
 
 /// Recursive descent parser implementation details
@@ -300,11 +335,11 @@ public:
     constexpr explicit(false) Stream(const char* string)
         : str_{string} {}
 
-    constexpr explicit(false) Stream(std::string_view& string)
+    constexpr explicit(false) Stream(std::string_view string)
         : str_{string} {}
 
     /// This overload is just used for writing tests
-    constexpr Stream(std::string_view& string, StreamContext context)
+    constexpr Stream(std::string_view string, StreamContext context)
         : ctx{context}
         , str_{string} {}
 
@@ -369,29 +404,16 @@ public:
         return true;
     }
 
-    constexpr bool consume(std::string_view str, CaseInsensitiveTag /*unused*/) {
-        using std::size;
-        const auto str_sz = std::string_view{str}.size();
-
-        if (this->size() < str_sz) {
+    constexpr bool consume(auto what, CaseInsensitiveTag /*unused*/) {
+        if (!starts_with(what, case_insensitive)) {
             return false;
         }
 
-        // Not sure why '| ranges::views::transform(tolower)' is able to be used constexpr here...
-        if (!ranges::equal(peek(str_sz), str, std::equal_to{}, tolower, tolower)) {
-            return false;
+        if constexpr (std::same_as<char, decltype(what)>) {
+            idx_ += 1;
+        } else {
+            idx_ += std::string_view{what}.size();
         }
-        idx_ += str_sz;
-
-        return true;
-    }
-
-    constexpr bool consume(char chr, CaseInsensitiveTag /*unused*/) {
-        if (size() == 0 || tolower(peek()) != tolower(chr)) {
-            return false;
-        }
-
-        idx_ += 1;
 
         return true;
     }
@@ -419,6 +441,15 @@ public:
 
     /// Whether the stream starts with `what` (accepts same as `std::string_view::starts_with`)
     constexpr bool starts_with(auto what) const { return str().starts_with(what); }
+
+    constexpr bool starts_with(char chr, CaseInsensitiveTag /*unused*/) const {
+        return !str().empty() && tolower(str().front()) == tolower(chr);
+    }
+
+    constexpr bool starts_with(std::string_view string, CaseInsensitiveTag /*unused*/) const {
+        return size() >= string.size() &&
+               ranges::equal(string, str().substr(0, string.size()), std::equal_to{}, tolower, tolower);
+    }
 
     constexpr std::string_view str() const { return str_.substr(idx_); }
 
@@ -523,6 +554,16 @@ constexpr auto is_ident_like() {
     };
 }
 
+/// Exactly as named. Sep = '
+constexpr auto digit_or_sep(char c) {
+    return isdigit(c) || c == '\'';
+}
+
+/// Exactly as named. Sep = '
+constexpr auto xdigit_or_sep(char c) {
+    return isxdigit(c) || c == '\'';
+}
+
 // Yes, I know \overload is not technically accurate for the following definitions,
 // but it groups the functions nicely in documentation.
 
@@ -597,117 +638,161 @@ static_assert(matches<CharLiteral>("u8''"));
 static_assert(!matches<CharLiteral>("+''"));
 
 /// \overload
-/// Whether the start of `stream` is a integer literal token
-/// See \ref Token::Kind::IntLiteral for details
+/// See \ref Token::Kind::BoolLiteral for details
 template <>
-constexpr bool matches<IntLiteral>(const Stream& stream) {
+constexpr bool matches<BoolLiteral>(const Stream& stream) {
+    auto leading = stream.peek_through(is_ident_like());
+
+    return leading == "true" || leading == "false";
+}
+
+static_assert(matches<BoolLiteral>("true"));
+static_assert(matches<BoolLiteral>("false"));
+static_assert(!matches<BoolLiteral>("_false"));
+static_assert(!matches<BoolLiteral>("false_"));
+
+/// \overload
+/// Whether the start of `stream` is a binary integer literal token
+/// See \ref Token::Kind::IntBinLiteral for details
+template <>
+constexpr bool matches<IntBinLiteral>(const Stream& stream) {
+    if (!stream.starts_with("0b", case_insensitive)) {
+        return false;
+    }
+
+    return stream.size() > 2 && isdigit(stream.str().at(2));
+}
+
+/// \overload
+/// Whether the start of `stream` is a hexadecimal integer literal token
+/// See \ref Token::Kind::IntHexLiteral for details
+template <>
+constexpr bool matches<IntHexLiteral>(const Stream& stream) {
+    if (stream.size() <= 2 || !stream.starts_with("0x", case_insensitive)) {
+        return false;
+    }
+
+    std::string_view after_prefix = stream.str().substr(2);
+
+    if (!isxdigit(after_prefix.front())) {
+        return false;
+    }
+
+    Stream after_digits = substr_past(after_prefix, xdigit_or_sep);
+
+    // Hex int digit-seq proceeded by a 'p' is ALWAYS interpreted as an exponent,
+    // as it is defined as such as part of the lexical grammar
+    return !after_digits.starts_with('p', case_insensitive) && !after_digits.starts_with('.');
+}
+
+/// \overload
+/// Whether the start of `stream` is an octal integer literal token
+/// See \ref Token::Kind::IntOctLiteral for details
+template <>
+constexpr bool matches<IntOctLiteral>(const Stream& stream) {
+    if (!stream.starts_with('0')) {
+        return false;
+    }
+
+    Stream after_digits = stream.peek_past(digit_or_sep);
+
+    // Non-hex int digit-seq proceeded by a 'e' is ALWAYS interpreted as an exponent,
+    // as it is defined as such as part of the lexical grammar
+    return !after_digits.starts_with('e', case_insensitive) && !after_digits.starts_with('.');
+}
+
+/// \overload
+/// Whether the start of `stream` is a decimal integer literal token
+/// Written in terms of other int literals.
+/// See \ref Token::Kind::IntDecLiteral for details
+template <>
+constexpr bool matches<IntDecLiteral>(const Stream& stream) {
+    if (stream.empty() || !isdigit(stream.peek())) {
+        return false;
+    }
+
+    if (matches<IntBinLiteral>(stream) || matches<IntOctLiteral>(stream) || matches<IntHexLiteral>(stream)) {
+        return false;
+    }
+
+    Stream after_digits = stream.peek_past(digit_or_sep);
+
+    // Non-hex int digit-seq proceeded by a 'e' is ALWAYS interpreted as an exponent,
+    // as it is defined as such as part of the lexical grammar
+    return !after_digits.starts_with('e', case_insensitive) && !after_digits.starts_with('.');
+}
+
+static_assert(matches<IntDecLiteral>("123"));
+static_assert(matches<IntDecLiteral>("123+"));
+static_assert(matches<IntDecLiteral>("123u"));
+static_assert(matches<IntHexLiteral>("0xAEF102"));
+static_assert(matches<IntHexLiteral>("0xAEF102ull"));
+static_assert(matches<IntBinLiteral>("0b1010"));
+static_assert(matches<IntOctLiteral>("0"));
+static_assert(matches<IntOctLiteral>("01'2"));
+static_assert(matches<IntOctLiteral>("0'1'2345'123"));
+static_assert(matches<IntHexLiteral>("0x1'A'b3F5'123"));
+static_assert(!matches<IntOctLiteral>("'0"));
+static_assert(!matches<IntOctLiteral>("0.123"));
+static_assert(!matches<IntDecLiteral>("10.123"));
+static_assert(!matches<IntDecLiteral>(".123"));
+static_assert(!matches<IntOctLiteral>("0.f"));
+static_assert(!matches<IntDecLiteral>("1e5"));
+static_assert(!matches<IntHexLiteral>("0x15p3"));
+
+/// \overload
+/// Whether the start of `stream` is a hexadecimal floating point literal token
+/// See \ref Token::Kind::FloatLiteral for details
+template <>
+constexpr bool matches<FloatHexLiteral>(const Stream& stream) {
+    // Only 2 valid forms for the start of a hex floating-point literal
+    if (stream.starts_with("0x", case_insensitive)) {
+        return !matches<IntHexLiteral>(stream);
+    }
+
+    return stream.starts_with(".0x", case_insensitive);
+}
+
+/// \overload
+/// Whether the start of `stream` is a floating point literal token
+/// See \ref Token::Kind::FloatLiteral for details
+template <>
+constexpr bool matches<FloatLiteral>(const Stream& stream) {
+    // stream starts with '.' and then a digit
+    if (stream.starts_with('.') && stream.size() > 1 && isdigit(stream.str().at(1))) {
+        return true;
+    }
+
     if (!isdigit(stream.peek())) {
         return false;
     }
 
-    // now need to do a few checks to make sure it's not a floating point literal
-    // we'll reuse this logic in `matches<FloatingPointLiteral>`
-
-    auto or_sep = [](std::invocable<char> auto digit_check, char c) { return digit_check(c) || c == '\''; };
-
-    // sep is not allowed at the front, but we already checked that the first char is a digit
-    // also, 12''34 is not a valid literal, but c++ forbids that anyways
-    std::string_view after_digits = stream.peek_past(std::bind_front(or_sep, isdigit));
-
-    // int literal is at the end of the stream
-    if (after_digits.empty()) {
-        return true;
-    }
-
-    if (char first = tolower(after_digits.front())) {
-        if (first == 'b') {
-            return true;
-        }
-
-        // floating point literal
-        if (first == 'e' || first == '.') {
-            return false;
-        }
-
-        // Not a hex literal and not a floating point -> must be a literal suffix
-        if (first != 'x') {
-            return true;
-        }
-    }
-
-    // At this point, we must have 0x...
-    //                  we're here  ^
-
-    // fully remove int/floating literal prefix 0x
-    after_digits.remove_prefix(1);
-
-    // obtain portion after all hex digits
-    after_digits = substr_past(after_digits, std::bind_front(or_sep, isxdigit));
-
-    // after_digits is empty -> hex int literal at end of stream -> GOOD
-    // after_digits first char is 'p' (floating hex literal exponent) or '.' floating poing -> BAD
-    return after_digits.empty() || (after_digits.front() != 'p' && after_digits.front() != '.');
+    return !matches<IntBinLiteral>(stream) && !matches<IntOctLiteral>(stream) && !matches<IntDecLiteral>(stream) &&
+           !matches<IntHexLiteral>(stream);
 }
 
-static_assert(matches<IntLiteral>("123"));
-static_assert(matches<IntLiteral>("123+"));
-static_assert(matches<IntLiteral>("123u"));
-static_assert(matches<IntLiteral>("0xAEF102"));
-static_assert(matches<IntLiteral>("0xAEF102ull"));
-static_assert(matches<IntLiteral>("0b1010"));
-static_assert(matches<IntLiteral>("0"));
-static_assert(matches<IntLiteral>("01'2"));
-static_assert(matches<IntLiteral>("0'1'2345'123"));
-static_assert(matches<IntLiteral>("0x1'A'b3F5'123"));
-static_assert(!matches<IntLiteral>("'0"));
-static_assert(!matches<IntLiteral>("0.123"));
-static_assert(!matches<IntLiteral>("10.123"));
-static_assert(!matches<IntLiteral>(".123"));
-static_assert(!matches<IntLiteral>("0.f"));
-static_assert(!matches<IntLiteral>("1e5"));
-static_assert(!matches<IntLiteral>("0x15p3"));
-
-/// \overload
-/// Whether the start of `stream` is a floating point literal token
-/// See \ref Token::Kind::FloatingPointLiteral for details
-template <>
-constexpr bool matches<FloatingPointLiteral>(const Stream& stream) {
-    // Starts with digit and is NOT an IntLiteral -> must be a FloatingPointLiteral
-    if (isdigit(stream.peek())) {
-        return !matches<IntLiteral>(stream);
-    }
-
-    // either operator. or a fp number
-    if (stream.peek() == '.') {
-        char after_dec = stream.peek(2).back();
-        // a digit after the . means it cannot be an operator
-        return isdigit(after_dec);
-    }
-
-    return false;
-}
-
-static_assert(matches<FloatingPointLiteral>(".123"));
-static_assert(matches<FloatingPointLiteral>(".123e52"));
-static_assert(matches<FloatingPointLiteral>(".123e+52"));
-static_assert(matches<FloatingPointLiteral>(".123e-52"));
-static_assert(matches<FloatingPointLiteral>("0.123"));
-static_assert(matches<FloatingPointLiteral>("10.123e31"));
-static_assert(matches<FloatingPointLiteral>("12e42"));
-static_assert(matches<FloatingPointLiteral>("10.123f"));
-static_assert(matches<FloatingPointLiteral>("0xAEFp3"));
-static_assert(matches<FloatingPointLiteral>("0xAEFp+3"));
-static_assert(matches<FloatingPointLiteral>("0xAEFp-3"));
-static_assert(matches<FloatingPointLiteral>("0xAEF.0x123p3"));
-static_assert(matches<FloatingPointLiteral>(".0x123p3"));
-static_assert(matches<FloatingPointLiteral>("0.fl"));
-static_assert(matches<FloatingPointLiteral>("0'123.1'2345'6fl"));
-static_assert(matches<FloatingPointLiteral>("0x12'1EF.p0x123"));
-static_assert(matches<FloatingPointLiteral>(".0FL"));
-static_assert(!matches<FloatingPointLiteral>("123"));
-static_assert(!matches<FloatingPointLiteral>("0"));
-static_assert(!matches<FloatingPointLiteral>("0b10"));
-static_assert(!matches<FloatingPointLiteral>("0xAB10"));
+static_assert(matches<FloatLiteral>(".123"));
+static_assert(matches<FloatLiteral>(".123e52"));
+static_assert(matches<FloatLiteral>(".123e+52"));
+static_assert(matches<FloatLiteral>(".123e-52"));
+static_assert(matches<FloatLiteral>("0.123"));
+static_assert(matches<FloatLiteral>("10.123e31"));
+static_assert(matches<FloatLiteral>("12e42"));
+static_assert(matches<FloatLiteral>("10.123f"));
+static_assert(matches<FloatHexLiteral>("0xAEFp3"));
+static_assert(matches<FloatHexLiteral>("0xAEFp+3"));
+static_assert(matches<FloatHexLiteral>("0xAEFp-3"));
+static_assert(matches<FloatHexLiteral>("0xAEF.0x123p3"));
+static_assert(matches<FloatHexLiteral>(".0x123p3"));
+static_assert(matches<FloatLiteral>("0.fl"));
+static_assert(matches<FloatLiteral>("0'123.1'2345'6fl"));
+static_assert(matches<FloatHexLiteral>("0x12'1EF.p0x123"));
+static_assert(matches<FloatLiteral>(".0FL"));
+static_assert(!matches<FloatLiteral>("123"));
+static_assert(!matches<FloatLiteral>("0"));
+static_assert(!matches<FloatLiteral>("0b10"));
+static_assert(!matches<FloatHexLiteral>("0b10"));
+static_assert(!matches<FloatHexLiteral>("0xAB10"));
 
 /// \overload
 /// Whether the start of `stream` is an identifier token
@@ -721,7 +806,7 @@ constexpr bool matches<Identifier>(const Stream& stream) {
         return false;
     }
 
-    return !ranges::contains(operator_tokens, full_token);
+    return !ranges::contains(operator_tokens, full_token) && !matches<BoolLiteral>(stream);
 }
 
 static_assert(matches<Identifier>("abc"));
@@ -781,8 +866,8 @@ constexpr bool matches<Grouping>(const Stream& stream) {
 
     // very basic heuristic for checking if '<' / '>' are being used to surround tparams:
     //   for '<': if an excess '>' is found further in the stream, before any other '<' chars, there is no logical
-    //   operator in-between, and there is no opening parenthesis in-between
-    //     (just includes '&&', '||')
+    //   operator in-between, there is no opening parenthesis in-between, and the chars up to the first alnum/ws/'_'
+    //   do not match an operator
     //   for '>': an unmatched '<' exists
 
     // FIXME: This is not worth implementing properly right now
@@ -793,6 +878,11 @@ constexpr bool matches<Grouping>(const Stream& stream) {
     //        `ident </> ident<simple-expr>`
     // TODO: handle bitshift ambiguity and '<' / '>' operators nested within a tparam
     if (tok == '<') {
+        auto full_token = stream.peek_until([](char c) { return isalnum(c) || isblank(c) || c == '_'; });
+        if (full_token.size() > 1 && ranges::contains(operator_tokens, full_token)) {
+            return false;
+        }
+
         auto first_logical_op = std::min(stream.str().find("&&"), stream.str().find("||"));
         auto first_opening_paren = stream.str().find('(');
         auto next_closing_angled = stream.str().find('>');
@@ -842,8 +932,7 @@ constexpr bool matches<Operator>(const Stream& stream) {
     // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
     // e.g., "-=" is always picked over "-"
     auto max_munch_tokens = operator_tokens;
-    // FIXME:...
-    // ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
+    ranges::sort(max_munch_tokens, std::greater{}, &std::string_view::size);
 
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     return ranges::any_of(max_munch_tokens, check_stream_starts);
@@ -990,145 +1079,129 @@ static_assert(test_parse<CharLiteral>(R"('\\')") == R"('\\')");
 static_assert(test_parse<CharLiteral>(R"('\'')") == R"('\'')");
 static_assert(test_parse<CharLiteral>("'abcd'") == "'abcd'");
 
-/// \overload
-/// See \ref Token::Kind::IntLiteral for details
-template <>
-constexpr std::string_view parse<IntLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<IntLiteral>(stream));
-
-    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
-
-    // Consume the first digit
-    stream.consume(1);
-
-    if (stream.empty()) {
-        return get_res();
-    }
-
-    // std::function is not allowed in constexpr pre-C++23 :(
-    bool (*digit_or_sep)(char){};
-
-    if (tolower(stream.peek()) == 'x') {
-        if (stream.size() == 1 || !isxdigit(stream.peek(2).at(1))) {
-            return get_res();
-        }
-        stream.consume(1);
-        digit_or_sep = [](char c) { return isxdigit(c) || c == '\''; };
-    } else {
-        // we don't want to attempt to consume hex digits for non-hex literals,
-        // since they can *technically* be a user-defined literal operator
-        //   e.g., "01abc"
-        // Attempting to consume normal decimal degits for a binary literal is
-        // fine, since those could never be a literal operator.
-        digit_or_sep = [](char c) { return isdigit(c) || c == '\''; };
-    }
-
-    if (tolower(stream.peek()) == 'b') {
-        if (stream.size() == 1 || !isdigit(stream.peek(2).at(1))) {
-            return get_res();
-        }
-        stream.consume(1);
-    }
-
-    // consumes all digits
-    stream.consume_while(digit_or_sep);
-
+constexpr bool consume_int_suffix(Stream& stream) {
     // an int suffix is 1-3 chars long, so just brute force
     for (std::size_t len = 3; len >= 1; --len) {
         if (len <= stream.size() && is_int_suffix(stream.peek(len))) {
             stream.consume(len);
-            break;
+            return true;
         }
     }
+
+    return false;
+}
+
+/// \overload
+/// See \ref Token::Kind::IntBinLiteral for details
+template <>
+constexpr std::string_view parse<IntBinLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<IntBinLiteral>(stream));
+
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
+
+    // Consume the prefix
+    ASSERT(stream.consume("0b", case_insensitive));
+
+    stream.consume_through(digit_or_sep);
+
+    consume_int_suffix(stream);
 
     return get_res();
 }
 
-static_assert(test_parse<IntLiteral>("0") == "0");
-static_assert(test_parse<IntLiteral>("0ull") == "0ull");
-static_assert(test_parse<IntLiteral>("0U") == "0U");
-static_assert(test_parse<IntLiteral>("0L") == "0L");
-static_assert(test_parse<IntLiteral>("0UL") == "0UL");
-static_assert(test_parse<IntLiteral>("123'456") == "123'456");
-static_assert(test_parse<IntLiteral>("123+456") == "123");
-static_assert(test_parse<IntLiteral>("123 + 456") == "123");
-static_assert(test_parse<IntLiteral>("0x123ABC") == "0x123ABC");
-static_assert(test_parse<IntLiteral>("0B01'01l") == "0B01'01l");
-static_assert(test_parse<IntLiteral>("123_ab") == "123");
-
-// testing for parsing of *really weird* (and UB) user-defined literal operators
-static_assert(test_parse<IntLiteral>("1x") == "1");
-static_assert(test_parse<IntLiteral>("1b") == "1");
-static_assert(test_parse<IntLiteral>("123ABC") == "123");
-static_assert(test_parse<IntLiteral>("1FFF") == "1");
-static_assert(test_parse<IntLiteral>("123'123a_ab") == "123'123");
-static_assert(test_parse<IntLiteral>("0b0101") == "0b0101");
-static_assert(test_parse<IntLiteral>("0b0A123") == "0b0");
-
 /// \overload
-/// See \ref Token::Kind::FloatingPointLiteral for details
+/// See \ref Token::Kind::IntOctLiteral for details
 template <>
-constexpr std::string_view parse<FloatingPointLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<FloatingPointLiteral>(stream));
+constexpr std::string_view parse<IntOctLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<IntOctLiteral>(stream));
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
-    auto xdigit_or_sep = [](char c) { return isxdigit(c) || c == '\''; };
-    auto digit_or_sep = [](char c) { return isdigit(c) || c == '\''; };
+    // Consume the prefix
+    ASSERT(stream.consume('0'));
 
-    auto try_parse_hex = [&]() -> bool {
-        // Hex floating point literal may be of the following forms:
-        //   hex-value hex-exp
-        //   hex-value '.' [hex-value] hex-exp
-        //   '.' hex-value hex-exp
-        // In the following statement we check that it matches one of the above
-        if (!stream.consume("0x", case_insensitive) && !stream.consume(".0x", case_insensitive)) {
-            return false;
-        }
-        // A note on the above:
-        //   technically, we could have '0xabc' where 'xabc' is a user-defined literal operator
-        //   (this would be UB, but well-formed syntactically). However, in this function's case,
-        //   we assume that the value MUST BE floating point, thus a literal suffix cannot occur here.
+    stream.consume_through(digit_or_sep);
 
-        stream.consume_through(xdigit_or_sep);
+    consume_int_suffix(stream);
 
-        // consume '.' if it exists
-        stream.consume('.');
+    return get_res();
+}
 
-        // potentially consume the hex fractional part
-        if (stream.consume("0x", case_insensitive)) {
-            stream.consume_through(xdigit_or_sep);
-        }
+/// \overload
+/// See \ref Token::Kind::IntDecLiteral for details
+template <>
+constexpr std::string_view parse<IntDecLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<IntDecLiteral>(stream));
 
-        // exponent is REQUIRED
-        ASSERT(stream.consume('p', case_insensitive), stream.str());
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
-        stream.consume('+') || stream.consume('-');
+    stream.consume_through(digit_or_sep);
 
+    consume_int_suffix(stream);
+
+    return get_res();
+}
+
+/// \overload
+/// See \ref Token::Kind::IntHexLiteral for details
+template <>
+constexpr std::string_view parse<IntHexLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<IntHexLiteral>(stream));
+
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
+
+    // Consume the prefix
+    ASSERT(stream.consume("0x", case_insensitive));
+
+    stream.consume_through(xdigit_or_sep);
+
+    consume_int_suffix(stream);
+
+    return get_res();
+}
+
+static_assert(test_parse<IntOctLiteral>("0") == "0");
+static_assert(test_parse<IntOctLiteral>("0ull") == "0ull");
+static_assert(test_parse<IntOctLiteral>("0U") == "0U");
+static_assert(test_parse<IntOctLiteral>("0L") == "0L");
+static_assert(test_parse<IntOctLiteral>("0UL") == "0UL");
+static_assert(test_parse<IntDecLiteral>("123'456") == "123'456");
+static_assert(test_parse<IntDecLiteral>("123+456") == "123");
+static_assert(test_parse<IntDecLiteral>("123 + 456") == "123");
+static_assert(test_parse<IntHexLiteral>("0x123ABC") == "0x123ABC");
+static_assert(test_parse<IntBinLiteral>("0B01'01l") == "0B01'01l");
+static_assert(test_parse<IntDecLiteral>("123_ab") == "123");
+
+// testing for parsing of *really weird* (and UB) user-defined literal operators
+static_assert(test_parse<IntDecLiteral>("123ABC") == "123");
+static_assert(test_parse<IntDecLiteral>("1FFF") == "1");
+static_assert(test_parse<IntDecLiteral>("123'123a_ab") == "123'123");
+static_assert(test_parse<IntBinLiteral>("0b0101") == "0b0101");
+static_assert(test_parse<IntBinLiteral>("0b0A123") == "0b0");
+
+/// \overload
+/// See \ref Token::Kind::FloatLiteral for details
+template <>
+constexpr std::string_view parse<FloatLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<FloatLiteral>(stream));
+
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
+
+    stream.consume_through(digit_or_sep);
+
+    if (stream.consume('.')) {
         stream.consume_through(digit_or_sep);
-
-        // parse the potential floating-point-suffix outside of this lammbda
-
-        return true;
-    };
-
-    if (!try_parse_hex()) {
-        stream.consume_through(digit_or_sep);
-
-        if (stream.consume('.')) {
-            stream.consume_through(digit_or_sep);
-        } else {
-            // if there is no '.' then there must be an exponent
-            ASSERT(tolower(stream.peek()) == 'e', stream.str());
-        }
-
-        // consume potential exponent and sign
-        if (stream.consume('e', case_insensitive)) {
-            stream.consume('+') || stream.consume('-');
-        }
-
-        stream.consume_through(digit_or_sep);
+    } else {
+        // if there is no '.' then there must be an exponent
+        ASSERT(tolower(stream.peek()) == 'e', stream.str());
     }
+
+    // consume potential exponent and sign
+    if (stream.consume('e', case_insensitive)) {
+        stream.consume('+') || stream.consume('-');
+    }
+
+    stream.consume_through(digit_or_sep);
 
     // check for a floating point suffix
     std::string_view suffix = stream.peek_through(is_ident_like());
@@ -1140,56 +1213,109 @@ constexpr std::string_view parse<FloatingPointLiteral>(Stream& stream) {
     return get_res();
 }
 
-static_assert(test_parse<FloatingPointLiteral>("0.") == "0.");
-static_assert(test_parse<FloatingPointLiteral>("123.") == "123.");
-static_assert(test_parse<FloatingPointLiteral>(".1") == ".1");
-static_assert(test_parse<FloatingPointLiteral>(".123") == ".123");
-static_assert(test_parse<FloatingPointLiteral>("0.0") == "0.0");
-static_assert(test_parse<FloatingPointLiteral>("123.456") == "123.456");
-static_assert(test_parse<FloatingPointLiteral>("1e123") == "1e123");
-static_assert(test_parse<FloatingPointLiteral>("1.e123") == "1.e123");
-static_assert(test_parse<FloatingPointLiteral>(".1e123") == ".1e123");
-static_assert(test_parse<FloatingPointLiteral>("1.1e123") == "1.1e123");
-static_assert(test_parse<FloatingPointLiteral>("1.1e+123") == "1.1e+123");
-static_assert(test_parse<FloatingPointLiteral>("1.1e-123") == "1.1e-123");
-static_assert(test_parse<FloatingPointLiteral>("1.1E123") == "1.1E123");
-static_assert(test_parse<FloatingPointLiteral>("1.1E+123") == "1.1E+123");
-static_assert(test_parse<FloatingPointLiteral>("1.1E-123") == "1.1E-123");
+/// \overload
+/// See \ref Token::Kind::FloatHexLiteral for details
+template <>
+constexpr std::string_view parse<FloatHexLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<FloatHexLiteral>(stream));
+
+    auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
+
+    // Hex floating point literal may be of the following forms:
+    //   hex-value hex-exp
+    //   hex-value '.' [hex-value] hex-exp
+    //   '.' hex-value hex-exp
+    // In the following statement we ensure that it matches one of the above
+    ASSERT(stream.consume("0x", case_insensitive) || stream.consume(".0x", case_insensitive));
+
+    stream.consume_through(xdigit_or_sep);
+
+    // consume '.' if it exists
+    stream.consume('.');
+
+    // potentially consume the hex fractional part
+    if (stream.consume("0x", case_insensitive)) {
+        stream.consume_through(xdigit_or_sep);
+    }
+
+    // exponent is REQUIRED
+    ASSERT(stream.consume('p', case_insensitive), stream.str());
+
+    stream.consume('+') || stream.consume('-');
+
+    stream.consume_through(digit_or_sep);
+
+    // parse the potential floating-point-suffix outside of this lammbda
+
+    // check for a floating point suffix
+    std::string_view suffix = stream.peek_through(is_ident_like());
+
+    if (suffix.size() == 1) {
+        stream.consume('f', case_insensitive) || stream.consume('l', case_insensitive);
+    }
+
+    return get_res();
+}
+
+static_assert(test_parse<FloatLiteral>("0.") == "0.");
+static_assert(test_parse<FloatLiteral>("123.") == "123.");
+static_assert(test_parse<FloatLiteral>(".1") == ".1");
+static_assert(test_parse<FloatLiteral>(".123") == ".123");
+static_assert(test_parse<FloatLiteral>("0.0") == "0.0");
+static_assert(test_parse<FloatLiteral>("123.456") == "123.456");
+static_assert(test_parse<FloatLiteral>("1e123") == "1e123");
+static_assert(test_parse<FloatLiteral>("1.e123") == "1.e123");
+static_assert(test_parse<FloatLiteral>(".1e123") == ".1e123");
+static_assert(test_parse<FloatLiteral>("1.1e123") == "1.1e123");
+static_assert(test_parse<FloatLiteral>("1.1e+123") == "1.1e+123");
+static_assert(test_parse<FloatLiteral>("1.1e-123") == "1.1e-123");
+static_assert(test_parse<FloatLiteral>("1.1E123") == "1.1E123");
+static_assert(test_parse<FloatLiteral>("1.1E+123") == "1.1E+123");
+static_assert(test_parse<FloatLiteral>("1.1E-123") == "1.1E-123");
 // test hex
-static_assert(test_parse<FloatingPointLiteral>("0x1p1") == "0x1p1");
-static_assert(test_parse<FloatingPointLiteral>("0x1p1") == "0x1p1");
-static_assert(test_parse<FloatingPointLiteral>("0x1.p1") == "0x1.p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x1p1") == ".0x1p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x1p1") == ".0x1p1");
-static_assert(test_parse<FloatingPointLiteral>("0x1.0x1p1") == "0x1.0x1p1");
-static_assert(test_parse<FloatingPointLiteral>("0xABCDEF1.0x1p1") == "0xABCDEF1.0x1p1");
-static_assert(test_parse<FloatingPointLiteral>("0Xabcdef1.0X1P1") == "0Xabcdef1.0X1P1");
-static_assert(test_parse<FloatingPointLiteral>("0x1.0xABCDEF1p1") == "0x1.0xABCDEF1p1");
-static_assert(test_parse<FloatingPointLiteral>("0x1.0Xabcdef1P1") == "0x1.0Xabcdef1P1");
-static_assert(test_parse<FloatingPointLiteral>("0xABCDEF1.0xABCDEF1p1") == "0xABCDEF1.0xABCDEF1p1");
-static_assert(test_parse<FloatingPointLiteral>("0Xabcdef1.0Xabcdef1P1") == "0Xabcdef1.0Xabcdef1P1");
-static_assert(test_parse<FloatingPointLiteral>("0x1p12345") == "0x1p12345");
-static_assert(test_parse<FloatingPointLiteral>("0x1p12345f") == "0x1p12345f");
-static_assert(test_parse<FloatingPointLiteral>("0x1p12345l") == "0x1p12345l");
+static_assert(test_parse<FloatHexLiteral>("0x1p1") == "0x1p1");
+static_assert(test_parse<FloatHexLiteral>("0x1p1") == "0x1p1");
+static_assert(test_parse<FloatHexLiteral>("0x1.p1") == "0x1.p1");
+static_assert(test_parse<FloatHexLiteral>(".0x1p1") == ".0x1p1");
+static_assert(test_parse<FloatHexLiteral>(".0x1p1") == ".0x1p1");
+static_assert(test_parse<FloatHexLiteral>("0x1.0x1p1") == "0x1.0x1p1");
+static_assert(test_parse<FloatHexLiteral>("0xABCDEF1.0x1p1") == "0xABCDEF1.0x1p1");
+static_assert(test_parse<FloatHexLiteral>("0Xabcdef1.0X1P1") == "0Xabcdef1.0X1P1");
+static_assert(test_parse<FloatHexLiteral>("0x1.0xABCDEF1p1") == "0x1.0xABCDEF1p1");
+static_assert(test_parse<FloatHexLiteral>("0x1.0Xabcdef1P1") == "0x1.0Xabcdef1P1");
+static_assert(test_parse<FloatHexLiteral>("0xABCDEF1.0xABCDEF1p1") == "0xABCDEF1.0xABCDEF1p1");
+static_assert(test_parse<FloatHexLiteral>("0Xabcdef1.0Xabcdef1P1") == "0Xabcdef1.0Xabcdef1P1");
+static_assert(test_parse<FloatHexLiteral>("0x1p12345") == "0x1p12345");
+static_assert(test_parse<FloatHexLiteral>("0x1p12345f") == "0x1p12345f");
+static_assert(test_parse<FloatHexLiteral>("0x1p12345l") == "0x1p12345l");
 // test (normal) suffixes
-static_assert(test_parse<FloatingPointLiteral>("1.f") == "1.f");
-static_assert(test_parse<FloatingPointLiteral>("1.l") == "1.l");
-static_assert(test_parse<FloatingPointLiteral>("1.0f") == "1.0f");
-static_assert(test_parse<FloatingPointLiteral>(".0f") == ".0f");
-static_assert(test_parse<FloatingPointLiteral>("123.0F") == "123.0F");
-static_assert(test_parse<FloatingPointLiteral>("123.0L") == "123.0L");
+static_assert(test_parse<FloatLiteral>("1.f") == "1.f");
+static_assert(test_parse<FloatLiteral>("1.l") == "1.l");
+static_assert(test_parse<FloatLiteral>("1.0f") == "1.0f");
+static_assert(test_parse<FloatLiteral>(".0f") == ".0f");
+static_assert(test_parse<FloatLiteral>("123.0F") == "123.0F");
+static_assert(test_parse<FloatLiteral>("123.0L") == "123.0L");
 // test potential user-defined suffixes
-static_assert(test_parse<FloatingPointLiteral>("123.0labc") == "123.0");
-static_assert(test_parse<FloatingPointLiteral>("123.0f_abc") == "123.0");
-static_assert(test_parse<FloatingPointLiteral>("123e12fb") == "123e12");
+static_assert(test_parse<FloatLiteral>("123.0labc") == "123.0");
+static_assert(test_parse<FloatLiteral>("123.0f_abc") == "123.0");
+static_assert(test_parse<FloatLiteral>("123e12fb") == "123e12");
 // hex weirdness (though exponent is required, so there are a few less edge cases)
-static_assert(test_parse<FloatingPointLiteral>("123.0p") == "123.0");
-static_assert(test_parse<FloatingPointLiteral>("123.p") == "123.");
-static_assert(test_parse<FloatingPointLiteral>("0x123.p1e123") == "0x123.p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x0p1f12") == ".0x0p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x0p1f12") == ".0x0p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x0p1l_12") == ".0x0p1");
-static_assert(test_parse<FloatingPointLiteral>(".0x0p1_12") == ".0x0p1");
+static_assert(test_parse<FloatLiteral>("123.0p") == "123.0");
+static_assert(test_parse<FloatLiteral>("123.p") == "123.");
+static_assert(test_parse<FloatHexLiteral>("0x123.p1e123") == "0x123.p1");
+static_assert(test_parse<FloatHexLiteral>(".0x0p1f12") == ".0x0p1");
+static_assert(test_parse<FloatHexLiteral>(".0x0p1f12") == ".0x0p1");
+static_assert(test_parse<FloatHexLiteral>(".0x0p1l_12") == ".0x0p1");
+static_assert(test_parse<FloatHexLiteral>(".0x0p1_12") == ".0x0p1");
+
+/// \overload
+/// See \ref Token::Kind::BoolLiteral for details
+template <>
+constexpr std::string_view parse<BoolLiteral>(Stream& stream) {
+    DEBUG_ASSERT(matches<BoolLiteral>(stream));
+
+    return stream.consume_through(is_ident_like());
+}
 
 /// \overload
 /// See \ref Token::Kind::Identifier for details
@@ -1234,8 +1360,7 @@ constexpr std::string_view parse<Operator>(Stream& stream) {
     // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
     // e.g., "-=" is always picked over "-"
     auto max_munch_tokens = operator_tokens;
-    // FIXME:...
-    // ranges::sort(max_munch_tokens, std::less{}, &std::string_view::size);
+    ranges::sort(max_munch_tokens, std::greater{}, &std::string_view::size);
 
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     const auto* iter = ranges::find_if(max_munch_tokens, check_stream_starts);
@@ -1279,8 +1404,9 @@ template <std::size_t MaxNumTokens>
 constexpr auto parse_tokens(std::string_view str) {
     using enum Token::Kind;
 
-    return tokenize::parse_all<MaxNumTokens, StringLiteral, RawStringLiteral, CharLiteral, IntLiteral,
-                               FloatingPointLiteral, Identifier, Grouping, Operator>(str);
+    return tokenize::parse_all<MaxNumTokens, BoolLiteral, StringLiteral, RawStringLiteral, CharLiteral, IntBinLiteral,
+                               IntOctLiteral, IntDecLiteral, IntHexLiteral, FloatLiteral, FloatHexLiteral, Identifier,
+                               Grouping, Operator>(str);
 }
 
 template <std::size_t MaxNumTokens = 1'024>
