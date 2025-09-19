@@ -241,7 +241,8 @@ constexpr char get(const ::asmgrader::StaticString<Size>& str) {
 
 } // namespace asmgrader
 
-// Testbed for {fmt} stuff as it's been really annoying to fix this
+// Testbed for {fmt} stuff as it's been really annoying to fix this:
+// https://godbolt.org/z/6158EMoz3
 
 // Disable range formatting for StaticString to prevent ambiguity
 template <std::size_t N, typename CharType>
