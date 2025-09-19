@@ -7,10 +7,8 @@
 #include <boost/mp11/integral.hpp>
 
 #include <bit>
-#include <cmath>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
 #include <type_traits>
 
