@@ -496,11 +496,11 @@ constexpr auto operator_tokens = std::to_array<std::string_view>({
     "throw", "sizeof", "alignof", "new", "delete",                   //
                                                                      //
     "const_cast", "static_cast", "dynamic_cast", "reinterpret_cast", //
-    "?", ":"                                                         //
+    "::", "?", ":"                                                   //
 });
 
-// Only 2 operands, '+' and '-', should be present in both operator_tokens and binary_operator_tokens
-static_assert(ranges::count_if(operator_tokens, std::bind_front(ranges::contains, binary_operator_tokens)) == 2);
+// Only 3 operands, '+' '-' and '::', should be present in both operator_tokens and binary_operator_tokens
+static_assert(ranges::count_if(operator_tokens, std::bind_front(ranges::contains, binary_operator_tokens)) == 3);
 
 constexpr auto grouping_tokens = std::to_array<char>({
     '{', '}', //
@@ -994,8 +994,8 @@ constexpr bool matches<BinaryOperator>(const Stream& stream) {
 
     // Logic to seperate binary-operators from any other arity is defined in matches<Operator>
 
-    // the only 2 operators that could be unary or binary
-    if (*iter != "+" && *iter != "-") {
+    // the only 3 operators that could be unary or binary
+    if (*iter != "::" && *iter != "+" && *iter != "-") {
         return true;
     }
 
@@ -1037,7 +1037,7 @@ constexpr bool matches<Operator>(const Stream& stream) {
     }
 
     // the only 2 operators that could be unary or binary
-    if (*iter == "+" || *iter == "-") {
+    if (*iter == "::" || *iter == "+" || *iter == "-") {
         return !matches<BinaryOperator>(stream);
     }
 

@@ -330,6 +330,10 @@ TEST_CASE("Binary operator distinction") {
         op("+"), int10lit("123")
     ));
 
+    STATIC_REQUIRE(Tokenizer("::std::string") == toks(
+        op("::"), id("std"), op2("::"), id("string")
+    ));
+
     STATIC_REQUIRE(Tokenizer("-123") == toks(
         op("-"), int10lit("123")
     ));
@@ -352,6 +356,14 @@ TEST_CASE("Binary operator distinction") {
 
     STATIC_REQUIRE(Tokenizer("+123 < -456") == toks(
         op("+"), int10lit("123"), op2("<"), op("-"), int10lit("456")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("true ? std::true_type{} : ::std::false_type{}") == toks(
+        boollit("true"), 
+        op("?"), 
+        id("std"), op2("::"), id("true_type"), grp("{"), grp("}"), 
+        op(":"),
+        op("::"), id("std"), op2("::"), id("false_type"), grp("{"), grp("}")
     ));
 
     // clang-format on
