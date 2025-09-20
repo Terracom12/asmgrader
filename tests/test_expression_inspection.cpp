@@ -33,6 +33,7 @@ constexpr auto float16lit = bind_front(make_token, FloatHexLiteral);
 constexpr auto id = std::bind_front(make_token, Identifier);
 constexpr auto grp = std::bind_front(make_token, Grouping);
 constexpr auto op = std::bind_front(make_token, Operator);
+constexpr auto op2 = std::bind_front(make_token, BinaryOperator);
 
 template <std::same_as<Token>... Tokens>
 constexpr auto toks(const Tokens&... tokens) {
@@ -74,13 +75,13 @@ TEST_CASE("Grouping tokens") {
     STATIC_REQUIRE(Tokenizer("(f(123))") == toks(grp("("), id("f"), op("("), int10lit("123"), op(")"), grp(")")));
 
     STATIC_REQUIRE(Tokenizer("f<x>") == toks(id("f"), grp("<"), id("x"), grp(">")));
-    STATIC_REQUIRE(Tokenizer("f<x, y>") == toks(id("f"), grp("<"), id("x"), op(","), id("y"), grp(">")));
+    STATIC_REQUIRE(Tokenizer("f<x, y>") == toks(id("f"), grp("<"), id("x"), op2(","), id("y"), grp(">")));
 
     // clang-format off
     SECTION("Parenthesis") {
         STATIC_REQUIRE(Tokenizer("(f(123, 456))") == toks(
             grp("("), 
-                id("f"), op("("), int10lit("123"), op(","), int10lit("456"), op(")"), 
+                id("f"), op("("), int10lit("123"), op2(","), int10lit("456"), op(")"), 
             grp(")")
         ));
 
@@ -89,7 +90,7 @@ TEST_CASE("Grouping tokens") {
                 id("f"), op("("), int10lit("123"), op(")"), 
                 op("+"), 
                 grp("("), 
-                    int10lit("3"), op("*"), int10lit("2"), 
+                    int10lit("3"), op2("*"), int10lit("2"), 
                 grp(")"), 
             grp(")")
         ));
@@ -98,32 +99,32 @@ TEST_CASE("Grouping tokens") {
     SECTION("Angled brackets as tparam enclosers") {
         STATIC_REQUIRE(Tokenizer("f<x> < g<y>") == toks(
             id("f"), grp("<"), id("x"), grp(">"),
-            op("<"),
+            op2("<"),
             id("g"), grp("<"), id("y"), grp(">")
         ));
         STATIC_REQUIRE(Tokenizer("f<x> > g<y>") == toks(
             id("f"), grp("<"), id("x"), grp(">"),
-            op(">"),
+            op2(">"),
             id("g"), grp("<"), id("y"), grp(">")
         ));
         STATIC_REQUIRE(Tokenizer("f<x> > g") == toks(
             id("f"), grp("<"), id("x"), grp(">"),
-            op(">"),
+            op2(">"),
             id("g")
         ));
         STATIC_REQUIRE(Tokenizer("f<x> < g") == toks(
             id("f"), grp("<"), id("x"), grp(">"),
-            op("<"),
+            op2("<"),
             id("g")
         ));
         STATIC_REQUIRE(Tokenizer("f > g<y>") == toks(
             id("f"),
-            op(">"),
+            op2(">"),
             id("g"), grp("<"), id("y"), grp(">")
         ));
         STATIC_REQUIRE(Tokenizer("f < g<y>") == toks(
             id("f"),
-            op("<"),
+            op2("<"),
             id("g"), grp("<"), id("y"), grp(">")
         ));
     }
@@ -133,35 +134,35 @@ TEST_CASE("Grouping tokens") {
         // test *reasonable* use-cases for bitwise shift and comparison combinations
         // that's going to be hell to properly parse if I try later, if it's even possible without proper context
         STATIC_REQUIRE(Tokenizer("x << 2 > y") == toks(
-            id("x"), op("<<"), int10lit("2"),
-            op(">"),
+            id("x"), op2("<<"), int10lit("2"),
+            op2(">"),
             id("y")
         ));
         STATIC_REQUIRE(Tokenizer("x << 2 < y") == toks(
-            id("x"), op("<<"), int10lit("2"),
-            op("<"),
+            id("x"), op2("<<"), int10lit("2"),
+            op2("<"),
             id("y")
         ));
         STATIC_REQUIRE(Tokenizer("x >> 2 > y") == toks(
-            id("x"), op(">>"), int10lit("2"),
-            op(">"),
+            id("x"), op2(">>"), int10lit("2"),
+            op2(">"),
             id("y")
         ));
         STATIC_REQUIRE(Tokenizer("x >> 2 < y") == toks(
-            id("x"), op(">>"), int10lit("2"),
-            op("<"),
+            id("x"), op2(">>"), int10lit("2"),
+            op2("<"),
             id("y")
         ));
 
         STATIC_REQUIRE(Tokenizer("y < x << 2") == toks(
             id("y"),
-            op("<"),
-            id("x"), op("<<"), int10lit("2")
+            op2("<"),
+            id("x"), op2("<<"), int10lit("2")
         ));
         STATIC_REQUIRE(Tokenizer("y > x << 2") == toks(
             id("y"),
-            op(">"),
-            id("x"), op("<<"), int10lit("2")
+            op2(">"),
+            id("x"), op2("<<"), int10lit("2")
         ));
 
         // reasonable solution to the ambiguity here:
@@ -169,16 +170,16 @@ TEST_CASE("Grouping tokens") {
         // I can't think of a way to actually enforce this right now, so hopefully I remember to documment it well
         STATIC_REQUIRE(Tokenizer("y < (x >> 2)") == toks(
             id("y"),
-            op("<"),
+            op2("<"),
             grp("("),
-                id("x"), op(">>"), int10lit("2"),
+                id("x"), op2(">>"), int10lit("2"),
             grp(")")
         ));
 
         STATIC_REQUIRE(Tokenizer("y > x >> 2") == toks(
             id("y"),
-            op(">"),
-            id("x"), op(">>"), int10lit("2")
+            op2(">"),
+            id("x"), op2(">>"), int10lit("2")
         ));
     }
     // clang-format on
@@ -188,32 +189,32 @@ TEST_CASE("Operator tokens") {
     STATIC_REQUIRE(Tokenizer("f(x)") == toks(id("f"), op("("), id("x"), op(")")));
     STATIC_REQUIRE(Tokenizer("f (x)") == toks(id("f"), op("("), id("x"), op(")")));
 
-    STATIC_REQUIRE(Tokenizer("1<<2") == toks(int10lit("1"), op("<<"), int10lit("2")));
-    STATIC_REQUIRE(Tokenizer("1 >> 2") == toks(int10lit("1"), op(">>"), int10lit("2")));
+    STATIC_REQUIRE(Tokenizer("1<<2") == toks(int10lit("1"), op2("<<"), int10lit("2")));
+    STATIC_REQUIRE(Tokenizer("1 >> 2") == toks(int10lit("1"), op2(">>"), int10lit("2")));
 
     STATIC_REQUIRE(Tokenizer("true ? a : b") == toks(boollit("true"), op("?"), id("a"), op(":"), id("b")));
 
-    STATIC_REQUIRE(Tokenizer("a <=> b") == toks(id("a"), op("<=>"), id("b")));
+    STATIC_REQUIRE(Tokenizer("a <=> b") == toks(id("a"), op2("<=>"), id("b")));
 
-    STATIC_REQUIRE(Tokenizer("std::cout") == toks(id("std"), op("::"), id("cout")));
+    STATIC_REQUIRE(Tokenizer("std::cout") == toks(id("std"), op2("::"), id("cout")));
 
     // clang-format off
     STATIC_REQUIRE(Tokenizer("a <= b && c >= d") == toks(
-        id("a"), op("<="), id("b"),
-        op("&&"),
-        id("c"), op(">="), id("d")
+        id("a"), op2("<="), id("b"),
+        op2("&&"),
+        id("c"), op2(">="), id("d")
     ));
     STATIC_REQUIRE(Tokenizer("a < b || c >= d") == toks(
-        id("a"), op("<"), id("b"),
-        op("||"),
-        id("c"), op(">="), id("d")
+        id("a"), op2("<"), id("b"),
+        op2("||"),
+        id("c"), op2(">="), id("d")
     ));
     STATIC_REQUIRE(Tokenizer("a[10]->b.c.*d->*e") == toks(
         id("a"), op("["), int10lit("10"), op("]"),
-        op("->"), id("b"),
-        op("."), id("c"),
-        op(".*"), id("d"),
-        op("->*"), id("e")
+        op2("->"), id("b"),
+        op2("."), id("c"),
+        op2(".*"), id("d"),
+        op2("->*"), id("e")
     ));
     // clang-format on
 }
@@ -247,31 +248,31 @@ TEST_CASE("Literal tokens") {
 TEST_CASE("Basic use-case tokenization") {
     // clang-format off
     STATIC_REQUIRE(Tokenizer(R"(std::cout << "Hello, world!" << '\n')") == toks(
-        id("std"), op("::"), id("cout"),
-        op("<<"),
+        id("std"), op2("::"), id("cout"),
+        op2("<<"),
         strlit(R"("Hello, world!")"),
-        op("<<"),
+        op2("<<"),
         charlit(R"('\n')")
     ));
 
     STATIC_REQUIRE(Tokenizer("x < y") == toks(
         id("x"),
-        op("<"),
+        op2("<"),
         id("y")
     ));
 
     STATIC_REQUIRE(Tokenizer("umask == 0755 || (umask & 07) == 1") == toks(
-        id("umask"), op("=="), int8lit("0755"),
-        op("||"),
+        id("umask"), op2("=="), int8lit("0755"),
+        op2("||"),
         grp("("), 
-            id("umask"), op("&"), int8lit("07"),
+            id("umask"), op2("&"), int8lit("07"),
         grp(")"),
-        op("=="),
+        op2("=="),
         int10lit("1")
     ));
 
     STATIC_REQUIRE(Tokenizer("V == true") == toks(
-        id("V"), op("=="), boollit("true")
+        id("V"), op2("=="), boollit("true")
     ));
 
     STATIC_REQUIRE(Tokenizer("!V") == toks(
@@ -279,7 +280,11 @@ TEST_CASE("Basic use-case tokenization") {
     ));
 
     STATIC_REQUIRE(Tokenizer("X30 & 0x8000000000000000") == toks(
-        id("X30"), op("&"), int16lit("0x8000000000000000")
+        id("X30"), op2("&"), int16lit("0x8000000000000000")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("X30 == -1000") == toks(
+        id("X30"), op2("=="), op("-"), int10lit("1000")
     ));
 
     STATIC_REQUIRE(Tokenizer("my_func(10)") == toks(
@@ -287,33 +292,67 @@ TEST_CASE("Basic use-case tokenization") {
     ));
 
     STATIC_REQUIRE(Tokenizer(R"(str_func("Thing?", 6))") == toks(
-        id("str_func"), op("("), strlit(R"("Thing?")"), op(","), int10lit("6"), op(")")
+        id("str_func"), op("("), strlit(R"("Thing?")"), op2(","), int10lit("6"), op(")")
     ));
 
     STATIC_REQUIRE(Tokenizer(R"(str_func("Thing?", 2) == "Th"sv)") == toks(
-        id("str_func"), op("("), strlit(R"("Thing?")"), op(","), int10lit("2"), op(")"),
-        op("=="),
+        id("str_func"), op("("), strlit(R"("Thing?")"), op2(","), int10lit("2"), op(")"),
+        op2("=="),
         strlit(R"("Th")"),
         id("sv")
     ));
 
     STATIC_REQUIRE(Tokenizer("syscalls.size() == test_cases.size()") == toks(
-        id("syscalls"), op("."), id("size"), op("("), op(")"),
-        op("=="),
-        id("test_cases"), op("."), id("size"), op("("), op(")")
+        id("syscalls"), op2("."), id("size"), op("("), op(")"),
+        op2("=="),
+        id("test_cases"), op2("."), id("size"), op("("), op(")")
     ));
 
     STATIC_REQUIRE(Tokenizer("res.get_code() == 0") == toks(
-        id("res"), op("."), id("get_code"), op("("), op(")"),
-        op("=="),
+        id("res"), op2("."), id("get_code"), op("("), op(")"),
+        op2("=="),
         int8lit("0")
     ));
 
     // potential ReGex matching operator/ in the future
     STATIC_REQUIRE(Tokenizer(R"---(str / R"(\w+\\_([0-9]*)?\.exe?)")---") == toks(
         id("str"),
-        op("/"),
+        op2("/"),
         rstrlit(R"---(R"(\w+\\_([0-9]*)?\.exe?)")---")
     ));
+    // clang-format on
+}
+
+TEST_CASE("Binary operator distinction") {
+    // clang-format off
+
+    STATIC_REQUIRE(Tokenizer("+123") == toks(
+        op("+"), int10lit("123")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("-123") == toks(
+        op("-"), int10lit("123")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("123 + 456") == toks(
+        int10lit("123"), op2("+"), int10lit("456")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("123 + -456") == toks(
+        int10lit("123"), op2("+"), op("-"), int10lit("456")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("123 + +456") == toks(
+        int10lit("123"), op2("+"), op("+"), int10lit("456")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("123 + ++456") == toks(
+        int10lit("123"), op2("+"), op("++"), int10lit("456")
+    ));
+
+    STATIC_REQUIRE(Tokenizer("+123 < -456") == toks(
+        op("+"), int10lit("123"), op2("<"), op("-"), int10lit("456")
+    ));
+
     // clang-format on
 }

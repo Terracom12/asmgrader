@@ -15,6 +15,7 @@
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/contains.hpp>
 #include <range/v3/algorithm/count.hpp>
+#include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/equal.hpp>
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>
@@ -175,21 +176,38 @@ struct Token
         /// https://en.cppreference.com/w/cpp/language/operator_precedence.html
         /// (Note that, contrary to the title of this link, this impl has no concept of operator precedence)
         ///
+        /// Only operators with 2 operands.
         /// Imperatively defined any of the symbols in the list below when they are not part of a previously defined
         /// token and do not meet the requirements for \ref Grouping. Perhaps a little confusingly, since the token
         /// stream is flat, operators like `a[]` produce 2 seperate operator tokens of '[' and ']'.
+        ///
         ///   '::'
-        ///   '++', '--'                                                    *** no distinction between pre and post
-        ///   '(', ')', '[', ']', '.', '->'
+        ///   '.', '->'
         ///   '.*', '->*'
         ///   '+', '-', '*', '/', '%',
-        ///   '<<', ">>', '^', '|', '&', '~'
+        ///   '<<', ">>', '^', '|', '&',
         ///   '&&', '||'
-        ///   '!', '==', '!=', '<=>', '<', '<=', '>', '>='
+        ///   '==', '!=', '<=>', '<', '<=', '>', '>='
+        ///   '=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '^=', '|=',
+        ///   ','
+        BinaryOperator,
+
+        /// https://en.cppreference.com/w/cpp/language/operator_precedence.html
+        /// (Note that, contrary to the title of this link, this impl has no concept of operator precedence)
+        ///
+        /// Unary, ternary, and (n>3)-ary (i.e., function call) operators
+        /// Imperatively defined any of the symbols in the list below when they are not part of a previously defined
+        /// token and do not meet the requirements for \ref Grouping. Perhaps a little confusingly, since the token
+        /// stream is flat, operators like `a[]` produce 2 seperate operator tokens of '[' and ']'.
+        ///   '++', '--'                                                    *** no distinction between pre and post
+        ///   '(', ')', '[', ']'
+        ///   '.*', '->*'
+        ///   '+', '-',                                                     *** unary only
+        ///   '~'
+        ///   '!',
         ///   'throw', 'sizeof', 'alignof', 'new', 'delete',
         ///   'const_cast', 'static_cast', 'dynamic_cast', 'reinterpret_cast',
-        ///   '=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '^=', '|=',
-        ///   ',', '?', ':'
+        ///   '?', ':'
         ///   also includes literal operators
         /// TODO: Maybe support alternate spellings like 'and', 'not', etc.
         Operator,
@@ -459,29 +477,35 @@ private:
     std::size_t idx_ = 0;
 };
 
-constexpr auto operator_tokens = std::to_array<std::string_view>({
-    "::",                                                              //
-    "++", "--",                                                        //
-    "(", ")", "[", "]", ".", "->",                                     //
-    ".*", "->*",                                                       //
-    "+", "-", "*", "/", "%",                                           //
-    "<<", ">>", "^", "|", "&", "~",                                    //
-    "&&", "||",                                                        //
-    "!", "==", "!=", "<=>", "<", "<=", ">", ">=",                      //
-    "throw", "sizeof", "alignof", "new", "delete",                     //
-                                                                       //
-    "const_cast", "static_cast", "dynamic_cast", "reinterpret_cast",   //
-    "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=", //
-    ",", "?", ":"                                                      //
+constexpr auto binary_operator_tokens = std::to_array<std::string_view>({
+    "::", ",",                                                           //
+    ".",  "->",                                                          //
+    ".*", "->*",                                                         //
+    "+",  "-",   "*",   "/",  "%",                                       //
+    "<<", ">>",  "^",   "|",  "&",                                       //
+    "&&", "||",                                                          //
+    "==", "!=",  "<=>", "<",  "<=", ">",  ">=",                          //
+    "=",  "+=",  "-=",  "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" //
 });
 
+constexpr auto operator_tokens = std::to_array<std::string_view>({
+    "++", "--",                                                      //
+    "(", ")", "[", "]",                                              //
+    "+", "-",                                                        //
+    "~", "!",                                                        //
+    "throw", "sizeof", "alignof", "new", "delete",                   //
+                                                                     //
+    "const_cast", "static_cast", "dynamic_cast", "reinterpret_cast", //
+    "?", ":"                                                         //
+});
+
+// Only 2 operands, '+' and '-', should be present in both operator_tokens and binary_operator_tokens
+static_assert(ranges::count_if(operator_tokens, std::bind_front(ranges::contains, binary_operator_tokens)) == 2);
+
 constexpr auto grouping_tokens = std::to_array<char>({
-    '{',
-    '}', //
-    '(',
-    ')', //
-    '<',
-    '>', //
+    '{', '}', //
+    '(', ')', //
+    '<', '>'  //
 });
 
 ///////////////// token matching implementation
@@ -905,7 +929,8 @@ constexpr bool matches<Grouping>(const Stream& stream) {
     // TODO: handle bitshift ambiguity and '<' / '>' operators nested within a tparam
     if (tok == '<') {
         auto full_token = stream.peek_until([](char c) { return isalnum(c) || isblank(c) || c == '_'; });
-        if (full_token.size() > 1 && ranges::contains(operator_tokens, full_token)) {
+        if (full_token.size() > 1 &&
+            (ranges::contains(binary_operator_tokens, full_token) || ranges::contains(operator_tokens, full_token))) {
             return false;
         }
 
@@ -945,8 +970,51 @@ constexpr bool matches<Grouping>(const Stream& stream) {
 // tests with context can be found at parse<Grouping>
 
 /// \overload
-/// Whether the start of `stream` is an identifier token
-/// See \ref Token::Kind::Identifier for details
+/// Whether the start of `stream` is a binary operator token
+/// See \ref Token::Kind::BinaryOperator for details
+template <>
+constexpr bool matches<BinaryOperator>(const Stream& stream) {
+    // Grouping tokens have the same chars as operators, except require more context checks,
+    // so give precedence to identifying them
+    if (matches<Grouping>(stream)) {
+        return false;
+    }
+
+    // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
+    // e.g., "-=" is always picked over "-"
+    auto max_munch_tokens = binary_operator_tokens;
+    ranges::sort(max_munch_tokens, std::greater{}, &std::string_view::size);
+
+    auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
+    auto iter = ranges::find_if(max_munch_tokens, check_stream_starts);
+
+    if (iter == ranges::end(max_munch_tokens)) {
+        return false;
+    }
+
+    // Logic to seperate binary-operators from any other arity is defined in matches<Operator>
+
+    // the only 2 operators that could be unary or binary
+    if (*iter != "+" && *iter != "-") {
+        return true;
+    }
+
+    // At the start of the stream -> MUST be a unary operator
+    if (stream.ctx.prevs.empty()) {
+        return false;
+    }
+
+    // the last token was an operator -> this one MUST be a unary operator
+    if (Token::Kind kind = stream.ctx.prevs.back().kind; kind == Operator || kind == BinaryOperator) {
+        return false;
+    }
+
+    return true;
+}
+
+/// \overload
+/// Whether the start of `stream` is an operator token
+/// See \ref Token::Kind::Operator for details
 template <>
 constexpr bool matches<Operator>(const Stream& stream) {
     // Grouping tokens have the same chars as operators, except require more context checks,
@@ -961,14 +1029,31 @@ constexpr bool matches<Operator>(const Stream& stream) {
     ranges::sort(max_munch_tokens, std::greater{}, &std::string_view::size);
 
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
-    return ranges::any_of(max_munch_tokens, check_stream_starts);
+
+    auto iter = ranges::find_if(max_munch_tokens, check_stream_starts);
+
+    if (iter == ranges::end(max_munch_tokens)) {
+        return false;
+    }
+
+    // the only 2 operators that could be unary or binary
+    if (*iter == "+" || *iter == "-") {
+        return !matches<BinaryOperator>(stream);
+    }
+
+    return true;
 }
 
 static_assert(matches<Operator>("+ 123"));
 static_assert(matches<Operator>(":: 123"));
 static_assert(matches<Operator>("? 123"));
+static_assert(matches<Operator>("sizeof 123"));
 static_assert(!matches<Operator>("(123)"));
 static_assert(!matches<Operator>("{ 123"));
+static_assert(!matches<Operator>("|| 123"));
+
+// tests for binary operators are impossible to do without context.
+// They may be found in test_expression_inspection.cpp
 
 ///////////////// token parsing implementation
 
@@ -1374,7 +1459,26 @@ constexpr std::string_view parse<Grouping>(Stream& stream) {
     return stream.consume(1);
 }
 
-// TODO: tests
+/// \overload
+/// See \ref Token::Kind::BinaryOperator for details
+template <>
+constexpr std::string_view parse<BinaryOperator>(Stream& stream) {
+    DEBUG_ASSERT(matches<BinaryOperator>(stream));
+
+    // Same strategy as in matches<BinaryOperator>
+
+    // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
+    // e.g., "-=" is always picked over "-"
+    auto max_munch_tokens = binary_operator_tokens;
+    ranges::sort(max_munch_tokens, std::greater{}, &std::string_view::size);
+
+    auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
+    const auto* iter = ranges::find_if(max_munch_tokens, check_stream_starts);
+
+    ASSERT(iter != ranges::end(max_munch_tokens));
+
+    return stream.consume(iter->size());
+}
 
 /// \overload
 /// See \ref Token::Kind::Operator for details
@@ -1382,7 +1486,8 @@ template <>
 constexpr std::string_view parse<Operator>(Stream& stream) {
     DEBUG_ASSERT(matches<Operator>(stream));
 
-    // Same strategy as in matches<Operator>
+    // Same logic as in parse<BinayOperator>
+    // TODO: Make more DRY
 
     // To abide by the maximal munch rule, prioritizing bigger tokens over samller ones
     // e.g., "-=" is always picked over "-"
@@ -1433,7 +1538,7 @@ constexpr auto parse_tokens(std::string_view str) {
 
     return tokenize::parse_all<MaxNumTokens, BoolLiteral, StringLiteral, RawStringLiteral, CharLiteral, IntBinLiteral,
                                IntOctLiteral, IntDecLiteral, IntHexLiteral, FloatLiteral, FloatHexLiteral, Identifier,
-                               Grouping, Operator>(str);
+                               Grouping, BinaryOperator, Operator>(str);
 }
 
 template <std::size_t MaxNumTokens = 1'024>
@@ -1441,8 +1546,11 @@ class Tokenizer
 {
 public:
     constexpr explicit(false) Tokenizer(std::string_view str)
-        : tokens_{parse_tokens<MaxNumTokens>(str)}
+        : original_{str}
+        , tokens_{parse_tokens<MaxNumTokens>(str)}
         , num_tokens_{find_end_delim_idx()} {}
+
+    constexpr std::string_view get_original() const { return original_; }
 
     constexpr auto size() const { return num_tokens_; }
 
@@ -1468,6 +1576,7 @@ private:
         return gsl::narrow_cast<std::size_t>(iter - ranges::begin(tokens_));
     }
 
+    std::string_view original_;
     std::array<Token, MaxNumTokens> tokens_;
     std::size_t num_tokens_;
 };
