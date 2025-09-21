@@ -40,7 +40,7 @@ class AsmFunctionResult : public Result<Ret>
 {
 public:
     // NOLINTNEXTLINE(readability-identifier-naming) - rational: don't shadow member variables
-    constexpr AsmFunctionResult(std::tuple<std::decay_t<Args>...>&& args_, std::string_view function_name_)
+    constexpr AsmFunctionResult(std::tuple<std::decay_t<Args>...> args_, std::string_view function_name_)
         : args{std::move(args_)}
         , function_name{function_name_} {}
 
@@ -136,7 +136,7 @@ public:
 
     template <MemoryIOCompatible<Args>... Ts>
         requires(sizeof...(Ts) == sizeof...(Args))
-    AsmFunctionResult<Ret, Ts...> operator()(Ts&&... args) {
+    AsmFunctionResult<Ret, Ts...> operator()(const Ts&... args) {
         static_assert((true && ... && std::copyable<std::decay_t<Ts>>), "All arguments must be copyable");
         (check_arg<Ts>(), ...);
 
@@ -148,7 +148,7 @@ public:
             return res;
         }
 
-        res.set_result(prog_->call_function<Ret(Args...)>(address_, std::forward<Ts>(args)...));
+        res.set_result(prog_->call_function<Ret(Args...)>(address_, args...));
 
         return res;
     }

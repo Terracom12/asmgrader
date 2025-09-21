@@ -2,6 +2,7 @@
 
 #include <asmgrader/api/asm_function.hpp>
 #include <asmgrader/api/asm_symbol.hpp>
+#include <asmgrader/api/decomposer.hpp>
 #include <asmgrader/api/expression_inspection.hpp>
 #include <asmgrader/api/stringize.hpp>
 #include <asmgrader/common/error_types.hpp>
@@ -11,20 +12,27 @@
 #include <asmgrader/logging.hpp>
 #include <asmgrader/meta/concepts.hpp>
 
+#include <boost/mp11/detail/mp_list.hpp>
+#include <boost/mp11/detail/mp_map_find.hpp>
+#include <boost/mp11/list.hpp>
+#include <boost/mp11/map.hpp>
 #include <boost/type_index.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <gsl/util>
 #include <libassert/assert.hpp>
 #include <range/v3/action/take_while.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/contains.hpp>
 #include <range/v3/algorithm/find.hpp>
+#include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/algorithm/find_if_not.hpp>
 #include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/drop_while.hpp>
 #include <range/v3/view/split.hpp>
+#include <range/v3/view/split_when.hpp>
 #include <range/v3/view/take_while.hpp>
 
 #include <array>
@@ -56,14 +64,16 @@ struct NAryOp
         : args{std::move(args_)}
         , arg_tokens{std::move(arg_tokens_)} {}
 
+    // FIXME: Making a copy of everything
     std::tuple<Args...> args;
     std::array<inspection::Tokenizer<>, sizeof...(Args)> arg_tokens;
 
     using EvalResT = std::decay_t<std::invoke_result_t<OpFn, Args...>>;
 
-    // FIXME: Current implementation of REQUIRE in conjunction with this causes the comparison expr to be evaluated
-    // multiple times
-    constexpr EvalResT eval() const { return std::apply(OpFn{}, args); }
+    EvalResT eval() const {
+        const static EvalResT res = std::apply(OpFn{}, args);
+        return res;
+    }
 
     static constexpr std::string_view raw_str = Rep;
 
@@ -73,9 +83,6 @@ struct NAryOp
 /// For argument deduction purposes
 template <template <typename...> typename Op, typename... Args>
 constexpr auto make(std::array<inspection::Tokenizer<>, sizeof...(Args)> arg_tokens, Args&&... args) {
-    // note: lack of forward<> in Op tpack is intentional
-    //   if Args...[i]&& is an lvalue ref, we want to keep it as such
-    //   if Args...[i]&& is an rvalue, we want to store an lvalue
     return Op<Args...>{{std::forward<Args>(args)...}, arg_tokens};
 }
 
@@ -114,6 +121,33 @@ concept Operator = requires(T op) {
 
 // sanity checks
 static_assert(Operator<LogicalNot<int>>);
+static_assert(Operator<Equal<int, int>>);
+
+namespace detail {
+
+template <StaticString Str>
+struct MapKeyT
+{
+};
+
+template <typename T, typename U>
+using StrToOpTMap = boost::mp11::mp_list<        //
+    std::pair<MapKeyT<"==">, Equal<T, U>>,       //
+    std::pair<MapKeyT<"!=">, NotEqual<T, U>>,    //
+    std::pair<MapKeyT<"<">, Less<T, U>>,         //
+    std::pair<MapKeyT<"<=">, LessEqual<T, U>>,   //
+    std::pair<MapKeyT<">">, Greater<T, U>>,      //
+    std::pair<MapKeyT<">=">, GreaterEqual<T, U>> //
+    >;
+
+static_assert(boost::mp11::mp_is_map<StrToOpTMap<int, int>>::value);
+
+} // namespace detail
+
+template <StaticString OpStr, typename T, typename U>
+using OpStrToType = boost::mp11::mp_second<boost::mp11::mp_map_find<detail::StrToOpTMap<T, U>, detail::MapKeyT<OpStr>>>;
+
+static_assert(std::same_as<OpStrToType<"!=", int, int>, NotEqual<int, int>>);
 
 /// Representation of an expression with all components stringized
 struct ExpressionRepr
@@ -175,39 +209,6 @@ struct ExpressionRepr
 
 } // namespace exprs
 
-namespace stringize {
-
-// /// Serializes strings with surrounding quotes ("") and escapes characters.
-// ///
-// /// e.g., "abc\t123\n"
-// template <std::convertible_to<std::string_view> Str>
-// inline std::string stringize(const Str& str) {
-//     // converting to string_view in case the formatter for the type of Str does not allow '?'
-//     return fmt::format("{:?}", std::string_view{str});
-// }
-//
-// // TODO: Little bit unDRY
-//
-//
-// /// I love this name
-// template <typename Arg>
-// concept Stringizable = requires(Arg arg) {
-//     { stringize(arg) } -> std::convertible_to<std::string>;
-// };
-//
-// /// Attempt to stringize arg. If a matching overload is not found, will
-// /// delegate serialization to \ref format_or_unknown
-// template <typename Arg>
-// inline std::string try_stringize(Arg&& arg) {
-//     if constexpr (Stringizable<Arg>) {
-//         return stringize(std::forward<Arg>(arg));
-//     } else {
-//         return format_or_unknown(std::forward<Arg>(arg));
-//     }
-// }
-
-} // namespace stringize
-
 // TODO: Might want to optimize by making more use of views, as the primary use case will be in REQUIRE*
 
 template <exprs::Operator Op>
@@ -224,6 +225,21 @@ public:
                  "=========================================================== ")]]
     explicit Requirement(Op op)
         : Requirement(op, default_description) {}
+
+    template <StaticString OpStr, typename... Ts>
+    [[deprecated("====================================================================================================="
+                 "=========================================================== !!!!!!!!!!!!!!!!! "
+                 "Please consider providing a requirement description by using REQUIRE(..., \"<description here>\")"
+                 " !!!!!!!!!!!!!!!!! "
+                 "====================================================================================================="
+                 "=========================================================== ")]]
+    explicit Requirement(const DecomposedExpr<OpStr, Ts...>& decomposed_expr, const inspection::Tokenizer<>& tokens)
+        : Requirement(decomposed_expr, tokens, default_description) {}
+
+    template <StaticString OpStr, typename... Ts>
+    explicit Requirement(const DecomposedExpr<OpStr, Ts...>& decomposed_expr, const inspection::Tokenizer<>& tokens,
+                         std::string description)
+        : Requirement(decomposed_to_op(decomposed_expr, tokens), std::move(description)) {}
 
     explicit Requirement(Op op, std::string description)
         : op_{op}
@@ -276,6 +292,25 @@ public:
     }
 
 private:
+    template <StaticString OpStr, typename... Ts>
+    static Op decomposed_to_op(const DecomposedExpr<OpStr, Ts...>& decomposed_expr,
+                               const inspection::Tokenizer<>& tokens) {
+        std::array<inspection::Tokenizer<>, sizeof...(Ts)> split_tokens_arr{};
+
+        if constexpr (sizeof...(Ts) == 1) {
+            split_tokens_arr.front() = tokens;
+        } else {
+            auto split_pos = gsl::narrow_cast<std::size_t>(
+                ranges::find_if(tokens,
+                                [](const inspection::Token& tok) { return tok.str == std::string_view{OpStr}; }) -
+                ranges::begin(tokens));
+            split_tokens_arr.at(0) = tokens.subseq(0, split_pos);
+            split_tokens_arr.at(1) = tokens.subseq(split_pos + 1, tokens.size());
+        }
+
+        return Op(decomposed_expr.operands, split_tokens_arr);
+    }
+
     template <typename Val>
     static consteval exprs::ExpressionRepr::Repr::Type deduce_kind() {
         using Repr = exprs::ExpressionRepr::Repr;
@@ -344,5 +379,14 @@ private:
     static_assert(
         requires { static_cast<bool>(res_); }, "Requirement expressions must be convertible to bool (for now)");
 };
+
+/// Deduction guide for a single type decomposition expr
+template <StaticString OpStr, typename T>
+Requirement(DecomposedExpr<OpStr, T>&&, const inspection::Tokenizer<>&, std::string) -> Requirement<exprs::Noop<T>>;
+
+/// Deduction guide for a binary type decomposition expr
+template <StaticString OpStr, typename T, typename U>
+Requirement(DecomposedExpr<OpStr, T, U>&&, const inspection::Tokenizer<>&, std::string)
+    -> Requirement<exprs::OpStrToType<OpStr, T, U>>;
 
 } // namespace asmgrader

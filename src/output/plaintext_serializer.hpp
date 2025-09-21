@@ -93,7 +93,7 @@ private:
 
     /// For requirements that were repeated within the run of the same student.
     /// Used to append a (#) to the end of the requirement message.
-    std::unordered_map<std::string_view, std::size_t> repeat_requirements_;
+    std::unordered_map<std::string, std::size_t> repeat_requirements_;
 };
 
 template <fmt::formattable T>

@@ -14,6 +14,7 @@
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/contains.hpp>
+#include <range/v3/algorithm/copy.hpp>
 #include <range/v3/algorithm/count.hpp>
 #include <range/v3/algorithm/count_if.hpp>
 #include <range/v3/algorithm/equal.hpp>
@@ -1556,10 +1557,29 @@ template <std::size_t MaxNumTokens = 1'024>
 class Tokenizer
 {
 public:
+    constexpr Tokenizer() = default;
+
     constexpr explicit(false) Tokenizer(std::string_view str)
         : original_{str}
         , tokens_{parse_tokens<MaxNumTokens>(str)}
         , num_tokens_{find_end_delim_idx()} {}
+
+    constexpr Tokenizer subseq(std::size_t start, std::size_t len) const {
+        ASSERT(start < size());
+
+        len = std::min(size() - start, len);
+
+        Tokenizer result;
+
+        ranges::copy(tokens_.begin() + start, tokens_.begin() + start + len, result.tokens_.begin());
+        result.num_tokens_ = len;
+
+        auto str_start = result.tokens_.front().str.data() - original_.data();
+        auto str_len = (result[len - 1].str.data() + result[len - 1].str.size()) - result.tokens_.front().str.data();
+        result.original_ = original_.substr(str_start, str_len);
+
+        return result;
+    }
 
     constexpr std::string_view get_original() const { return original_; }
 
@@ -1589,7 +1609,7 @@ private:
 
     std::string_view original_;
     std::array<Token, MaxNumTokens> tokens_;
-    std::size_t num_tokens_;
+    std::size_t num_tokens_{};
 };
 
 } // namespace asmgrader::inspection

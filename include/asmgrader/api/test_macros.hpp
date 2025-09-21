@@ -52,31 +52,15 @@
 #define PROF_ONLY_TEST(name, ...) [[maybe_unused]] static void CONCAT(prof_test_unused, __COUNTER__)(TestContext & ctx)
 #endif // PROFESSOR_VERSION
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-#define REQUIRE_IMPL(unq_ident, op, op_args, op_args_raw_strs, ...)                                                    \
+#define REQUIRE_IMPL(unq_ident, condition, condition_raw_str, ...)                                                     \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto& CONCAT(op_, unq_ident) =                                                                           \
-            ::asmgrader::exprs::make<::asmgrader::exprs::op>(STRIP_PARENS(op_args_raw_strs), STRIP_PARENS(op_args));   \
-        const auto& unq_ident =                                                                                        \
-            ::asmgrader::Requirement{CONCAT(op_, unq_ident) __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};                    \
+         /*NOLINTNEXTLINE(bugprone-chained-comparison)*/                                                               \
+        const auto& unq_ident = ::asmgrader::Requirement{asmgrader::Decomposer{} <= condition,                         \
+                                                         {condition_raw_str} __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};   \
         bool CONCAT(bool_, unq_ident) = ctx.require(unq_ident);                                                        \
     } while (false);
 
-#define REQUIRE(condition, ...)                                                                                        \
-    REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), Noop, ((condition)), ({std::string_view{#condition}}), __VA_ARGS__)
-
-#define REQUIRE_EQ_IMPL(lhs, rhs, unq_ident, ...)                                                                      \
-    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-        const auto& CONCAT(op_, unq_ident) = ::asmgrader::exprs::make<::asmgrader::exprs::Equal>((lhs), (rhs));        \
-        const auto& unq_ident =                                                                                        \
-            ::asmgrader::Requirement{CONCAT(op_, unq_ident) __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};                    \
-        bool CONCAT(bool_, unq_ident) =                                                                                \
-            ctx.require(unq_ident, ::asmgrader::RequirementResult::DebugInfo{#lhs " == " #rhs});                       \
-    } while (false);
-
-#define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
-    REQUIRE_IMPL(CONCAT(require_eq_unq_, __COUNTER__), Equal, ((lhs), (rhs)),                                          \
-                 ({std::string_view{#lhs}, std::string_view{#rhs}}), __VA_ARGS__)
+#define REQUIRE(condition, ...) REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), condition, #condition, __VA_ARGS__)
 
 #define FILE_METADATA(...)                                                                                             \
     namespace asmgrader::metadata {                                                                                    \
