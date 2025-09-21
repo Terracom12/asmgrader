@@ -34,8 +34,11 @@
 #include <array>
 #include <concepts>
 #include <cstddef>
+#include <exception>
 #include <functional>
+#include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -211,7 +214,7 @@ struct Token
         ///   'const_cast', 'static_cast', 'dynamic_cast', 'reinterpret_cast',
         ///   '?', ':'
         ///   also includes literal operators
-        /// TODO: Maybe support alternate spellings like 'and', 'not', etc.
+        // TODO: Maybe support alternate spellings like 'and', 'not', etc.
         Operator,
 
         /// Deliminates the end of the token sequence.
@@ -264,6 +267,60 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
 
 constexpr std::pair<Token::Kind, std::string_view> format_as(const Token& tok) {
     return {tok.kind, tok.str};
+}
+
+/// Bad or invalid parse exception type. May indicate an implementation bug,
+/// or just an invalid expression.
+class ParsingError : public std::exception
+{
+public:
+    // Using constexpr where possible for the unlikely possibility of eventually updating to C++26
+    // See: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3068r6.html
+
+    explicit ParsingError(std::string msg)
+        : msg_{std::move(msg)} {}
+
+    ParsingError(std::string msg, std::string_view stream_state)
+        : msg_{std::move(msg)}
+        , stream_state_{stream_state} {}
+
+    ParsingError(std::string msg, std::string_view stream_state, Token::Kind token_kind)
+        : msg_{std::move(msg)}
+        , stream_state_{stream_state}
+        , token_kind_{token_kind} {}
+
+    constexpr const char* what() const noexcept override { return msg_.c_str(); }
+
+    constexpr const std::string& msg() const noexcept { return msg_; }
+
+    constexpr const std::optional<std::string>& stream_state() const noexcept { return stream_state_; }
+
+    constexpr const std::optional<Token::Kind>& token_kind() const noexcept { return token_kind_; }
+
+    /// Return a human-readable "pretty" stringified version of the exception
+    std::string pretty() const {
+        const static std::string pretty_str = make_pretty();
+        return pretty_str;
+    }
+
+private:
+    std::string make_pretty() const {
+        std::string_view stream_state_str = stream_state_ ? std::string_view{*stream_state_} : "<unknown>";
+        std::string_view token_kind_str = token_kind_ ? format_as(*token_kind_) : "<unknown>";
+
+        return fmt::format("{} : state={:?}, token={}", msg_, stream_state_str, token_kind_str);
+    }
+
+    /// A message as to why parsing failed
+    std::string msg_;
+    /// Optional state of the stream when failure occured
+    std::optional<std::string> stream_state_;
+    /// Optional token kind we were attempting to parse when failure occured
+    std::optional<Token::Kind> token_kind_;
+};
+
+inline std::string format_as(const ParsingError& parse_error) {
+    return parse_error.pretty();
 }
 
 /// Recursive descent parser implementation details
@@ -370,14 +427,18 @@ public:
 
     /// Peek at the first character of the stream
     constexpr char peek() const {
-        ASSERT(!str().empty());
+        if (str().empty()) {
+            throw ParsingError("called peek with empty stream");
+        }
         return str().at(0);
     }
 
     /// \overload
     /// Peek at the first n characters of the stream
     constexpr std::string_view peek(std::size_t n) const {
-        ASSERT(n <= str().size());
+        if (n > size()) {
+            throw ParsingError(fmt::format("called peek(n) where n > size() ({} > {})", n, size()));
+        }
         return str().substr(0, n);
     }
 
@@ -914,7 +975,9 @@ constexpr bool matches<Grouping>(const Stream& stream) {
         auto num_operator_closing = ranges::count(stream.ctx.prevs, Token{.kind = Operator, .str = ")"});
 
         // there cannot be more closing than opening. That would imply a parsing error
-        ASSERT(num_operator_closing <= num_operator_opening);
+        if (num_operator_closing > num_operator_opening) {
+            throw ParsingError("closing ')' ops > opening '(' ops", stream.str(), Grouping);
+        }
 
         // no unmatched operator opening. We must be matching to the previous grouping symbol
         if (num_operator_opening == num_operator_closing) {
@@ -1092,7 +1155,9 @@ constexpr std::string_view parse([[maybe_unused]] Stream& stream) {
 /// See \ref Token::Kind::StringLiteral for details
 template <>
 constexpr std::string_view parse<StringLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<StringLiteral>(stream));
+    if (!matches<StringLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), StringLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1132,7 +1197,9 @@ static_assert(test_parse<StringLiteral>(R"("\\\\\" \x12")") == R"("\\\\\" \x12")
 /// See \ref Token::Kind::RawStringLiteral for details
 template <>
 constexpr std::string_view parse<RawStringLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<RawStringLiteral>(stream));
+    if (!matches<RawStringLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), RawStringLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1165,7 +1232,9 @@ static_assert(test_parse<RawStringLiteral>(R"---(R"123( 28%\di\""" 2)123")---") 
 /// See \ref Token::Kind::StringLiteral for details
 template <>
 constexpr std::string_view parse<CharLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<CharLiteral>(stream));
+    if (!matches<CharLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), CharLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1218,12 +1287,16 @@ constexpr bool consume_int_suffix(Stream& stream) {
 /// See \ref Token::Kind::IntBinLiteral for details
 template <>
 constexpr std::string_view parse<IntBinLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<IntBinLiteral>(stream));
+    if (!matches<IntBinLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), IntBinLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
     // Consume the prefix
-    ASSERT(stream.consume("0b", case_insensitive));
+    if (!stream.consume("0b", case_insensitive)) {
+        throw ParsingError("0b literal prefix missing", stream.str(), IntBinLiteral);
+    }
 
     stream.consume_through(digit_or_sep);
 
@@ -1236,12 +1309,16 @@ constexpr std::string_view parse<IntBinLiteral>(Stream& stream) {
 /// See \ref Token::Kind::IntOctLiteral for details
 template <>
 constexpr std::string_view parse<IntOctLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<IntOctLiteral>(stream));
+    if (!matches<IntOctLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), IntOctLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
     // Consume the prefix
-    ASSERT(stream.consume('0'));
+    if (!stream.consume('0')) {
+        throw ParsingError("0 literal prefix missing", stream.str(), IntOctLiteral);
+    }
 
     stream.consume_through(digit_or_sep);
 
@@ -1254,7 +1331,9 @@ constexpr std::string_view parse<IntOctLiteral>(Stream& stream) {
 /// See \ref Token::Kind::IntDecLiteral for details
 template <>
 constexpr std::string_view parse<IntDecLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<IntDecLiteral>(stream));
+    if (!matches<IntDecLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), IntDecLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1269,12 +1348,16 @@ constexpr std::string_view parse<IntDecLiteral>(Stream& stream) {
 /// See \ref Token::Kind::IntHexLiteral for details
 template <>
 constexpr std::string_view parse<IntHexLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<IntHexLiteral>(stream));
+    if (!matches<IntHexLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), IntHexLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
     // Consume the prefix
-    ASSERT(stream.consume("0x", case_insensitive));
+    if (!stream.consume("0x", case_insensitive)) {
+        throw ParsingError("0x literal prefix missing", stream.str(), IntHexLiteral);
+    }
 
     stream.consume_through(xdigit_or_sep);
 
@@ -1306,7 +1389,9 @@ static_assert(test_parse<IntBinLiteral>("0b0A123") == "0b0");
 /// See \ref Token::Kind::FloatLiteral for details
 template <>
 constexpr std::string_view parse<FloatLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<FloatLiteral>(stream));
+    if (!matches<FloatLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), FloatLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1316,7 +1401,9 @@ constexpr std::string_view parse<FloatLiteral>(Stream& stream) {
         stream.consume_through(digit_or_sep);
     } else {
         // if there is no '.' then there must be an exponent
-        ASSERT(tolower(stream.peek()) == 'e', stream.str());
+        if (tolower(stream.peek()) != 'e') {
+            throw ParsingError("exponent char 'e'/'E' missing", stream.str(), FloatLiteral);
+        }
     }
 
     // consume potential exponent and sign
@@ -1340,7 +1427,9 @@ constexpr std::string_view parse<FloatLiteral>(Stream& stream) {
 /// See \ref Token::Kind::FloatHexLiteral for details
 template <>
 constexpr std::string_view parse<FloatHexLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<FloatHexLiteral>(stream));
+    if (!matches<FloatHexLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), FloatHexLiteral);
+    }
 
     auto get_res = [init = stream.str(), &stream] { return init.substr(0, init.size() - stream.str().size()); };
 
@@ -1349,7 +1438,9 @@ constexpr std::string_view parse<FloatHexLiteral>(Stream& stream) {
     //   hex-value '.' [hex-value] hex-exp
     //   '.' hex-value hex-exp
     // In the following statement we ensure that it matches one of the above
-    ASSERT(stream.consume("0x", case_insensitive) || stream.consume(".0x", case_insensitive));
+    if (!stream.consume("0x", case_insensitive) && !stream.consume(".0x", case_insensitive)) {
+        throw ParsingError("bad start of hex float literal", stream.str(), FloatHexLiteral);
+    }
 
     stream.consume_through(xdigit_or_sep);
 
@@ -1362,7 +1453,9 @@ constexpr std::string_view parse<FloatHexLiteral>(Stream& stream) {
     }
 
     // exponent is REQUIRED
-    ASSERT(stream.consume('p', case_insensitive), stream.str());
+    if (!stream.consume('p', case_insensitive)) {
+        throw ParsingError("exponent char 'p'/'P' missing", stream.str(), FloatHexLiteral);
+    }
 
     stream.consume('+') || stream.consume('-');
 
@@ -1436,7 +1529,9 @@ static_assert(test_parse<FloatHexLiteral>(".0x0p1_12") == ".0x0p1");
 /// See \ref Token::Kind::BoolLiteral for details
 template <>
 constexpr std::string_view parse<BoolLiteral>(Stream& stream) {
-    DEBUG_ASSERT(matches<BoolLiteral>(stream));
+    if (!matches<BoolLiteral>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), BoolLiteral);
+    }
 
     return stream.consume_through(is_ident_like());
 }
@@ -1445,7 +1540,9 @@ constexpr std::string_view parse<BoolLiteral>(Stream& stream) {
 /// See \ref Token::Kind::Identifier for details
 template <>
 constexpr std::string_view parse<Identifier>(Stream& stream) {
-    DEBUG_ASSERT(matches<Identifier>(stream));
+    if (!matches<Identifier>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), Identifier);
+    }
 
     return stream.consume_through(is_ident_like());
 }
@@ -1463,7 +1560,9 @@ static_assert(test_parse<Identifier>("a.b") == "a");
 /// See \ref Token::Kind::Grouping for details
 template <>
 constexpr std::string_view parse<Grouping>(Stream& stream) {
-    DEBUG_ASSERT(matches<Grouping>(stream));
+    if (!matches<Grouping>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), Grouping);
+    }
 
     // Raise a compilation error in case we ever change supported grouping tokens to multi-char
     static_assert(std::same_as<decltype(grouping_tokens)::value_type, char>);
@@ -1475,7 +1574,9 @@ constexpr std::string_view parse<Grouping>(Stream& stream) {
 /// See \ref Token::Kind::BinaryOperator for details
 template <>
 constexpr std::string_view parse<BinaryOperator>(Stream& stream) {
-    DEBUG_ASSERT(matches<BinaryOperator>(stream));
+    if (!matches<BinaryOperator>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), BinaryOperator);
+    }
 
     // Same strategy as in matches<BinaryOperator>
 
@@ -1487,7 +1588,9 @@ constexpr std::string_view parse<BinaryOperator>(Stream& stream) {
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     const auto* iter = ranges::find_if(max_munch_tokens, check_stream_starts);
 
-    ASSERT(iter != ranges::end(max_munch_tokens));
+    if (iter == ranges::end(max_munch_tokens)) {
+        throw ParsingError("no match found in binary operator token list", stream.str(), BinaryOperator);
+    }
 
     return stream.consume(iter->size());
 }
@@ -1496,7 +1599,9 @@ constexpr std::string_view parse<BinaryOperator>(Stream& stream) {
 /// See \ref Token::Kind::Operator for details
 template <>
 constexpr std::string_view parse<Operator>(Stream& stream) {
-    DEBUG_ASSERT(matches<Operator>(stream));
+    if (!matches<Operator>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), Operator);
+    }
 
     // Same logic as in parse<BinayOperator>
     // TODO: Make more DRY
@@ -1509,7 +1614,9 @@ constexpr std::string_view parse<Operator>(Stream& stream) {
     auto check_stream_starts = std::bind_front(&Stream::starts_with<std::string_view>, stream);
     const auto* iter = ranges::find_if(max_munch_tokens, check_stream_starts);
 
-    ASSERT(iter != ranges::end(max_munch_tokens));
+    if (iter == ranges::end(max_munch_tokens)) {
+        throw ParsingError("no match found in operator token list", stream.str(), Operator);
+    }
 
     return stream.consume(iter->size());
 }
@@ -1537,7 +1644,9 @@ constexpr auto parse_all(Stream input_stream) {
         input_stream.ctx.prevs = std::span(tokens.begin(), ++i);
     }
 
-    ASSERT(input_stream.empty(), input_stream, tokens, input_stream.str());
+    if (!input_stream.empty()) {
+        throw ParsingError("input stream non-empty after full parse", input_stream.str());
+    }
 
     return tokens;
 }
@@ -1602,7 +1711,9 @@ private:
     constexpr std::size_t find_end_delim_idx() const {
         auto iter =
             std::ranges::find_if(tokens_, [](const Token& tok) { return tok.kind == Token::Kind::EndDelimiter; });
-        ASSERT(iter != ranges::end(tokens_), tokens_);
+        if (iter == ranges::end(tokens_)) {
+            throw ParsingError("EndDelimiter missing from token stream");
+        }
 
         return gsl::narrow_cast<std::size_t>(iter - ranges::begin(tokens_));
     }
