@@ -63,7 +63,7 @@
     } while (false);
 
 #define REQUIRE(condition, ...)                                                                                        \
-    REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), Noop, ((condition)), ({#condition}), __VA_ARGS__)
+    REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), Noop, ((condition)), ({std::string_view{#condition}}), __VA_ARGS__)
 
 #define REQUIRE_EQ_IMPL(lhs, rhs, unq_ident, ...)                                                                      \
     do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
@@ -75,7 +75,8 @@
     } while (false);
 
 #define REQUIRE_EQ(lhs, rhs, ...)                                                                                      \
-    REQUIRE_IMPL(CONCAT(require_eq_unq_, __COUNTER__), Equal, ((lhs), (rhs)), ({#lhs, #rhs}), __VA_ARGS__)
+    REQUIRE_IMPL(CONCAT(require_eq_unq_, __COUNTER__), Equal, ((lhs), (rhs)),                                          \
+                 ({std::string_view{#lhs}, std::string_view{#rhs}}), __VA_ARGS__)
 
 #define FILE_METADATA(...)                                                                                             \
     namespace asmgrader::metadata {                                                                                    \

@@ -1,15 +1,28 @@
 #pragma once
 
+#include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/api/stringize.hpp>
 #include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/to_static_range.hpp>
+#include <asmgrader/logging.hpp>
 #include <asmgrader/meta/always_false.hpp>
 #include <asmgrader/program/program.hpp>
 #include <asmgrader/subprocess/memory/concepts.hpp>
 
 #include <fmt/base.h>
+#include <gsl/narrow>
+#include <gsl/util>
+#include <libassert/assert.hpp>
+#include <range/v3/action/split.hpp>
+#include <range/v3/view/enumerate.hpp>
 
+#include <array>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
-#include <optional>
+#include <map>
+#include <span>
+#include <stack>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -42,6 +55,70 @@ public:
 
     std::tuple<std::decay_t<Args>...> args;
     std::string_view function_name;
+
+    std::string repr(std::span<const inspection::Token> tokens, std::string_view raw_str) const {
+        auto split_arg_tokens_fn = [open_groupings = std::stack<char>{}](const inspection::Token& tok) mutable {
+            using inspection::Token::Kind::Grouping;
+
+            // Opening grouping symbol
+            if (tok.str == "(" || tok.str == "{" || (tok.kind == Grouping && tok.str == "<")) {
+                open_groupings.push(tok.str.at(0));
+            }
+            // Closing grouping symbol
+            else if (!open_groupings.empty() &&
+                     (tok.str == ")" || tok.str == "}" || (tok.kind == Grouping && tok.str == ">"))) {
+                // This *should* always be true, but it's not important enough to crash in a release build
+                DEBUG_ASSERT(open_groupings.top() ==
+                             (std::map<char, char>{{')', '('}, {'}', '{'}, {'>', '<'}}).at(tok.str.at(0)));
+                open_groupings.pop();
+            }
+
+            return open_groupings.empty() && tok.str == ",";
+        };
+
+        // FIXME: This is very much hacked together and will likely break in a lot of edge cases
+
+        std::array<std::span<const inspection::Token>, sizeof...(Args)> arg_tokens{};
+        std::array<std::string_view, sizeof...(Args)> arg_raw_strs{};
+
+        DEBUG_ASSERT(tokens[0].kind == inspection::Token::Kind::Identifier);
+        DEBUG_ASSERT(tokens[1] == (inspection::Token{.kind = inspection::Token::Kind::Operator, .str = "("}),
+                     tokens[1].kind, tokens[1].str);
+        DEBUG_ASSERT(tokens.back() == (inspection::Token{.kind = inspection::Token::Kind::Operator, .str = ")"}),
+                     tokens.back().kind, tokens.back().str);
+
+        tokens = tokens.subspan(2);
+
+        for (std::size_t last_start = 0, len = 0, i = 0; const auto& [ti, tok] : tokens | ranges::views::enumerate) {
+            if (i >= arg_tokens.size()) {
+                DEBUG_ASSERT(false, i, arg_tokens, tokens);
+                LOG_WARN("Parsing error for asm function arguments");
+            }
+            if (split_arg_tokens_fn(tok) || ti + 1 == tokens.size()) {
+                arg_tokens.at(i) = std::span{tokens.begin() + gsl::narrow_cast<std::ptrdiff_t>(last_start), len};
+                auto str_start = tokens[last_start].str.data() - raw_str.data();
+                arg_raw_strs.at(i) = raw_str.substr(str_start, tok.str.data() - raw_str.data() - str_start);
+
+                len = 0;
+                last_start = ti + 1;
+                ++i;
+            } else {
+                len++;
+            }
+        }
+
+        std::array stringized_args = std::apply(
+            [&arg_tokens, &arg_raw_strs]<typename... Ts>(const Ts&... fn_args) {
+                std::size_t idx = 0;
+                return std::array{
+                    (idx++, stringize::repr(arg_tokens.at(idx - 1), arg_raw_strs.at(idx - 1), fn_args))...};
+            },
+            args);
+
+        return fmt::format("{}({})", function_name, fmt::join(stringized_args, ", "));
+    }
+
+    auto str() const { return static_cast<Result<Ret>>(*this); }
 };
 
 template <typename T>
@@ -111,5 +188,6 @@ AsmFunction<Ret(Args...)>::AsmFunction(Program& prog, std::string name, ErrorKin
 
 template <typename Ret, typename... Ts>
 struct fmt::formatter<::asmgrader::AsmFunctionResult<Ret, Ts...>> : formatter<::asmgrader::Result<Ret>>
+
 {
 };

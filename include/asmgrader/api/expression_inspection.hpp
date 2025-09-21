@@ -205,6 +205,7 @@ struct Token
         ///   '+', '-',                                                     *** unary only
         ///   '~'
         ///   '!',
+        ///   '*', '&'
         ///   'throw', 'sizeof', 'alignof', 'new', 'delete',
         ///   'const_cast', 'static_cast', 'dynamic_cast', 'reinterpret_cast',
         ///   '?', ':'
@@ -477,7 +478,16 @@ private:
     std::size_t idx_ = 0;
 };
 
-constexpr auto binary_operator_tokens = std::to_array<std::string_view>({
+template <std::size_t N>
+constexpr auto make_rev_size_sorted(const std::string_view (&arr)[N]) {
+    std::array<std::string_view, N> array = std::to_array(arr);
+
+    ranges::sort(array, std::greater{}, &std::string_view::size);
+
+    return array;
+}
+
+constexpr auto binary_operator_tokens = make_rev_size_sorted({
     "::", ",",                                                           //
     ".",  "->",                                                          //
     ".*", "->*",                                                         //
@@ -488,19 +498,20 @@ constexpr auto binary_operator_tokens = std::to_array<std::string_view>({
     "=",  "+=",  "-=",  "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" //
 });
 
-constexpr auto operator_tokens = std::to_array<std::string_view>({
+constexpr auto operator_tokens = make_rev_size_sorted({
     "++", "--",                                                      //
     "(", ")", "[", "]",                                              //
     "+", "-",                                                        //
     "~", "!",                                                        //
+    "*", "&",                                                        //
     "throw", "sizeof", "alignof", "new", "delete",                   //
                                                                      //
     "const_cast", "static_cast", "dynamic_cast", "reinterpret_cast", //
     "::", "?", ":"                                                   //
 });
 
-// Only 3 operands, '+' '-' and '::', should be present in both operator_tokens and binary_operator_tokens
-static_assert(ranges::count_if(operator_tokens, std::bind_front(ranges::contains, binary_operator_tokens)) == 3);
+// Only 5 operands, '+' '-' '*' '&' and '::', should be present in both operator_tokens and binary_operator_tokens
+static_assert(ranges::count_if(operator_tokens, std::bind_front(ranges::contains, binary_operator_tokens)) == 5);
 
 constexpr auto grouping_tokens = std::to_array<char>({
     '{', '}', //
@@ -995,7 +1006,7 @@ constexpr bool matches<BinaryOperator>(const Stream& stream) {
     // Logic to seperate binary-operators from any other arity is defined in matches<Operator>
 
     // the only 3 operators that could be unary or binary
-    if (*iter != "::" && *iter != "+" && *iter != "-") {
+    if (!ranges::contains(operator_tokens, *iter)) {
         return true;
     }
 
@@ -1037,7 +1048,7 @@ constexpr bool matches<Operator>(const Stream& stream) {
     }
 
     // the only 2 operators that could be unary or binary
-    if (*iter == "::" || *iter == "+" || *iter == "-") {
+    if (ranges::contains(binary_operator_tokens, *iter)) {
         return !matches<BinaryOperator>(stream);
     }
 
@@ -1525,7 +1536,7 @@ constexpr auto parse_all(Stream input_stream) {
         input_stream.ctx.prevs = std::span(tokens.begin(), ++i);
     }
 
-    ASSERT(input_stream.empty(), input_stream, tokens);
+    ASSERT(input_stream.empty(), input_stream, tokens, input_stream.str());
 
     return tokens;
 }

@@ -1,15 +1,18 @@
 #pragma once
 
 #include <asmgrader/api/asm_data.hpp>
+#include <asmgrader/api/expression_inspection.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/logging.hpp>
 #include <asmgrader/program/program.hpp>
 
 #include <fmt/base.h>
+#include <fmt/format.h>
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -38,6 +41,12 @@ public:
     using Result<T>::operator<=>;
 
     std::string_view symbol_name;
+
+    std::string repr(std::span<const inspection::Token> /*tokens*/, std::string_view /*raw_str*/) const {
+        return fmt::format("*{}", symbol_name);
+    }
+
+    auto str() const { return static_cast<Result<T>>(*this); }
 };
 
 template <typename T>

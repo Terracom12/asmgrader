@@ -1,6 +1,8 @@
 #include "output/plaintext_serializer.hpp"
 
+#include "api/expression_inspection.hpp"
 #include "api/requirement.hpp"
+#include "api/syntax_highlighter.hpp"
 #include "common/overloaded.hpp"
 #include "common/terminal_checks.hpp"
 #include "common/time.hpp"
@@ -61,7 +63,11 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
         req_result_str = style_str("FAILED", ERROR_STYLE);
     }
 
-    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.description, VALUE_STYLE));
+    std::string description{data.description};
+    if (auto cnt = repeat_requirements_[data.description]++; cnt != 0) {
+        description += fmt::format(" ({})", cnt);
+    }
+    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(description, VALUE_STYLE));
 
     if (data.expression_repr.has_value() /* && should_output_extra_info*/) {
         out += serialize_req_expr(data.expression_repr.value());
@@ -196,10 +202,12 @@ std::string PlainTextSerializer::pluralize(std::string_view root, int count, std
 }
 
 void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
-
     static bool is_first = true;
 
+    // FIXME: this seems wrong
     is_first = false;
+
+    repeat_requirements_.clear();
 
     std::string name_text;
 
@@ -320,99 +328,102 @@ void PlainTextSerializer::output_grade_percentage(const AssignmentResult& data) 
 }
 
 std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr& expr) {
-    return "";
-    // static constexpr auto string_style = fmt::fg(fmt::color::alice_blue);
-    // static constexpr auto numeric_style = fmt::fg(fmt::color::blanched_almond);
-    // static constexpr auto other_value_style = VALUE_STYLE;
-    //
-    // using Expression = exprs::ExpressionRepr::Expression;
-    // using Value = exprs::ExpressionRepr::Value;
-    // using Operator = exprs::ExpressionRepr::Operator;
-    // using Repr = exprs::ExpressionRepr::Repr;
-    //
-    // std::function<fmt::text_style(const Repr&)> repr_style = [&](const Repr& repr) {
-    //     fmt::text_style style{};
-    //
-    //     using enum Repr::Type;
-    //
-    //     switch (repr.kind) {
-    //     case String:
-    //         style = string_style;
-    //         break;
-    //     case Integer:
-    //         [[fallthrough]];
-    //     case Floating:
-    //         style = numeric_style;
-    //         break;
-    //     case Other:
-    //         style = other_value_style;
-    //         break;
-    //     }
-    //
-    //     return style;
-    // };
-    //
-    // std::function<std::string(const Expression&)> serialize_header = [this, &serialize_header,
-    //                                                                   &repr_style](const Expression& expression) {
-    //     auto impl = Overloaded{
-    //         [this, &repr_style](const Value& value) -> std::string {
-    //             if (value.repr.is_lvalue) {
-    //                 return std::string{value.repr.raw_str};
-    //             }
-    //             return style_str(value.repr.raw_str, repr_style(value.repr));
-    //         }, //
-    //         [&serialize_header](const Operator& op) {
-    //             ASSERT(op.operands.size() == 2);
-    //
-    //             return fmt::format("{} {} {}", serialize_header(op.operands[0]), op.repr.raw_str,
-    //                                serialize_header(op.operands[1]));
-    //         } //
-    //     };
-    //
-    //     return std::visit(impl, expression);
-    // };
-    //
-    // // Heavy inspiration from libassert
-    // // https://github.com/jeremy-rifkin/libassert
-    //
-    // struct WhereDetail
-    // {
-    //     std::string lhs;
-    //     std::string rhs;
-    // };
-    //
-    // std::function<std::vector<WhereDetail>(const Expression&)> get_where_details =
-    //     [this, &get_where_details, &repr_style](const Expression& expression) {
-    //         auto impl = Overloaded{
-    //             [this, &repr_style](const Value& value) -> std::vector<WhereDetail> {
-    //                 if (!value.repr.is_lvalue) {
-    //                     return {};
-    //                 }
-    //                 return {{.lhs = value.repr.raw_str, .rhs = style_str(value.repr.repr, repr_style(value.repr))}};
-    //             }, //
-    //             [&](const Operator& op) -> std::vector<WhereDetail> {
-    //                 return op.operands | ranges::views::transform(get_where_details) | ranges::views::join |
-    //                        ranges::to<std::vector>();
-    //             } //
-    //         };
-    //
-    //         return std::visit(impl, expression);
-    //     };
-    //
-    // auto serialize_where_details = [](const std::vector<WhereDetail>& dets) {
-    //     std::vector<std::string> strs;
-    //     strs.reserve(dets.size());
-    //
-    //     for (const WhereDetail& det : dets) {
-    //         strs.push_back(fmt::format("{} := {}", det.lhs, det.rhs));
-    //     }
-    //     return fmt::to_string(fmt::join(strs, "\n    "));
-    // };
-    //
-    // std::vector where_details = get_where_details(expr.expression);
-    //
-    // return fmt::format("  {}\n  Where:\n    {}\n\n", serialize_header(expr.expression),
-    //                    serialize_where_details(where_details));
+    static constexpr auto string_style = fmt::fg(fmt::color::alice_blue);
+    static constexpr auto numeric_style = fmt::fg(fmt::color::blanched_almond);
+    static constexpr auto other_value_style = VALUE_STYLE;
+
+    using Expression = exprs::ExpressionRepr::Expression;
+    using Value = exprs::ExpressionRepr::Value;
+    using Operator = exprs::ExpressionRepr::Operator;
+    using Repr = exprs::ExpressionRepr::Repr;
+
+    std::function<fmt::text_style(const Repr&)> repr_style = [&](const Repr& repr) {
+        fmt::text_style style{};
+
+        using enum Repr::Type;
+
+        switch (repr.kind) {
+        case String:
+            style = string_style;
+            break;
+        case Integer:
+            [[fallthrough]];
+        case Floating:
+            style = numeric_style;
+            break;
+        case Other:
+            style = other_value_style;
+            break;
+        }
+
+        return style;
+    };
+
+    std::function<std::string(const Expression&)> serialize_header = [&serialize_header](const Expression& expression) {
+        auto impl = Overloaded{
+            [](const Value& value) -> std::string {
+                return highlight::highlight(inspection::Tokenizer<>(value.repr.repr));
+            }, //
+            [&serialize_header](const Operator& op) {
+                ASSERT(op.operands.size() == 2);
+
+                return fmt::format("{} {} {}", serialize_header(op.operands[0]), op.repr.raw_str,
+                                   serialize_header(op.operands[1]));
+            } //
+        };
+
+        return std::visit(impl, expression);
+    };
+
+    // Heavy inspiration from libassert
+    // https://github.com/jeremy-rifkin/libassert
+
+    struct WhereDetail
+    {
+        std::string lhs;
+        std::string rhs;
+    };
+
+    std::function<std::vector<WhereDetail>(const Expression&)> get_where_details =
+        [&get_where_details](const Expression& expression) {
+            auto impl = Overloaded{
+                [](const Value& value) -> std::vector<WhereDetail> {
+                    if (value.repr.is_literal) {
+                        return {};
+                    }
+
+                    std::string rhs = value.repr.str;
+                    try {
+                        rhs = highlight::highlight(inspection::Tokenizer<>{value.repr.str});
+                    } catch (...) {
+                        LOG_WARN("Failed to syntax highlight expression. Context: raw={}, repr={}, str={}",
+                                 value.repr.raw_str, value.repr.repr, value.repr.str);
+                    }
+                    return {{.lhs = highlight::highlight(inspection::Tokenizer<>(value.repr.repr)), .rhs = rhs}};
+                }, //
+                [&](const Operator& op) -> std::vector<WhereDetail> {
+                    return op.operands | ranges::views::transform(get_where_details) | ranges::views::join |
+                           ranges::to<std::vector>();
+                } //
+            };
+
+            return std::visit(impl, expression);
+        };
+
+    auto serialize_where_details = [](const std::vector<WhereDetail>& dets) {
+        std::vector<std::string> strs;
+        strs.reserve(dets.size());
+
+        for (const WhereDetail& det : dets) {
+            strs.push_back(fmt::format("{} := {}", det.lhs, det.rhs));
+        }
+        return fmt::to_string(fmt::join(strs, "\n    "));
+    };
+
+    std::vector where_details = get_where_details(expr.expression);
+
+    return fmt::format("  {}\n  Where:\n    {}\n\n", serialize_header(expr.expression),
+                       serialize_where_details(where_details));
 }
 
 } // namespace asmgrader

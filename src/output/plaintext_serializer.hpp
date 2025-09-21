@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace asmgrader {
 
@@ -89,6 +90,10 @@ private:
 
     bool do_colorize_;
     std::size_t terminal_width_;
+
+    /// For requirements that were repeated within the run of the same student.
+    /// Used to append a (#) to the end of the requirement message.
+    std::unordered_map<std::string_view, std::size_t> repeat_requirements_;
 };
 
 template <fmt::formattable T>
