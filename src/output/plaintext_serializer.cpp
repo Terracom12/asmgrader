@@ -69,7 +69,7 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     }
     std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(description, VALUE_STYLE));
 
-    if (data.expression_repr.has_value() /* && should_output_extra_info*/) {
+    if (data.expression_repr.has_value() && should_output_requirement_details(verbosity_)) {
         out += serialize_req_expr(data.expression_repr.value());
     }
 
@@ -287,9 +287,13 @@ void PlainTextSerializer::on_error(std::string_view what) {
 }
 
 void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
-    constexpr std::string_view HEADER_TEXT = "Execution Info";
-    constexpr std::string_view VERSION_LABEL = "Version: ";
-    constexpr std::string_view DATE_LABEL = "Date and Time: ";
+    if (!should_output_run_metadata(verbosity_)) {
+        return;
+    }
+
+    constexpr std::string_view header_text = "Execution Info";
+    constexpr std::string_view version_label = "Version: ";
+    constexpr std::string_view date_label = "Date and Time: ";
 
     std::string version_text = fmt::format("{}-g{}", data.version_string, data.git_hash);
 
@@ -302,9 +306,9 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
     std::string local_timepoint_text =
         asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
 
-    std::string out = fmt::format("{:#^{}}\n", HEADER_TEXT, terminal_width_);
-    out += fmt::format("{}{:>{}}\n", VERSION_LABEL, version_text, terminal_width_ - VERSION_LABEL.size());
-    out += fmt::format("{:}{:>{}}\n", DATE_LABEL, local_timepoint_text, terminal_width_ - DATE_LABEL.size());
+    std::string out = fmt::format("{:#^{}}\n", header_text, terminal_width_);
+    out += fmt::format("{}{:>{}}\n", version_label, version_text, terminal_width_ - version_label.size());
+    out += fmt::format("{:}{:>{}}\n", date_label, local_timepoint_text, terminal_width_ - date_label.size());
     out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
 
     sink_.write(out);
@@ -337,6 +341,20 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
     using Operator = exprs::ExpressionRepr::Operator;
     using Repr = exprs::ExpressionRepr::Repr;
 
+    // syntax highlight iff `do_colorize_` is true
+    auto maybe_highlight = [this](const std::string& what) {
+        if (!do_colorize_) {
+            return what;
+        }
+
+        try {
+            return highlight::highlight(inspection::Tokenizer<>(what));
+        } catch (const inspection::ParsingError& ex) {
+            LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what, ex);
+            return what;
+        }
+    };
+
     std::function<fmt::text_style(const Repr&)> repr_style = [&](const Repr& repr) {
         fmt::text_style style{};
 
@@ -359,11 +377,10 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
         return style;
     };
 
-    std::function<std::string(const Expression&)> serialize_header = [&serialize_header](const Expression& expression) {
+    std::function<std::string(const Expression&)> serialize_header = [&serialize_header,
+                                                                      &maybe_highlight](const Expression& expression) {
         auto impl = Overloaded{
-            [](const Value& value) -> std::string {
-                return highlight::highlight(inspection::Tokenizer<>(value.repr.repr));
-            }, //
+            [&maybe_highlight](const Value& value) -> std::string { return maybe_highlight(value.repr.repr); }, //
             [&serialize_header](const Operator& op) {
                 ASSERT(op.operands.size() == 2);
 
@@ -385,20 +402,14 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
     };
 
     std::function<std::vector<WhereDetail>(const Expression&)> get_where_details =
-        [&get_where_details](const Expression& expression) {
+        [&get_where_details, &maybe_highlight](const Expression& expression) {
             auto impl = Overloaded{
-                [](const Value& value) -> std::vector<WhereDetail> {
+                [&maybe_highlight](const Value& value) -> std::vector<WhereDetail> {
                     if (value.repr.is_literal) {
                         return {};
                     }
 
-                    std::string rhs = value.repr.str;
-                    try {
-                        rhs = highlight::highlight(inspection::Tokenizer<>{value.repr.str});
-                    } catch (...) {
-                        LOG_WARN("Failed to syntax highlight expression. Context: raw={}, repr={}, str={}",
-                                 value.repr.raw_str, value.repr.repr, value.repr.str);
-                    }
+                    std::string rhs = maybe_highlight(value.repr.str);
                     return {{.lhs = highlight::highlight(inspection::Tokenizer<>(value.repr.repr)), .rhs = rhs}};
                 }, //
                 [&](const Operator& op) -> std::vector<WhereDetail> {
