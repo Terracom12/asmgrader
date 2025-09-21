@@ -19,11 +19,9 @@
 #include <filesystem>
 #include <optional>
 #include <regex>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 
 namespace asmgrader {
 
