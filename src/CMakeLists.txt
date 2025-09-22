@@ -57,6 +57,7 @@ set(
 
     api/assignment.cpp
     api/test_context.cpp
+    api/syntax_highlighter.cpp
 
     database_reader.cpp
 

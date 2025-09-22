@@ -94,7 +94,7 @@ struct StrFn
 } // namespace detail
 
 /// `repr` customization point object
-/// The return value of this function is guaranteed to be parsable by \ref inspection::Tokenizer
+/// The return value of this function is guaranteed to be parsable by \ref highlight::highlight
 ///
 /// Users may define a free function `repr` with the following signature:
 ///   fmt::formattable auto repr(std::span<const Token> tokens, std::string_view raw_str, const T& val)
@@ -106,7 +106,7 @@ struct StrFn
 constexpr detail::ReprFn repr{};
 
 /// `str` customization point object
-/// The return value of this function is guaranteed to be parsable by \ref inspection::Tokenizer
+/// The return value of this function is guaranteed to be parsable by \ref highlight::highlight
 ///
 /// Users may define a free function `str` with the following signature:
 ///   fmt::formattable auto str(const T& val)

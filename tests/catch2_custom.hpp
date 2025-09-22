@@ -3,12 +3,8 @@
 #include "common/bit_casts.hpp"
 #include "common/formatters/formatters.hpp" // IWYU pragma: keep
 #include "common/macros.hpp"
-#include "common/os.hpp"
 
 #include <boost/preprocessor/facilities/identity.hpp>
-#include <catch2/catch_test_macros.hpp> // IWYU pragma: export
-#include <catch2/catch_tostring.hpp>
-#include <catch2/matchers/catch_matchers_range_equals.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -19,9 +15,39 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
+
+// If this is included after Catch2, then instantiations of the stringify function template will
+// be choosen over ours
+#if defined(CATCH_TOSTRING_HPP_INCLUDED)
+#error "Include this file before Catch2"
+#else
+// Hacky way of overriding the stringification behavior for types Catch2 explicitly specializes
+// String formatting without being able to see non-graphical chars is VERY annoying
+namespace Catch::Detail {
+
+inline std::string stringify(std::string_view e) {
+    return fmt::format("{:?}", e);
+}
+
+inline std::string stringify(const std::string& e) {
+    return fmt::format("{:?}", e);
+}
+
+inline std::string stringify(const char* e) {
+    return fmt::format("{:?}", e);
+}
+
+} // namespace Catch::Detail
+#endif
+
+#include <catch2/catch_all.hpp>         // IWYU pragma: export
+#include <catch2/catch_test_macros.hpp> // IWYU pragma: export
+#include <catch2/catch_tostring.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp> // IWYU pragma: export
 
 namespace Catch {
 

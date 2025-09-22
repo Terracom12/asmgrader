@@ -12,6 +12,7 @@ set(
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
     test_expression_inspection.cpp
+    test_syntax_highlighter.cpp
     test_cconstexpr.cpp
     test_static_string.cpp
     test_static_byte.cpp
@@ -125,6 +126,7 @@ catch_discover_tests(
     ".xml"
     EXTRA_ARGS
     "--reporter console::out=-"
+    "--invisibles"
 )
 
 add_test(

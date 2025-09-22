@@ -4,25 +4,38 @@
 #pragma once
 
 #include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/contains.hpp>
+#include <range/v3/algorithm/find.hpp>
+#include <range/v3/algorithm/find_if.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/algorithm/transform.hpp>
+#include <range/v3/iterator/concepts.hpp>
+#include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/range/primitives.hpp>
+#include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/join.hpp>
+#include <range/v3/view/split.hpp>
+#include <range/v3/view/split_when.hpp>
 #include <range/v3/view/transform.hpp>
 
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <functional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 namespace asmgrader::highlight {
 
@@ -44,111 +57,20 @@ struct Options
         /// Function to call to transform a token string. May be null.
         std::function<std::string(std::string_view)> transform_fn;
 
-        std::string apply(std::string_view str) const {
-            fmt::text_style style_in_use = style;
-            if (style_fn) {
-                style_in_use = style_fn(str);
-            }
-
-            std::string res{str};
-
-            if (transform_fn) {
-                res = transform_fn(res);
-            }
-
-            return fmt::to_string(fmt::styled(res, style_in_use));
-        }
+        std::string apply(std::string_view str) const;
     };
 
     /// Custom styling functions for identifiers that are types (e.g., void, int, etc.)
     static fmt::text_style style_basic_ident_types(fmt::text_style type_style, fmt::text_style default_style,
-                                                   std::string_view ident) {
-        std::array basic_type_strs{"void", "int", "long", "unsigned", "float", "double", "char", "size_t"};
-
-        if (ranges::contains(basic_type_strs, ident)) {
-            return type_style;
-        }
-
-        return default_style;
-    }
-
+                                                   std::string_view ident);
     static fmt::text_style style_op_keywords(fmt::text_style keyword_style, fmt::text_style default_style,
-                                             std::string_view op) {
-        ASSERT(!op.empty(), op);
-
-        if (isalpha(op.at(0))) {
-            return keyword_style;
-        }
-
-        return default_style;
-    }
-
+                                             std::string_view op);
     /// Add spacing for binary ops
-    static std::string basic_binary_op_spacing(std::string_view op) {
-        constexpr std::array add_spaces_surrounding{
-            "+",  "-",  "*",   "/",  "%",                                        //
-            "<<", ">>", "^",   "|",  "&",                                        //
-            "&&", "||",                                                          //
-            "==", "!=", "<=>", "<",  "<=", ">",  ">=",                           //
-            "=",  "+=", "-=",  "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=", //
-            "?",  ":"                                                            //
-        };
-
-        if (ranges::contains(add_spaces_surrounding, op)) {
-            return fmt::format(" {} ", op);
-        }
-
-        if (op == ",") {
-            return fmt::format("{} ", op);
-        }
-
-        return std::string{op};
-    }
-
+    static std::string basic_binary_op_spacing(std::string_view op);
     // Add some spacing around unary and ternary ops
-    static std::string basic_op_spacing(std::string_view op) {
-        constexpr std::array add_spaces_surrounding{
-            "?",
-            ":" //
-        };
-        constexpr std::array add_space_after{
-            "throw", "sizeof", "alignof", "new", "delete" //
-        };
+    static std::string basic_op_spacing(std::string_view op);
 
-        if (ranges::contains(add_spaces_surrounding, op)) {
-            return fmt::format(" {} ", op);
-        }
-
-        if (ranges::contains(add_space_after, op)) {
-            return fmt::format("{} ", op);
-        }
-
-        return std::string{op};
-    }
-
-    static Options get_default_options() {
-        std::array<Opt, num_token_kinds> res{};
-
-        using enum fmt::color;
-
-        constexpr auto idx = [](inspection::Token::Kind kind) { return static_cast<std::size_t>(kind); };
-
-        auto ident_style_fn = std::bind_front(style_basic_ident_types, fmt::fg(purple), fmt::fg(deep_sky_blue));
-        auto op_style_fn = std::bind_front(style_op_keywords, fmt::fg(purple), fmt::text_style{});
-
-        res[idx(StringLiteral)] = Opt{.style = fmt::fg(lawn_green), .style_fn = {}, .transform_fn = {}};
-        res[idx(RawStringLiteral)] = Opt{.style = fmt::fg(lawn_green), .style_fn = {}, .transform_fn = {}};
-        res[idx(BoolLiteral)] = Opt{.style = fmt::fg(purple), .style_fn = {}, .transform_fn = {}};
-        res[idx(IntBinLiteral)] = res[idx(IntOctLiteral)] = res[idx(IntDecLiteral)] = res[idx(IntHexLiteral)] =
-            Opt{.style = fmt::fg(azure), .style_fn = {}, .transform_fn = {}};
-        res[idx(FloatLiteral)] = res[idx(FloatLiteral)] =
-            Opt{.style = fmt::fg(blue), .style_fn = {}, .transform_fn = {}};
-        res[idx(Identifier)] = Opt{.style = {}, .style_fn = ident_style_fn, .transform_fn = {}};
-        res[idx(Operator)] = Opt{.style = {}, .style_fn = op_style_fn, .transform_fn = basic_op_spacing};
-        res[idx(BinaryOperator)] = Opt{.style = {}, .style_fn = op_style_fn, .transform_fn = basic_binary_op_spacing};
-
-        return {res};
-    }
+    static Options get_default_options();
 
     /// Each index is representative of the highlighting option for the token kind
     /// enumerator with a value == index.
@@ -166,16 +88,65 @@ struct Options
     }
 };
 
-// If unspecified, uses the default of whatever text rendering method is in use
+/// Parses and renders literal blocks, returning a form meant for displaying to a console user, as by means of
+/// fmt::styled. The syntax for a literal string is a sequence of characters started by the sequence <code>%#\`</code>
+/// and ended by a single backtick <code>\`</code>. Backticks within the sequence may be escaped using
+/// <code>\\\`</code>.
+///
+/// This plain form is not very useful here, but is handy to disable tokenization with \ref highlight(std::string_view,
+/// const Options&).
+///
+/// \param str The string to parse literal blocks from
+/// \param skip_styling Whether to skip all styling.
+///
+/// Example, with possible output from \ref highlight(std::string_view, const Options&):
+/// \verbatim
+/// %#`I am a literal block with a some \`backticks!\``
+/// int main() { return 0; }  %#`hey, this is main!`
+/// \endverbatim
+/// <pre>
+/// I am a literal block with a some `backticks!`
+/// <span style="color:purple">int</span> <span style="color:blue">main</span>() { <span
+/// style="color:orange">return</span> 0; }\endcode  hey, this is main!
+/// </pre>
+///
+/// ---
+///
+/// A style may also be specified within each literal block with the syntax `<style-name>` positioned at the
+/// very beginning of the block. Multiple `style-name` fields may be seperated by `,`s **without spaces**.
+/// To begin a block with a literal `<` character, escape it with a `\`.
+/// Supported style names are:
+/// - `fg:ansi-name` | `bg:ansi-name` - where **ansi-name** is one of: black, red, green, yellow, blue, magenta,
+/// cyan, or white
+/// - `fg:#hex-color` | `bg:#hex-color` - where **hex-color** is a 6-digit hex rgb color value (e.g., red foreground
+/// `fg:#FF0000`)
+/// - `bold` | `italic` | `underline` | `blink` | `strikethrough`
+///
+/// Example:
+/// \verbatim
+/// I am a not formatted, but %#`<fg:red>I am IMPORTANT RED text` and %#`<bold,underline,bg:#66FF00>I'm bolded and
+/// underlined, with a bright green background` and %#`\<I'm not styled, as the < is escaped`
+/// \endverbatim
+/// <pre>I am a not formatted, but <span style="color:red">I am IMPORTANT RED text</span> and <span
+/// style="background-color:#66FF00;font-weight:bold;text-decoration:underline">I'm bolded
+/// and underlined, with a bright green background</span> and \<I'm not styled, as the \< is escaped</pre>
+std::string render_blocks(std::string_view str, bool skip_styling);
 
-inline std::string highlight(const inspection::Token& token, const Options& opts = Options::get_default_options()) {
-    return opts[token.kind].apply(token.str);
-}
+/// Applies syntax highlighting to `str` by means of first passing it through inspection::Tokenizer,
+/// then applying highlighting as specified by `opts` to the obtained tokens.
+///
+/// Special consideration is taken for literal blocks that should NOT be considered for tokenization
+/// or syntax highlighting. These strings are surrounded by \`\` backticks and are removed before the tokenization
+/// stage, then added back in the correct position afterwards. There are other properties that will be considered when
+/// parsing this syntax that may be found at \ref parse_literal_strs.
+std::string highlight(std::string_view str, const Options& opts = Options::get_default_options());
 
-inline std::string highlight(const ranges::sized_range auto& tokens,
-                             const Options& opts = Options::get_default_options()) {
-    return tokens | ranges::views::transform([&opts](const inspection::Token& tok) { return highlight(tok, opts); }) |
-           ranges::views::join | ranges::to<std::string>();
-}
+/// Returns a stringified and highlighted version of the supplied token.
+/// Highlighting and spacing is done based on `opts`.
+std::string highlight(const inspection::Token& token, const Options& opts = Options::get_default_options());
+
+/// Returns a stringified and highlighted version of the supplied range of tokens.
+/// Highlighting and spacing is done based on `opts`.
+std::string highlight(std::span<const inspection::Token> tokens, const Options& opts = Options::get_default_options());
 
 } // namespace asmgrader::highlight
