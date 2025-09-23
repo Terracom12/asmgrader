@@ -39,7 +39,7 @@ help: # with thanks to Ben Rady
 $(BUILD_DIR)/$(DEBUG_PRESET):
 	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET)
 
-$(BUILD_DIR)/$(RELEASm_PRESET):
+$(BUILD_DIR)/$(RELEASE_PRESET):
 	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET)
 
 $(BUILD_DIR)/$(DOCS_PRESET):
@@ -83,11 +83,11 @@ test: test-debug  ## alias for test-debug
 
 .PHONY: test-debug
 test-debug: build-tests-debug ## run tests in debug mode
-	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml
+	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml --no-tests=error
 
 .PHONY: test-release
 test-release: build-tests-release ## run tests in release mode
-	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml
+	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml --no-tests=error
 
 
 .PHONY: clean
