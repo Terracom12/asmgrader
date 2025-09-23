@@ -63,6 +63,7 @@ macro(asmgrader_setup_options)
     asmgrader_supports_sanitizers()
 
     if(NOT PROJECT_IS_TOP_LEVEL)
+        option(ASMGRADER_ENABLE_TRACING "Enable tracing logs (default on in DEBUG mode)" OFF)
         option(ASMGRADER_BUILD_TESTS "Enable building unit tests" OFF)
         option(ASMGRADER_BUILD_DOCS "Enable building docs (Doxygen)" OFF)
         # option(ASMGRADER_ENABLE_IPO "Enable IPO/LTO" OFF)
@@ -188,6 +189,14 @@ macro(asmgrader_local_options)
     if(ASMGRADER_ENABLE_CACHE)
         include(cmake/Cache.cmake)
         asmgrader_enable_cache()
+    endif()
+
+    if(ASMGRADER_ENABLE_TRACING)
+        target_compile_definitions(
+            asmgrader_options
+            INTERFACE
+            "TRACE"
+        )
     endif()
 
     # include(cmake/StaticAnalyzers.cmake)
