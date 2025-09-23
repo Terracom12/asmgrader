@@ -104,4 +104,21 @@ TEST_CASE("Test that SYS_exit is properly thwarted") {
 
 TEST_CASE("Test that executables with 'weird' file names work") {
     asmgrader::Program prog(ASM_TESTS_WEIRD_NAME_EXEC, {});
+
+    using enum asmgrader::ErrorKind;
+
+    REQUIRE(prog.call_function<timeout_fn>("timeout_fn") == TimedOut);
+
+    // and again...
+    REQUIRE(prog.call_function<timeout_fn>("timeout_fn") == TimedOut);
+
+    // ensure that calling other functions still works
+    REQUIRE(prog.call_function<sum>("sum", 128, 42) == 170ull);
+
+    // once again...
+    REQUIRE(prog.call_function<segfaulting_fn>("segfaulting_fn") == UnexpectedReturn);
+
+    REQUIRE(prog.call_function<exiting_fn>("exiting_fn", 42) == UnexpectedReturn);
+
+    REQUIRE(prog.get_subproc().is_alive());
 }

@@ -1,4 +1,4 @@
-// Heavily inspired by: https://blog.ganets.ky/StaticString/
+// Inspired by, but heavily modified from, https://blog.ganets.ky/StaticString/
 // In accordance with above mentioned site's licensing:
 //
 // The MIT License (MIT)
