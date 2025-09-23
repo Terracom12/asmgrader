@@ -2,6 +2,7 @@
 
 #include "api/expression_inspection.hpp"
 #include "api/requirement.hpp"
+#include "api/stringize.hpp"
 #include "api/syntax_highlighter.hpp"
 #include "common/overloaded.hpp"
 #include "common/terminal_checks.hpp"
@@ -31,6 +32,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
+#include <exception>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -39,6 +41,9 @@
 
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+// FIXME: in student mode, it seems passing tests are not hidden with default verbosity.
+// Can't remember if this was intentional
 
 namespace asmgrader {
 
@@ -342,16 +347,12 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
     using Repr = exprs::ExpressionRepr::Repr;
 
     // syntax highlight iff `do_colorize_` is true
-    auto maybe_highlight = [this](const std::string& what) {
-        if (!do_colorize_) {
-            return what;
-        }
-
+    auto maybe_highlight = [this](const stringize::StringizeResult& what) {
         try {
-            return highlight::highlight(what);
-        } catch (const inspection::ParsingError& ex) {
-            LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what, ex);
-            return highlight::render_blocks(what, /*skip_styling=*/true);
+            return do_colorize_ ? what.syntax_highlight() : what.resolve_blocks(/*do_colorize=*/false);
+        } catch (std::exception& ex) {
+            LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what.original, ex);
+            return what.resolve_blocks(do_colorize_);
         }
     };
 
