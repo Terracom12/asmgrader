@@ -41,13 +41,10 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
 
     LOG_DEBUG("Searching with ReGex string: {}", subst_args());
 
-#ifdef DEBUG
     std::size_t search_counter = 0;
-#endif
     for (auto iter = fs::recursive_directory_iterator{base}; iter != fs::recursive_directory_iterator{}; ++iter) {
-#ifdef DEBUG
         search_counter++;
-#endif
+        LOG_TRACE("file search iter := {:?}, depth={}, ", iter->path().c_str(), iter.depth());
 
         if (!iter->is_regular_file()) {
             continue;

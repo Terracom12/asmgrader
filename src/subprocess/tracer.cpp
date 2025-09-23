@@ -396,7 +396,7 @@ Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pr
             // FIXME: better macro, or abstracted registers
 #ifndef ASMGRADER_AARCH64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
-                      fmt_or_unknown(get_registers()));
+                      format_or_unknown(get_registers()));
 #endif
             return RunResult::make_signal_caught(*waitid_data.signal_num);
         }

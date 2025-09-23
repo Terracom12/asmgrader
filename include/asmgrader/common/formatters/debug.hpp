@@ -16,8 +16,6 @@ struct DebugFormatter
         if (it != end && *it == '?') {
             is_debug_format = true;
             ++it;
-        } else if (it != end && *it != '}') {
-            throw fmt::format_error("invalid format");
         }
 
         return it;
