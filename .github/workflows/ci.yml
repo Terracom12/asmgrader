@@ -56,7 +56,7 @@ jobs:
 
       - name: Build
         run: |
-          make build-${{ matrix.build_type }}
+          make build-${{ matrix.build_type }} CMAKE_CONFIGURE_EXTRA_ARGS="-DASMGRADER_ENABLE_TRACE=ON"
 
       - name: ccache Stats
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Test
         run: |
-          LOG_LEVEL=trace make test-${{ matrix.build_type }}
+          LOG_LEVEL=trace make test-${{ matrix.build_type }} CTEST_EXTRA_ARGS="--output-junit \"$PWD/reports/junit-ctest.xml\""
 
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed
