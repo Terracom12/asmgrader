@@ -46,17 +46,15 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
         search_counter++;
         LOG_TRACE("file search iter := {:?}, depth={}, ", iter->path().c_str(), iter.depth());
 
-        if (!iter->is_regular_file()) {
-            continue;
-        }
-
-        if (iter.depth() > max_depth) {
+        while (iter.depth() > max_depth) {
             iter.pop();
 
             if (iter == fs::recursive_directory_iterator{}) {
-                break;
+                goto break_outer;
             }
+        }
 
+        if (!iter->is_regular_file()) {
             continue;
         }
 
@@ -66,6 +64,7 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
             result.push_back(path);
         }
     }
+break_outer:
 
     LOG_DEBUG("Searched through {} files", search_counter);
 
