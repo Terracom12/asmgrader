@@ -93,7 +93,26 @@ void TestContext::send_stdin(const std::string& input) {
 }
 
 RunResult TestContext::run() {
-    return TRY_OR_THROW(prog_.run(), "failed to run program");
+    int exit_code{};
+
+    auto res = prog_.run_until([&exit_code](const SyscallRecord& syscall) {
+        if (syscall.num == SYS_exit || syscall.num == SYS_exit_group) {
+            exit_code = std::get<int>(syscall.args.at(0));
+            return true;
+        }
+        return false;
+    });
+
+    // We're at the entry to an invocation of exit(2) or exit_group(2) we know:
+    //   the program is essentially over and cannot SEGFAULT
+    //   (pretty sure about this? except if there's a kernel bug ofc)
+    // Thus we can tell the user that, for all intents and purposes, the program has exited.
+    // Usefully, however, memory is still readable and writable at this point
+    if (res == ErrorKind::SyscallPredSat) {
+        return RunResult::make_exited(exit_code);
+    }
+
+    return TRY_OR_THROW(res, "failed to run program");
 }
 
 void TestContext::restart_program() {

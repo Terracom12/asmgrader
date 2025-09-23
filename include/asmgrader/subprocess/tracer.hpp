@@ -55,8 +55,21 @@ public:
     /// Sets up tracing in parent process, then stops child immediately after exec call
     Result<void> begin(pid_t pid);
 
-    /// Run the child process. Collect syscall info each time one is executed
+    /// Run the child process. Records each syscall execution.
+    /// Equivalent to \ref run_until({})
     Result<RunResult> run();
+
+    /// Run the child process until pred returns true.
+    ///
+    /// pred is passed a copy of each invoked syscall upon entry, in the child process.
+    /// Note that certain fields of the \ref SyscallEntry requiring completion of the syscall,
+    /// such as the exit return value for instance, will be invalid as the syscall has not yet
+    /// completed at the time of the predicate's evaluation.
+    ///
+    /// It is valid to pass an empty pred value. This is equivalent to passing a predicate that
+    /// always returns true, and also equivalent to a call to \ref run. \ref run should always be
+    /// preferred, however.
+    Result<RunResult> run_until(const std::function<bool(SyscallRecord)>& pred);
 
     /// Executes a syscall with the given arguments as the stopped tracee
     Result<SyscallRecord> execute_syscall(u64 sys_nr, std::array<std::uint64_t, 6> args);

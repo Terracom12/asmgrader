@@ -64,7 +64,7 @@ jobs:
 
       - name: Test
         run: |
-          LOG_LEVEL=trace ctest --test-dir build/ --output-on-failure --output-junit reports/junit-ctest.xml
+          LOG_LEVEL=trace make test-${{ matrix.build_type }}
 
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed

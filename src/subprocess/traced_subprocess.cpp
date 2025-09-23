@@ -1,11 +1,16 @@
 #include "subprocess/traced_subprocess.hpp"
 
+#include "common/error_types.hpp"
 #include "logging.hpp"
 #include "subprocess/run_result.hpp"
 #include "subprocess/subprocess.hpp"
+#include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer.hpp"
 
 #include <chrono>
+#include <functional>
+#include <thread>
+#include <tuple>
 
 namespace asmgrader {
 
@@ -47,6 +52,10 @@ Result<void> TracedSubprocess::init_parent() {
 
 Result<RunResult> TracedSubprocess::run() {
     return tracer_.run();
+}
+
+Result<RunResult> TracedSubprocess::run_until(const std::function<bool(SyscallRecord)>& pred) {
+    return tracer_.run_until(pred);
 }
 
 Result<int> TracedSubprocess::wait_for_exit(std::chrono::microseconds /*timeout*/) {

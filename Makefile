@@ -74,12 +74,20 @@ build-docs: configure-docs ## build in release mode (with debug info)
 build-tests-debug: configure-debug
 	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) --target asmgrader_tests
 
+.PHONY: build-tests-release
+build-tests-release: configure-release
+	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) --target asmgrader_tests
+
 .PHONY: test
 test: test-debug  ## alias for test-debug
 
 .PHONY: test-debug
 test-debug: build-tests-debug ## run tests in debug mode
-	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure
+	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml --no-tests=error
+
+.PHONY: test-release
+test-release: build-tests-release ## run tests in release mode
+	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --output-junit reports/junit-ctest.xml --no-tests=error
 
 
 .PHONY: clean

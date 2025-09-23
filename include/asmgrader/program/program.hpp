@@ -8,6 +8,7 @@
 #include <asmgrader/meta/functional_traits.hpp>
 #include <asmgrader/subprocess/memory/concepts.hpp>
 #include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/syscall_record.hpp>
 #include <asmgrader/subprocess/traced_subprocess.hpp>
 #include <asmgrader/subprocess/tracer.hpp>
 #include <asmgrader/symbols/symbol_table.hpp>
@@ -15,10 +16,10 @@
 #include <fmt/format.h>
 
 #include <concepts>
-#include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,7 +38,11 @@ public:
 
     ~Program() = default;
 
+    /// \see Tracer::run
     Result<RunResult> run();
+
+    /// \see Tracer::run
+    Result<RunResult> run_until(const std::function<bool(SyscallRecord)>& pred);
 
     TracedSubprocess& get_subproc();
     const TracedSubprocess& get_subproc() const;
