@@ -30,6 +30,8 @@
 #include <utility>
 #include <vector>
 
+// FIXME: Nested literal blocks cause errors
+
 namespace asmgrader::highlight {
 
 std::string Options::Opt::apply(std::string_view str) const {
