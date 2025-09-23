@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api/requirement.hpp"
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
@@ -12,6 +13,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace asmgrader {
 
@@ -36,6 +38,8 @@ public:
     void finalize() override;
 
 private:
+    std::string serialize_req_expr(const exprs::ExpressionRepr& expr);
+
     static bool process_colorize_opt(ProgramOptions::ColorizeOpt colorize_option);
     static std::size_t get_terminal_width();
 
@@ -86,6 +90,10 @@ private:
 
     bool do_colorize_;
     std::size_t terminal_width_;
+
+    /// For requirements that were repeated within the run of the same student.
+    /// Used to append a (#) to the end of the requirement message.
+    std::unordered_map<std::string, std::size_t> repeat_requirements_;
 };
 
 template <fmt::formattable T>

@@ -20,13 +20,16 @@ namespace asmgrader {
 
 template <typename T>
 void trace_exception(const T& exception) {
-    boost::stacktrace::stacktrace trace = boost::stacktrace::stacktrace::from_current_exception();
+    // FIXME: strange bug where boost::stacktrace enters an infinite fork loop @
+    // boost::stacktrace::detail::addr2line_pipe::addr2line_pipe
+
+    // boost::stacktrace::stacktrace trace = boost::stacktrace::stacktrace::from_current_exception();
     std::string except_str = fmt::format("Unhandled exception: {}", exception);
     fmt::println(std::cerr, "{}", except_str);
     fmt::println(std::cerr, "{}", std::string(except_str.size(), '='));
 
-    std::string stacktrace_str = fmt::to_string(fmt::streamed(trace));
-    fmt::println(std::cerr, "Stacktrace:\n{}", stacktrace_str.empty() ? " <unavailable>" : stacktrace_str);
+    // std::string stacktrace_str = fmt::to_string(fmt::streamed(trace));
+    // fmt::println(std::cerr, "Stacktrace:\n{}", stacktrace_str.empty() ? " <unavailable>" : stacktrace_str);
 }
 
 template <typename Func, typename... Args>

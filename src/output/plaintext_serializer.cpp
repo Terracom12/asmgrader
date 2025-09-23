@@ -1,5 +1,10 @@
 #include "output/plaintext_serializer.hpp"
 
+#include "api/expression_inspection.hpp"
+#include "api/requirement.hpp"
+#include "api/stringize.hpp"
+#include "api/syntax_highlighter.hpp"
+#include "common/overloaded.hpp"
 #include "common/terminal_checks.hpp"
 #include "common/time.hpp"
 #include "grading_session.hpp"
@@ -14,19 +19,31 @@
 #include <fmt/color.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <libassert/assert.hpp>
 #include <range/v3/algorithm/all_of.hpp>
+#include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/view/transform.hpp>
 
 #include <cctype>
 #include <chrono>
-#include <concepts>
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
+#include <exception>
+#include <functional>
 #include <string>
 #include <string_view>
+#include <variant>
+#include <vector>
 
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+// FIXME: in student mode, it seems passing tests are not hidden with default verbosity.
+// Can't remember if this was intentional
 
 namespace asmgrader {
 
@@ -51,7 +68,15 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
         req_result_str = style_str("FAILED", ERROR_STYLE);
     }
 
-    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(data.msg, VALUE_STYLE));
+    std::string description{data.description};
+    if (auto cnt = repeat_requirements_[data.description]++; cnt != 0) {
+        description += fmt::format(" ({})", cnt);
+    }
+    std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(description, VALUE_STYLE));
+
+    if (data.expression_repr.has_value() && should_output_requirement_details(verbosity_)) {
+        out += serialize_req_expr(data.expression_repr.value());
+    }
 
     sink_.write(out);
 }
@@ -146,6 +171,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
 
     // Extra line
     if (APP_MODE == AppMode::Professor) {
+        // FIXME: ???
     }
 
     sink_.write(out);
@@ -181,10 +207,12 @@ std::string PlainTextSerializer::pluralize(std::string_view root, int count, std
 }
 
 void PlainTextSerializer::on_student_begin(const StudentInfo& info) {
-
     static bool is_first = true;
 
+    // FIXME: this seems wrong
     is_first = false;
+
+    repeat_requirements_.clear();
 
     std::string name_text;
 
@@ -264,9 +292,13 @@ void PlainTextSerializer::on_error(std::string_view what) {
 }
 
 void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
-    constexpr std::string_view HEADER_TEXT = "Execution Info";
-    constexpr std::string_view VERSION_LABEL = "Version: ";
-    constexpr std::string_view DATE_LABEL = "Date and Time: ";
+    if (!should_output_run_metadata(verbosity_)) {
+        return;
+    }
+
+    constexpr std::string_view header_text = "Execution Info";
+    constexpr std::string_view version_label = "Version: ";
+    constexpr std::string_view date_label = "Date and Time: ";
 
     std::string version_text = fmt::format("{}-g{}", data.version_string, data.git_hash);
 
@@ -279,9 +311,9 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
     std::string local_timepoint_text =
         asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
 
-    std::string out = fmt::format("{:#^{}}\n", HEADER_TEXT, terminal_width_);
-    out += fmt::format("{}{:>{}}\n", VERSION_LABEL, version_text, terminal_width_ - VERSION_LABEL.size());
-    out += fmt::format("{:}{:>{}}\n", DATE_LABEL, local_timepoint_text, terminal_width_ - DATE_LABEL.size());
+    std::string out = fmt::format("{:#^{}}\n", header_text, terminal_width_);
+    out += fmt::format("{}{:>{}}\n", version_label, version_text, terminal_width_ - version_label.size());
+    out += fmt::format("{:}{:>{}}\n", date_label, local_timepoint_text, terminal_width_ - date_label.size());
     out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
 
     sink_.write(out);
@@ -302,6 +334,86 @@ void PlainTextSerializer::output_grade_percentage(const AssignmentResult& data) 
                                   data.num_requirements_total);
 
     sink_.write(out);
+}
+
+std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr& expr) {
+    static constexpr auto string_style = fmt::fg(fmt::color::alice_blue);
+    static constexpr auto numeric_style = fmt::fg(fmt::color::blanched_almond);
+    static constexpr auto other_value_style = VALUE_STYLE;
+
+    using Expression = exprs::ExpressionRepr::Expression;
+    using Value = exprs::ExpressionRepr::Value;
+    using Operator = exprs::ExpressionRepr::Operator;
+    using Repr = exprs::ExpressionRepr::Repr;
+
+    // syntax highlight iff `do_colorize_` is true
+    auto maybe_highlight = [this](const stringize::StringizeResult& what) {
+        try {
+            return do_colorize_ ? what.syntax_highlight() : what.resolve_blocks(/*do_colorize=*/false);
+        } catch (std::exception& ex) {
+            LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what.original, ex);
+            return what.resolve_blocks(do_colorize_);
+        }
+    };
+
+    std::function<std::string(const Expression&)> serialize_header = [&serialize_header,
+                                                                      &maybe_highlight](const Expression& expression) {
+        auto impl = Overloaded{
+            [&maybe_highlight](const Value& value) -> std::string { return maybe_highlight(value.repr.repr); }, //
+            [&serialize_header](const Operator& op) {
+                ASSERT(op.operands.size() == 2);
+
+                return fmt::format("{} {} {}", serialize_header(op.operands[0]), op.repr.raw_str,
+                                   serialize_header(op.operands[1]));
+            } //
+        };
+
+        return std::visit(impl, expression);
+    };
+
+    // Heavy inspiration from libassert
+    // https://github.com/jeremy-rifkin/libassert
+
+    struct WhereDetail
+    {
+        std::string lhs;
+        std::string rhs;
+    };
+
+    std::function<std::vector<WhereDetail>(const Expression&)> get_where_details =
+        [&get_where_details, &maybe_highlight](const Expression& expression) {
+            auto impl = Overloaded{
+                [&maybe_highlight](const Value& value) -> std::vector<WhereDetail> {
+                    if (value.repr.is_literal) {
+                        return {};
+                    }
+
+                    std::string rhs = maybe_highlight(value.repr.str);
+                    return {{.lhs = maybe_highlight(value.repr.repr), .rhs = rhs}};
+                }, //
+                [&](const Operator& op) -> std::vector<WhereDetail> {
+                    return op.operands | ranges::views::transform(get_where_details) | ranges::views::join |
+                           ranges::to<std::vector>();
+                } //
+            };
+
+            return std::visit(impl, expression);
+        };
+
+    auto serialize_where_details = [](const std::vector<WhereDetail>& dets) {
+        std::vector<std::string> strs;
+        strs.reserve(dets.size());
+
+        for (const WhereDetail& det : dets) {
+            strs.push_back(fmt::format("{} := {}", det.lhs, det.rhs));
+        }
+        return fmt::to_string(fmt::join(strs, "\n    "));
+    };
+
+    std::vector where_details = get_where_details(expr.expression);
+
+    return fmt::format("  {}\n  Where:\n    {}\n\n", serialize_header(expr.expression),
+                       serialize_where_details(where_details));
 }
 
 } // namespace asmgrader

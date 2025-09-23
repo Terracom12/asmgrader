@@ -11,6 +11,9 @@ set(
     test_static_expected.cpp
     test_static_formatters.cpp
     test_static_tuple_matcher.cpp
+    test_expression_inspection.cpp
+    test_syntax_highlighter.cpp
+    test_cconstexpr.cpp
     test_static_string.cpp
     test_static_byte.cpp
     test_bit_casts.cpp
@@ -49,6 +52,8 @@ add_executable(
 
     catch_main.cpp
 )
+
+add_dependencies(asmgrader_tests asm_tests)
 
 target_compile_definitions(
     asmgrader_tests
@@ -121,6 +126,7 @@ catch_discover_tests(
     ".xml"
     EXTRA_ARGS
     "--reporter console::out=-"
+    "--invisibles"
 )
 
 add_test(

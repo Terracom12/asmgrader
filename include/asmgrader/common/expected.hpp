@@ -187,15 +187,16 @@ public:
     constexpr auto operator<=>(const Expected& rhs) const = default;
 
     // TODO: Figure out why it's necessary to define this
-    constexpr bool operator==(const Expected& rhs) const
+    friend constexpr bool operator==(const Expected& lhs, const Expected& rhs)
         requires(std::equality_comparable<E> && (std::is_void_v<T> || std::equality_comparable<T>))
     {
-        return data_ == rhs.data_;
+        return lhs.data_ == rhs.data_;
     }
 
     template <typename Tu>
     constexpr bool operator==(const Tu& rhs) const
-        requires(!std::is_void_v<T> && !std::same_as<Tu, Expected> && std::equality_comparable_with<Tu, T>)
+        requires(!std::is_void_v<T> && !std::same_as<Tu, Expected> && !std::derived_from<Tu, Expected> &&
+                 std::equality_comparable_with<Tu, T>)
     {
         if (!has_value()) {
             return false;
@@ -206,7 +207,8 @@ public:
 
     template <typename Eu>
     constexpr bool operator==(const Eu& rhs) const
-        requires(!std::same_as<Eu, Expected> && std::equality_comparable_with<Eu, E>)
+        requires(!std::same_as<Eu, Expected> && !std::derived_from<Eu, Expected> &&
+                 std::equality_comparable_with<Eu, E>)
     {
         if (has_value()) {
             return false;

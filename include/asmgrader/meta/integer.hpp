@@ -7,10 +7,8 @@
 #include <boost/mp11/integral.hpp>
 
 #include <bit>
-#include <cmath>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
 #include <type_traits>
 
@@ -19,13 +17,13 @@ namespace asmgrader {
 namespace detail {
 namespace mp = boost::mp11;
 
-using sized_uint_map = mp::mp_list<u8, std::uint16_t, std::uint32_t, std::uint64_t>;
-using sized_int_map = mp::mp_list<i8, std::int16_t, std::int32_t, std::int64_t>;
+using sized_uint_map = mp::mp_list<u8, u16, u32, u64>;
+using sized_int_map = mp::mp_list<i8, i16, i32, i64>;
 
-template <std::size_t I>
+template <int I>
 using sized_int_impl = mp::mp_at<sized_int_map, mp::mp_int<I>>;
 
-template <std::size_t I>
+template <int I>
 using sized_uint_impl = mp::mp_at<sized_uint_map, mp::mp_int<I>>;
 } // namespace detail
 

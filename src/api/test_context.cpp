@@ -3,6 +3,7 @@
 #include "api/asm_buffer.hpp"
 #include "api/metadata.hpp"
 #include "api/registers_state.hpp"
+#include "api/requirement.hpp"
 #include "api/test_base.hpp"
 #include "common/aliases.hpp"
 #include "common/bit_casts.hpp"
@@ -27,9 +28,9 @@
 #include <cstdint>
 #include <ctime>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ TestContext::TestContext(TestBase& test, Program program,
     , on_requirement_{std::move(on_requirement)} {}
 
 TestResult TestContext::finalize() {
-    constexpr int DEFAULT_WEIGHT = 1;
+    constexpr int default_weight = 1;
 
     result_.num_passed = static_cast<int>(
         ranges::count(result_.requirement_results, true, [](const RequirementResult& res) { return res.passed; }));
@@ -61,7 +62,7 @@ TestResult TestContext::finalize() {
     if (auto weight = associated_test_->get_weight()) {
         result_.weight = gsl::narrow_cast<int>(weight->points);
     } else {
-        result_.weight = DEFAULT_WEIGHT;
+        result_.weight = default_weight;
     }
 
     return result_;
@@ -71,13 +72,8 @@ bool TestContext::require(bool condition, RequirementResult::DebugInfo debug_inf
     return require(condition, "<no message>", debug_info);
 }
 
-bool TestContext::require(bool condition, std::string msg, RequirementResult::DebugInfo debug_info) {
-    result_.requirement_results.emplace_back(/*.passed =*/condition, /*.msg =*/std::move(msg),
-                                             /*.debug_info =*/debug_info);
-
-    on_requirement_(result_.requirement_results.back());
-
-    return condition;
+bool TestContext::require(bool condition, const std::string& msg, RequirementResult::DebugInfo debug_info) {
+    return require_impl(condition, msg, std::nullopt, debug_info);
 }
 
 std::string_view TestContext::get_name() const {
@@ -176,10 +172,21 @@ std::size_t TestContext::flush_stdin() {
 }
 
 RegistersState TestContext::get_registers() const {
-    auto regs = TRY_OR_THROW(prog_.get_subproc().get_tracer().get_registers(), "failed to get registers");
-    auto fp_regs = TRY_OR_THROW(prog_.get_subproc().get_tracer().get_fp_registers(), "failed to get registers");
+    const auto& tracer = prog_.get_subproc().get_tracer();
+    auto regs = TRY_OR_THROW(tracer.get_registers(), "failed to get registers");
+    auto fp_regs = TRY_OR_THROW(tracer.get_fp_registers(), "failed to get registers");
 
     return RegistersState::from(regs, fp_regs);
 }
 
+bool TestContext::require_impl(bool condition, const std::string& description,
+                               const std::optional<exprs::ExpressionRepr>& expression_repr,
+                               const RequirementResult::DebugInfo& debug_info) {
+    result_.requirement_results.push_back(RequirementResult{
+        .passed = condition, .description = description, .expression_repr = expression_repr, .debug_info = debug_info});
+
+    on_requirement_(result_.requirement_results.back());
+
+    return condition;
+}
 } // namespace asmgrader

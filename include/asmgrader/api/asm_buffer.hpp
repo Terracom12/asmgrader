@@ -1,8 +1,8 @@
 #pragma once
 
 #include <asmgrader/api/asm_data.hpp>
-#include <asmgrader/common/byte.hpp>
-#include <asmgrader/common/byte_array.hpp>
+#include <asmgrader/common/byte.hpp>       // IWYU pragma: export
+#include <asmgrader/common/byte_array.hpp> // IWYU pragma: export
 #include <asmgrader/common/macros.hpp>
 #include <asmgrader/program/program.hpp>
 #include <asmgrader/subprocess/memory/memory_io_base.hpp>

@@ -37,9 +37,9 @@ WarningsAsErrors: ""
 CheckOptions:
   # Conventional use of `os` and `is` for std::ostream and std::istream stream operator overloads
   - key: "readability-identifier-length.IgnoredVariableNames"
-    value: '^(id|fd|nr|it|fn|tc)$'
+    value: '^(id|fd|nr|it|fn|tc|op|a|b|c|x|y)$'
   - key: "readability-identifier-length.IgnoredParameterNames"
-    value: '^(os|is|id|fd|nr|it|fn|tc)$'
+    value: '^(os|is|id|fd|nr|it|fn|tc|op|c)$'
   # Allow small, recognizable integer values. Not EVERYTHING has to be a constant, especially in academia
   - key: "readability-magic-numbers.IgnoredIntegerValues"
     value: "1;2;3;4;5;6;7;8;9;10;100"
@@ -95,7 +95,7 @@ CheckOptions:
   # Identifier conventions is currently:
   # - `lower_case` for variables and functions
   # - `CamelCase` for types and enum constants
-  # - `UPPER_CASE` for constants (compile-time or otherwise)
+  # - `lower_case` for constants (compile-time or otherwise)
   # - `lower_case` for namespaces
   # - class members are prefixed with `m_`
 
@@ -111,9 +111,9 @@ CheckOptions:
   - key: "readability-identifier-naming.ClassMethodCase"
     value: "lower_case"
   - key: "readability-identifier-naming.ConstantCase"
-    value: "UPPER_CASE"
+    value: "lower_case"
   - key: "readability-identifier-naming.ConstantMemberCase"
-    value: "UPPER_CASE"
+    value: "lower_case"
   # Parameters are often `const&`, which should be the same case as other params
   # const params that aren't refs or ptrs are almost never used anyways
   - key: "readability-identifier-naming.ConstantParameterCase"
@@ -125,7 +125,7 @@ CheckOptions:
   - key: "readability-identifier-naming.ConstexprMethodCase"
     value: "lower_case"
   - key: "readability-identifier-naming.ConstexprVariableCase"
-    value: "UPPER_CASE"
+    value: "lower_case"
   - key: "readability-identifier-naming.EnumCase"
     value: "CamelCase"
   - key: "readability-identifier-naming.EnumConstantCase"
@@ -133,7 +133,7 @@ CheckOptions:
   - key: "readability-identifier-naming.FunctionCase"
     value: "lower_case"
   - key: "readability-identifier-naming.GlobalConstantCase"
-    value: "UPPER_CASE"
+    value: "lower_case"
   - key: "readability-identifier-naming.GlobalConstantPointerCase"
     value: "lower_case"
   - key: "readability-identifier-naming.GlobalFunctionCase"
@@ -185,7 +185,7 @@ CheckOptions:
   - key: "readability-identifier-naming.ScopedEnumConstantCase"
     value: "CamelCase"
   - key: "readability-identifier-naming.StaticConstantCase"
-    value: "UPPER_CASE"
+    value: "lower_case"
   - key: "readability-identifier-naming.StaticVariableCase"
     value: "lower_case"
   - key: "readability-identifier-naming.StructCase"

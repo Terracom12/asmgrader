@@ -198,29 +198,25 @@ struct FloatingPointRegister : detail::RegisterBaseImpl<FloatingPointRegister, u
 
 static_assert(sizeof(FloatingPointRegister<>) == sizeof(u128));
 
-template <ProcessorKind Arch = SYSTEM_PROCESSOR>
-struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
+/// Derived classes should use Aarch64FlagsBase with the CRTP pattern
+template <typename Base>
+struct Aarch64FlagsBase
 {
-    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
-    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
+    constexpr bool n() const { return get_base().negative_set(); }
 
-    constexpr bool negative_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & NEGATIVE_FLAG_BIT) != 0U;
+    constexpr bool z() const { return get_base().zero_set(); }
+
+    constexpr bool c() const { return get_base().carry_set(); }
+
+    constexpr bool v() const { return get_base().overflow_set(); }
+
+    constexpr u64 nzcv() const {
+        constexpr u64 NZCV_BIT_MASK = 0xF;
+
+        return (get_base().get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
     }
 
-    constexpr bool zero_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & ZERO_FLAG_BIT) != 0U;
-    }
-
-    constexpr bool carry_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & CARRY_FLAG_BIT) != 0U;
-    }
-
-    constexpr bool overflow_set() const {
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() & OVERFLOW_FLAG_BIT) != 0U;
-    }
-
-#if defined(ASMGRADER_AARCH64)
+protected:
     // Specification of pstate (for nzcv) obtained from:
     //   https://developer.arm.com/documentation/ddi0601/2025-06/AArch64-Registers/NZCV--Condition-Flags
     static constexpr u64 NZCV_BASE_OFF = 28;
@@ -229,13 +225,22 @@ struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
     static constexpr u64 CARRY_FLAG_BIT = 1U << (NZCV_BASE_OFF + 1);
     static constexpr u64 OVERFLOW_FLAG_BIT = 1U << (NZCV_BASE_OFF + 0);
 
-    constexpr u64 nzcv() const {
-        constexpr u64 NZCV_BIT_MASK = 0xF;
+private:
+    Base& get_base() { return *static_cast<Base*>(this); }
 
-        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() >> NZCV_BASE_OFF) & NZCV_BIT_MASK;
-    }
+    const Base& get_base() const { return *static_cast<const Base*>(this); }
 
-#elif defined(ASMGRADER_X86_64)
+    Aarch64FlagsBase() = default;
+    friend Base;
+};
+
+/// Derived classes should use Aarch64FlagsBase with the CRTP pattern
+template <typename Base>
+struct X64FlagsBase
+{
+protected:
+    // TODO: Implement specific flag getters
+
     // Specification of eflags obtained from:
     //   https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html
     //   Volume 1 - 3.4.3.1 Status Flags
@@ -243,7 +248,51 @@ struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>
     static constexpr u64 ZERO_FLAG_BIT = 1U << 6;
     static constexpr u64 NEGATIVE_FLAG_BIT = 1U << 7;
     static constexpr u64 OVERFLOW_FLAG_BIT = 1U << 11;
+
+private:
+    X64FlagsBase() = default;
+    friend Base;
+};
+
+#if defined(ASMGRADER_AARCH64)
+template <typename CrtpBase>
+using FlagsArchBase = Aarch64FlagsBase<CrtpBase>;
+template <typename CrtpBase>
+using FlagsArchBaseAlternative = X64FlagsBase<CrtpBase>;
+#elif defined(ASMGRADER_X86_64)
+template <typename CrtpBase>
+using FlagsArchBase = X64FlagsBase<CrtpBase>;
+template <typename CrtpBase>
+using FlagsArchBaseAlternative = Aarch64FlagsBase<CrtpBase>;
 #endif
+
+template <ProcessorKind Arch = SYSTEM_PROCESSOR>
+struct FlagsRegister : detail::RegisterBaseImpl<FlagsRegister, u64, Arch>,
+                       FlagsArchBase<FlagsRegister<Arch>>,
+                       FlagsArchBaseAlternative<FlagsRegister<Arch>>
+{
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::RegisterBaseImpl;
+    using detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::operator=;
+
+    constexpr bool negative_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::NEGATIVE_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool zero_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::ZERO_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool carry_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::CARRY_FLAG_BIT) != 0U;
+    }
+
+    constexpr bool overflow_set() const {
+        return (detail::RegisterBaseImpl<FlagsRegister, u64, Arch>::get_value() &
+                FlagsArchBase<FlagsRegister>::OVERFLOW_FLAG_BIT) != 0U;
+    }
 };
 
 static_assert(sizeof(FlagsRegister<>) == sizeof(u64));
@@ -559,9 +608,11 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             //   Volume 1 - 3.4.3.1 Status Flags
             std::string flags_bin = fmt::format("0b{:032b}", from.get_value());
 
+            // i.e., OVERFLOW_FLAG_BIT
+            constexpr auto FIRST_FLAG_OFF = 11;
+
             // 32 bits - starting bit# of labels + len('0b')
-            constexpr auto LABEL_INIT_OFFSET =
-                32 - std::bit_width(::asmgrader::FlagsRegister<Arch>::OVERFLOW_FLAG_BIT) + 2;
+            constexpr auto LABEL_INIT_OFFSET = 32 - FIRST_FLAG_OFF + 2;
 
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "O   SZ     C";

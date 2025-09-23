@@ -1,20 +1,53 @@
 #pragma once
 
 #include <asmgrader/api/asm_data.hpp>
+#include <asmgrader/api/expression_inspection.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/exceptions.hpp>
 #include <asmgrader/logging.hpp>
 #include <asmgrader/program/program.hpp>
 
 #include <fmt/base.h>
+#include <fmt/format.h>
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
 namespace asmgrader {
+
+/// Transparent wrapper around Result<T>, as far as the user is concerned.
+///
+/// Internally provides serialized_args and function_name member variables for
+/// use in requirement serialization.
+template <typename T>
+class AsmSymbolResult : public Result<T>
+{
+public:
+    // NOLINTNEXTLINE(readability-identifier-naming) - rational: don't shadow member variables
+    explicit constexpr AsmSymbolResult(std::string_view symbol_name_)
+        : symbol_name{symbol_name_} {}
+
+    template <typename U>
+    void set_result(U&& val) {
+        Result<T>::operator=(std::forward<U>(val));
+    }
+
+    // not sure if these are really needed, but I'm including them to be safe
+    using Result<T>::operator==;
+    using Result<T>::operator<=>;
+
+    std::string_view symbol_name;
+
+    std::string repr(std::span<const inspection::Token> /*tokens*/, std::string_view /*raw_str*/) const {
+        return fmt::format("*{}", symbol_name);
+    }
+
+    // using the default `str` implementation for the base Expected type
+};
 
 template <typename T>
 class AsmSymbol : AsmData<T>
@@ -25,7 +58,7 @@ public:
 
     std::string_view get_name() const;
 
-    Result<T> get_value() const override;
+    AsmSymbolResult<T> get_value() const;
 
 private:
     std::string name_;
@@ -38,9 +71,12 @@ std::string_view AsmSymbol<T>::get_name() const {
 }
 
 template <typename T>
-Result<T> AsmSymbol<T>::get_value() const {
+AsmSymbolResult<T> AsmSymbol<T>::get_value() const {
+    AsmSymbolResult<T> res{name_};
+
     if (resolution_err_.has_value()) {
-        return *resolution_err_;
+        res.set_result(*resolution_err_);
+        return res;
     }
 
     auto value = AsmData<T>::get_value_impl();
@@ -51,7 +87,9 @@ Result<T> AsmSymbol<T>::get_value() const {
     }
     LOG_DEBUG("Read value {} for symbol {:?} @ 0x{:X}", val_str, name_, AsmData<T>::get_address());
 
-    return value;
+    res.set_result(value);
+
+    return res;
 }
 
 template <typename T>

@@ -120,7 +120,7 @@ TEST_CASE("Find assignment files with specified student names") {
     auto student_false_test = make_student("Unknown", "Unknown");
     auto search_res = searcher.search_recursive(student_false_test, resources_path);
     REQUIRE_FALSE(search_res);
-    REQUIRE(student_false_test.assignment_path->empty());
+    REQUIRE_FALSE(student_false_test.assignment_path);
 }
 
 TEST_CASE("Find assignment files with special student names") {

@@ -23,6 +23,9 @@ Completion:
     AllScopes: Yes
     ArgumentLists: Delimiters # fo^ completes to foo(^)
 
+Documentation:
+    CommentFormat: Doxygen
+
 ---
 
 If:

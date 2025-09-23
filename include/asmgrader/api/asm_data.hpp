@@ -23,10 +23,13 @@ public:
 
     virtual ~AsmData() = default;
 
+    // NOLINTNEXTLINE(google-runtime-operator) - nicer semantics?
+    std::uintptr_t operator&() const { return address_; }
+
     std::uintptr_t get_address() const { return address_; }
 
     /// Get the value currently present in the asm program
-    virtual Result<T> get_value() const;
+    Result<T> get_value() const;
 
     /// Set the value of type ``T`` in the asm program
     ///

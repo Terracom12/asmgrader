@@ -4,6 +4,7 @@
 #include <asmgrader/api/asm_function.hpp>
 #include <asmgrader/api/asm_symbol.hpp>
 #include <asmgrader/api/registers_state.hpp>
+#include <asmgrader/api/requirement.hpp>
 #include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/functional.hpp>
@@ -18,11 +19,14 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -42,9 +46,14 @@ public:
     explicit TestContext(TestBase& test, Program program,
                          std::function<void(const RequirementResult&)> on_requirement = common::noop) noexcept;
 
-    bool require(bool condition, std::string msg,
+    [[deprecated("Use require(Requirement)")]]
+    bool require(bool condition, const std::string& msg,
                  RequirementResult::DebugInfo debug_info = RequirementResult::DebugInfo{});
+    [[deprecated("Use require(Requirement)")]]
     bool require(bool condition, RequirementResult::DebugInfo debug_info = RequirementResult::DebugInfo{});
+
+    template <exprs::Operator Op>
+    bool require(const Requirement<Op>& req, RequirementResult::DebugInfo debug_info = RequirementResult::DebugInfo{});
 
     /// Obtain the final test results
     /// Run after the test is complete. Note: has no ill effects if run before test is complete
@@ -101,6 +110,10 @@ public:
     RunResult run();
 
 private:
+    bool require_impl(bool condition, const std::string& description,
+                      const std::optional<exprs::ExpressionRepr>& expression_repr,
+                      const RequirementResult::DebugInfo& debug_info);
+
     TestBase* associated_test_;
     Program prog_;
 
@@ -112,6 +125,11 @@ private:
     /// Run when a requirement is done being evaluated (whether pass or fail)
     std::function<void(const RequirementResult&)> on_requirement_;
 };
+
+template <exprs::Operator Op>
+bool TestContext::require(const Requirement<Op>& req, RequirementResult::DebugInfo debug_info) {
+    return require_impl(static_cast<bool>(req.get_res()), req.get_description(), req.get_expr_repr(), debug_info);
+}
 
 template <std::size_t NumBytes>
 AsmBuffer<NumBytes> TestContext::create_buffer() {
