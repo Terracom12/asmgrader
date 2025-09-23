@@ -348,33 +348,11 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
         }
 
         try {
-            return highlight::highlight(inspection::Tokenizer<>(what));
+            return highlight::highlight(what);
         } catch (const inspection::ParsingError& ex) {
             LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what, ex);
-            return what;
+            return highlight::render_blocks(what, /*skip_styling=*/true);
         }
-    };
-
-    std::function<fmt::text_style(const Repr&)> repr_style = [&](const Repr& repr) {
-        fmt::text_style style{};
-
-        using enum Repr::Type;
-
-        switch (repr.kind) {
-        case String:
-            style = string_style;
-            break;
-        case Integer:
-            [[fallthrough]];
-        case Floating:
-            style = numeric_style;
-            break;
-        case Other:
-            style = other_value_style;
-            break;
-        }
-
-        return style;
     };
 
     std::function<std::string(const Expression&)> serialize_header = [&serialize_header,
@@ -410,7 +388,7 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
                     }
 
                     std::string rhs = maybe_highlight(value.repr.str);
-                    return {{.lhs = highlight::highlight(inspection::Tokenizer<>(value.repr.repr)), .rhs = rhs}};
+                    return {{.lhs = maybe_highlight(value.repr.repr), .rhs = rhs}};
                 }, //
                 [&](const Operator& op) -> std::vector<WhereDetail> {
                     return op.operands | ranges::views::transform(get_where_details) | ranges::views::join |

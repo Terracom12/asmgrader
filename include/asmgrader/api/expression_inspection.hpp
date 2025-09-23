@@ -289,7 +289,7 @@ public:
         , stream_state_{stream_state}
         , token_kind_{token_kind} {}
 
-    constexpr const char* what() const noexcept override { return msg_.c_str(); }
+    const char* what() const noexcept override { return get_pretty().c_str(); }
 
     constexpr const std::string& msg() const noexcept { return msg_; }
 
@@ -298,17 +298,20 @@ public:
     constexpr const std::optional<Token::Kind>& token_kind() const noexcept { return token_kind_; }
 
     /// Return a human-readable "pretty" stringified version of the exception
-    std::string pretty() const {
-        const static std::string pretty_str = make_pretty();
-        return pretty_str;
-    }
+    std::string pretty() const { return get_pretty(); }
 
 private:
-    std::string make_pretty() const {
-        std::string_view stream_state_str = stream_state_ ? std::string_view{*stream_state_} : "<unknown>";
-        std::string_view token_kind_str = token_kind_ ? format_as(*token_kind_) : "<unknown>";
+    std::string& get_pretty() const {
+        static std::string pretty_cache;
 
-        return fmt::format("{} : state={:?}, token={}", msg_, stream_state_str, token_kind_str);
+        if (pretty_cache.empty()) {
+            std::string_view stream_state_str = stream_state_ ? std::string_view{*stream_state_} : "<unknown>";
+            std::string_view token_kind_str = token_kind_ ? format_as(*token_kind_) : "<unknown>";
+
+            pretty_cache = fmt::format("{} : state={:?}, token={}", msg_, stream_state_str, token_kind_str);
+        }
+
+        return pretty_cache;
     }
 
     /// A message as to why parsing failed
@@ -319,8 +322,8 @@ private:
     std::optional<Token::Kind> token_kind_;
 };
 
-inline std::string format_as(const ParsingError& parse_error) {
-    return parse_error.pretty();
+inline const std::exception& format_as(const ParsingError& err) {
+    return err;
 }
 
 /// Recursive descent parser implementation details

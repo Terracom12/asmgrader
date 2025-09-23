@@ -11,6 +11,9 @@
 using namespace std::literals;
 using asmgrader::Expected;
 
+// TODO: regression test for operator== ambiguity with derived classes
+// may still be present for <=>?
+
 // Simple types
 using Et = Expected<int, std::string>;
 

@@ -70,10 +70,8 @@ struct NAryOp
 
     using EvalResT = std::decay_t<std::invoke_result_t<OpFn, Args...>>;
 
-    EvalResT eval() const {
-        const static EvalResT res = std::apply(OpFn{}, args);
-        return res;
-    }
+    // FIXME: may be evaluated multiple times
+    EvalResT eval() const { return std::apply(OpFn{}, args); }
 
     static constexpr std::string_view raw_str = Rep;
 

@@ -9,11 +9,12 @@ namespace asmgrader {
 
 // NOLINTNEXTLINE
 enum class ErrorKind {
-    TimedOut,         // Program / operation surpassed maximum timeout (gennerally specified)
-    UnresolvedSymbol, // Failed to resolve a named symbol in a program
-    UnexpectedReturn, // A function returned happened due to an unexpected condition
-    UnknownError,     // As named; use this as little as possible
-    SyscallFailure,   // A Linux syscall failed
+    TimedOut,         ///< Program / operation surpassed maximum timeout (gennerally specified)
+    UnresolvedSymbol, ///< Failed to resolve a named symbol in a program
+    UnexpectedReturn, ///< A function returned happened due to an unexpected condition
+    BadArgument,      ///< Bad argument to an AsmFunction. For an unwrappable type with no inner value.
+    UnknownError,     ///< As named; use this as little as possible
+    SyscallFailure,   ///< A Linux syscall failed
 
     MaxErrorNum // Not a proper error; used to determine the number of errors
 };
@@ -23,8 +24,8 @@ using Result = Expected<T, ErrorKind>;
 
 } // namespace asmgrader
 
-FMT_SERIALIZE_ENUM(::asmgrader::ErrorKind, TimedOut, UnresolvedSymbol, UnexpectedReturn, UnknownError, SyscallFailure,
-                   MaxErrorNum);
+FMT_SERIALIZE_ENUM(::asmgrader::ErrorKind, TimedOut, UnresolvedSymbol, UnexpectedReturn, BadArgument, UnknownError,
+                   SyscallFailure, MaxErrorNum);
 
 /// If the supplied argument is an error (unexpected) type, then propegate the error type `e` up
 /// the call stack. Otherwise, continue execution as normal

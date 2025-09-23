@@ -439,8 +439,7 @@ std::string highlight(std::string_view str, const Options& opts) {
             return std::string{component};
         }
 
-        return highlight(component, opts);
-        //               ^^^ implicit conversion to inspection::Token
+        return highlight(inspection::Tokenizer<>{component}, opts);
     };
 
     std::vector<LiteralBlock> blocks = find_literal_blocks(str);
