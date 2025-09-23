@@ -6,6 +6,7 @@
 ///
 /// Refer to the [cppreference page on std lib headers](https://en.cppreference.com/w/cpp/headers.html) for the pages I
 /// used as authoritative definitions in implementing these functions.
+#pragma once
 
 #include <asmgrader/common/aliases.hpp>
 

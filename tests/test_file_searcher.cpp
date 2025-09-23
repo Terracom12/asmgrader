@@ -128,8 +128,10 @@ TEST_CASE("Find assignment files with special student names") {
     asmgrader::AssignmentFileSearcher searcher{special_assignment};
 
     const auto tests = std::to_array<std::pair<asmgrader::StudentInfo, std::string_view>>({
-        {make_student("Jack", "O'Reily"), "o'reilyjack_0000_0000_special.out"},
-        {make_student("Carlos", "De La Cruz"), "de la cruzcarlos_0000_0000_special.out"},
+        {make_student("Jack Bryan", "O'Reily"),
+         "o'reilyjackbryan_0000_0000_special.out"}, // not sure if the ' is correct for canvas' output
+        {make_student("John", "Al Marco"), "almarcojohn_0000_0000_special.out"},
+        {make_student("Carlos", "De La Cruz"), "delacruzcarlos_0000_0000_special.out"},
     });
 
     for (auto [student, expected_filename] : tests) {

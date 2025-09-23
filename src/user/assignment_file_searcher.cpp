@@ -1,6 +1,7 @@
 #include "user/assignment_file_searcher.hpp"
 
 #include "api/assignment.hpp"
+#include "common/cconstexpr.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
 #include "user/file_searcher.hpp"
@@ -9,6 +10,7 @@
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/algorithm/transform.hpp>
 #include <range/v3/range/conversion.hpp>
+#include <range/v3/view/filter.hpp>
 #include <range/v3/view/take_while.hpp>
 #include <range/v3/view/transform.hpp>
 
@@ -34,10 +36,13 @@ AssignmentFileSearcher::AssignmentFileSearcher(const Assignment& assignment, std
 bool AssignmentFileSearcher::search_recursive(StudentInfo& student, const std::filesystem::path& base, int max_depth) {
     namespace fs = std::filesystem;
 
-    auto tolower = ranges::views::transform(static_cast<int (*)(int)>(std::tolower)) | ranges::to<std::string>();
+    auto tolower = ranges::views::transform(asmgrader::tolower);
+    auto remove_spaces = ranges::views::filter(std::not_fn(asmgrader::isspace));
 
-    set_arg("firstname", student.first_name | tolower);
-    set_arg("lastname", student.last_name | tolower);
+    auto name_tf = tolower | remove_spaces | ranges::to<std::string>();
+
+    set_arg("firstname", student.first_name | name_tf);
+    set_arg("lastname", student.last_name | name_tf);
 
     student.subst_regex_string = get_expr();
 
