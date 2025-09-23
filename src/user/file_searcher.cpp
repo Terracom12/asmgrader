@@ -59,6 +59,8 @@ std::vector<std::filesystem::path> FileSearcher::search_recursive(const std::fil
             if (iter == fs::recursive_directory_iterator{}) {
                 break;
             }
+
+            continue;
         }
 
         fs::path path = iter->path();
