@@ -106,7 +106,7 @@ public:
     template <typename Func>
     AsmFunction<Func> find_function(std::string name);
 
-    /// Run the program normally from `_start`
+    /// Run the program normally from `_start`, stopping at the first exit(2) or exit_group(2) syscall invocation
     RunResult run();
 
 private:

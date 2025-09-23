@@ -12,6 +12,7 @@
 #include "logging.hpp"
 #include "subprocess/memory/ptrace_memory_io.hpp"
 #include "subprocess/run_result.hpp"
+#include "subprocess/syscall.hpp"
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer_types.hpp"
 
@@ -29,6 +30,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <memory>
 #include <optional>
@@ -327,8 +329,11 @@ Result<SyscallRecord> Tracer::execute_syscall(u64 sys_nr, std::array<std::uint64
     return result;
 }
 
-// TODO: Refactor to use Exxpected result values
 Result<RunResult> Tracer::run() {
+    return run_until({});
+}
+
+Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pred) {
     assert_invariants();
 
     for (;;) {
@@ -368,6 +373,10 @@ Result<RunResult> Tracer::run() {
             if (info.op == PTRACE_SYSCALL_INFO_ENTRY) {
                 SyscallRecord record = get_syscall_entry_info(&info);
                 syscall_records_.push_back(std::move(record));
+
+                if (pred && pred(syscall_records_.back())) {
+                    return ErrorKind::SyscallPredSat;
+                }
             } else if (info.op == PTRACE_SYSCALL_INFO_EXIT) {
                 if (syscall_records_.empty() || syscall_records_.back().ret != std::nullopt) {
                     LOG_DEBUG("Expected syscall entry but encountered exit. Skipping handling...");

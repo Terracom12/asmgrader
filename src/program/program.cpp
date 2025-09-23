@@ -4,6 +4,7 @@
 #include "common/expected.hpp"
 #include "logging.hpp"
 #include "subprocess/run_result.hpp"
+#include "subprocess/syscall_record.hpp"
 #include "subprocess/traced_subprocess.hpp"
 #include "subprocess/tracer.hpp"
 #include "symbols/elf_reader.hpp"
@@ -19,6 +20,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -82,6 +84,10 @@ const SymbolTable& Program::get_symtab() const {
 
 Result<RunResult> Program::run() {
     return subproc_->run();
+}
+
+Result<RunResult> Program::run_until(const std::function<bool(SyscallRecord)>& pred) {
+    return subproc_->run_until(pred);
 }
 
 std::uintptr_t Program::alloc_mem(std::size_t amt) {
