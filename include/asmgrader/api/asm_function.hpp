@@ -103,22 +103,15 @@ public:
         //     }
         // }
 
+        // nesting is still an issue with literal blocks, but these are guaranteed to be nested (at least not by means
+        // of this function), so using the original strings is ok here.
         std::array stringized_args = std::apply(
-            []<typename... Ts>(const Ts&... fn_args) { return std::array{stringize::str(fn_args)...}; }, args);
+            []<typename... Ts>(const Ts&... fn_args) { return std::array{stringize::str(fn_args).original...}; }, args);
 
         return fmt::format("{}({})", function_name, fmt::join(stringized_args, ", "));
     }
 
-    std::string str() const {
-        if (Result<Ret>::has_value()) {
-            if constexpr (std::same_as<Ret, void>) {
-                return "void";
-            } else {
-                return stringize::str(Result<Ret>::value());
-            }
-        }
-        return fmt::format("%#`<fg:red>{}`", Result<Ret>::error());
-    }
+    // using the default `str` implementation for the base Expected type
 };
 
 template <typename T>

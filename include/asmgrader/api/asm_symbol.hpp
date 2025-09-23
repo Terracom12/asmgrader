@@ -46,7 +46,7 @@ public:
         return fmt::format("*{}", symbol_name);
     }
 
-    auto str() const { return static_cast<Result<T>>(*this); }
+    // using the default `str` implementation for the base Expected type
 };
 
 template <typename T>
