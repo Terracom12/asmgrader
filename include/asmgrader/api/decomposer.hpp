@@ -107,7 +107,7 @@ constexpr DecomposedExpr<">=", T, U> operator>=(DecomposedExpr<"", T>&& expr_lhs
 template <StaticString Op, typename... Ts>
 template <typename U>
 constexpr DecomposedExpr<Op, Ts...>& DecomposedExpr<Op, Ts...>::operator=(const U& /*unused*/) {
-    static_assert(false, STATIC_ASSERT_PRE "=" STATIC_ASSERT_POST);
+    static_assert(always_false_v<decltype(Op)>, STATIC_ASSERT_PRE "=" STATIC_ASSERT_POST);
 }
 
 // NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved) - unnamed parameter
