@@ -4,6 +4,7 @@
 
 #include <asmgrader/common/class_traits.hpp>
 #include <asmgrader/common/static_string.hpp>
+#include <asmgrader/meta/always_false.hpp>
 
 #include <cstddef>
 #include <string_view>
@@ -106,7 +107,7 @@ constexpr DecomposedExpr<">=", T, U> operator>=(DecomposedExpr<"", T>&& expr_lhs
 template <StaticString Op, typename... Ts>
 template <typename U>
 constexpr DecomposedExpr<Op, Ts...>& DecomposedExpr<Op, Ts...>::operator=(const U& /*unused*/) {
-    static_assert(false, STATIC_ASSERT_PRE "=" STATIC_ASSERT_POST);
+    static_assert(always_false_v<decltype(Op)>, STATIC_ASSERT_PRE "=" STATIC_ASSERT_POST);
 }
 
 // NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved) - unnamed parameter
@@ -114,12 +115,12 @@ constexpr DecomposedExpr<Op, Ts...>& DecomposedExpr<Op, Ts...>::operator=(const 
 #define DISABLE_OPERATOR(op)                                                                                           \
     template <StaticString Op, typename... Ts, typename U>                                                             \
     constexpr void operator op(DecomposedExpr<Op, Ts...>&& /*expr_lhs*/, U&& /*expr_rhs*/) {                           \
-        static_assert(false, STATIC_ASSERT_PRE #op STATIC_ASSERT_POST);                                                \
+        static_assert(always_false_v<U>, STATIC_ASSERT_PRE #op STATIC_ASSERT_POST);                                \
     }
 #define DISABLE_CHAINED_OPERATOR(op)                                                                                   \
     template <StaticString Op, typename... Ts, typename U>                                                             \
     constexpr void operator op(DecomposedExpr<Op, Ts...>&& /*expr_lhs*/, U&& /*expr_rhs*/) {                           \
-        static_assert(false, STATIC_ASSERT_PRE #op STATIC_ASSERT_CHAINED_POST);                                        \
+        static_assert(always_false_v<U>, STATIC_ASSERT_PRE #op STATIC_ASSERT_CHAINED_POST);                                        \
     }
 
 DISABLE_OPERATOR(&);

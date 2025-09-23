@@ -95,6 +95,14 @@ target_link_libraries(
     asmgrader_core_interface
 )
 
+set(asm_tests_weird_name_exec "${CMAKE_CURRENT_BINARY_DIR}/(asm_tests () weird \\(name) ~`")
+
+add_custom_command(
+    TARGET asmgrader_tests POST_BUILD
+    COMMAND cp $<TARGET_FILE:asm_tests> "${asm_tests_weird_name_exec}"
+    VERBATIM
+)
+
 target_compile_definitions(
     asmgrader_constexpr_tests
 
