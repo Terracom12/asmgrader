@@ -48,7 +48,7 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     endif()
 
     set(DOXYGEN_EXCLUDE_PATTERNS
-        "${CMAKE_SOURCE_DIR}/build"
+        "${CMAKE_CURRENT_SOURCE_DIR}/build"
         ${cpm_deps_dir}
         "cs3b-grader"
         "tests"
@@ -94,7 +94,7 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     message(STATUS "Adding `doxygen-docs` target that builds the documentation.")
     doxygen_add_docs(
         doxygen-docs 
-        "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/asmgrader/version.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/asmgrader/version.hpp"
         ALL 
         ${PROJECT_SOURCE_DIR}
         COMMENT "Generating documentation - entry file: ${CMAKE_CURRENT_BINARY_DIR}/html/index.html"

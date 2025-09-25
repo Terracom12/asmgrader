@@ -3,7 +3,7 @@ enable_testing()
 
 # Partially based on Catch2 docs at
 # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md#top
-include(${CMAKE_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
+include(${AsmGrader_SOURCE_DIR}/cmake/AddAsmArchImpl.cmake)
 
 set(
     TESTS_SRCS
@@ -127,7 +127,7 @@ catch_discover_tests(
     REPORTER
     "JUnit"
     OUTPUT_DIR
-    ${CMAKE_SOURCE_DIR}/reports
+    ${AsmGrader_SOURCE_DIR}/reports
     OUTPUT_PREFIX
     "junit-unittests."
     OUTPUT_SUFFIX
@@ -140,5 +140,5 @@ catch_discover_tests(
 add_test(
     NAME asmgrader_constexpr_tests
     COMMAND ${CMAKE_MAKE_PROGRAM} asmgrader_constexpr_tests
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${AsmGrader_BINARY_DIR}
 )

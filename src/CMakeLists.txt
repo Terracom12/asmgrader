@@ -87,9 +87,9 @@ function(create_target basename)
 
         INTERFACE
         "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_BINARY_DIR}/asmgrader"   # For generated `version.hpp`
+        "${AsmGrader_BINARY_DIR}/asmgrader"   # For generated `version.hpp`
         # treat `include/asmgrader` as if it's within the  `src/` tree
-        "${CMAKE_SOURCE_DIR}/include/asmgrader"
+        "${AsmGrader_SOURCE_DIR}/include/asmgrader"
     )
 
     target_link_libraries(
@@ -112,8 +112,8 @@ function(create_target basename)
         ${basename}_core
 
         PUBLIC
-        "${CMAKE_BINARY_DIR}"   # For generated `version.hpp`
-        "${CMAKE_SOURCE_DIR}/include"
+        "${AsmGrader_BINARY_DIR}"   # For generated `version.hpp`
+        "${AsmGrader_SOURCE_DIR}/include"
     )
 
 

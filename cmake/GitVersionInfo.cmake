@@ -3,14 +3,14 @@
 macro(git_version_info version_major_var version_minor_var version_patch_var commit_hash)
     execute_process(
         COMMAND git describe --tags --abbrev=0
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_TAG
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
 
     execute_process(
         COMMAND git log -n 1 --format=%H
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE GIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
