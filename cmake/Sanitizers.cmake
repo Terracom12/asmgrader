@@ -19,9 +19,15 @@ function(
 
         if(${ENABLE_SANITIZER_ADDRESS})
             list(APPEND SANITIZERS "address")
+
+            if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+                set(NO_PIE_OPT -fno-pie)
+            elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                set(NO_PIE_OPT -no-pie)
+            endif()
             # disable PIE, as ASLR messes with ASan pre-llvm17
-            target_compile_options(${target_name} INTERFACE -no-pie)
-            target_link_options(${target_name} INTERFACE -no-pie)
+            target_compile_options(${target_name} INTERFACE ${NO_PIE_OPT})
+            target_link_options(${target_name} INTERFACE ${NO_PIE_OPT})
         endif()
 
         if(${ENABLE_SANITIZER_LEAK})
