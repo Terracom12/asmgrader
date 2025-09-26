@@ -120,8 +120,6 @@ macro(asmgrader_setup_dependencies)
             URL https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.tar.xz
             URL_HASH SHA256=f48b48390380cfb94a629872346e3a81370dc498896f16019ade727ab72eb1ec
 
-            # Make the compiler think that Boost is a system lib as to not emit warnings
-            PATCHES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/boost-pfr-system.patch"
             OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
                     "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace\\\;preprocessor" # Note the escapes!
             SYSTEM TRUE
