@@ -112,6 +112,48 @@ target_compile_definitions(
     "ASM_TESTS_WEIRD_NAME_EXEC=R\"abc(${asm_tests_weird_name_exec})abc\""
 )
 
+##### Built executables of the CLI library with no user-defined student tests
+# Used to check whether basic flags (--help and --version) work properly
+
+add_executable(asmgrader_cli_empty)
+target_link_libraries(
+    asmgrader_cli_empty
+    PRIVATE
+    asmgrader_core_with_main
+)
+
+add_executable(asmgrader_profcli_empty)
+target_link_libraries(
+    asmgrader_profcli_empty
+    PRIVATE
+    asmgrader_prof_core_with_main
+)
+
+# Provide a simple smoke test to make sure that the CLI works and can display a --help message
+add_test(
+    NAME cli.has_help
+    COMMAND asmgrader_cli_empty --help
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_test(
+    NAME prof_cli.has_help
+    COMMAND asmgrader_profcli_empty  --help
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_dependencies(asmgrader_tests asmgrader_profcli_empty asmgrader_cli_empty)
+
+# Provide a test to verify that the version being reported from the application
+# matches the version given to CMake. This will be important once you package
+# your program. Real world shows that this is the kind of simple mistake that is easy
+# to make, but also easy to test for.
+add_test(NAME cli.version_matches COMMAND asmgrader_cli_empty --version)
+add_test(NAME prof_cli.version_matches COMMAND asmgrader_profcli_empty --version)
+set_tests_properties(
+    cli.version_matches prof_cli.version_matches
+    PROPERTIES PASS_REGULAR_EXPRESSION "${ASMGRADER_VERSION}"
+)
+
 # !!DISCLAIMER!!
 # This was adapted from the following source
 #   cpp-best-practices/cmake_template
