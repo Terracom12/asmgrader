@@ -63,7 +63,7 @@ public:
     // TODO: Proper allocation (and deallocation!!)
     std::uintptr_t alloc_mem(std::size_t amt);
 
-    static Expected<void, std::string> check_is_elf(const std::filesystem::path& path);
+    static Expected<void, std::string> check_is_compat_elf(const std::filesystem::path& path);
 
 private:
     std::filesystem::path path_;

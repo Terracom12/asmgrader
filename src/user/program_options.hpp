@@ -128,7 +128,7 @@ struct ProgramOptions
             std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
 
             TRY(ensure_is_regular_file(exec_file_name, "File to run tests on {:?}"));
-            TRY(Program::check_is_elf(exec_file_name));
+            TRY(Program::check_is_compat_elf(exec_file_name));
         }
 
         // Only check the database path if it's not the default
