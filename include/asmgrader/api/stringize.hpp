@@ -89,7 +89,9 @@ inline std::string str_default(std::floating_point auto val) {
     return fmt::format("{}", val);
 }
 
-inline std::string str_default(const ranges::range auto& val) {
+template <ranges::range Range>
+    requires(!std::convertible_to<Range, std::string_view>) // prevent ambiguity with other overload
+inline std::string str_default(const Range& val) {
     return fmt::to_string(fmt::join(
         val | ranges::views::transform([](const auto& elem) { return str_fn_dispatcher(elem).original; }), ", "));
 }

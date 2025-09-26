@@ -14,18 +14,16 @@
 CTEST_EXTRA_ARGS ?=
 CMAKE_CONFIGURE_EXTRA_ARGS ?=
 CMAKE_BUILD_EXTRA_ARGS ?=
+# gcc or clang
+COMPILER ?= gcc
 
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 BUILD_DIR := $(ROOT_DIR)/build
 SOURCE_DIR := $(ROOT_DIR)
 
-CMAKE_SOURCES := $(shell find $(SOURCE_DIR) -path $(BUILD_DIR) -prune -a -name 'CMakeLists.txt' -o -name '*.cmake') src/version.hpp.in CMakePresets.json
-CMAKE_SOURCES_HASH := $(shell cat $(CMAKE_SOURCES) | sha256sum | awk '{ print $$1 }')
-CMAKE_HASH_CACHE_FILE := $(BUILD_DIR)/cmake-sources-hash.txt
-
-DEBUG_PRESET := unixlike-gcc-debug
-RELEASE_PRESET := unixlike-gcc-release
+DEBUG_PRESET := unixlike-$(COMPILER)-debug
+RELEASE_PRESET := unixlike-$(COMPILER)-release
 DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
@@ -106,18 +104,6 @@ clean: ## remove build objects, libraries, executables, and test reports
 .PHONY: deep-clean
 deep-clean: ## remove all build files and configuration
 	rm -rf $(BUILD_DIR)/ reports/*
-
-# .PHONY: reconfigure-warning
-# reconfigure-warning:
-# 	@if [ -z "build/configured-*" ]; then \
-# 		true; \
-# 	elif [ ! -f $(CMAKE_HASH_CACHE_FILE) ]; then \
-# 		printf '\033[33mWarning: CMake sources have not been hashed; You may want to clean and reconfigure.\nUse `make deep-clean` and `make configure-<mode>`.\033[0m\n'; \
-# 	elif [ "$$(cat $(CMAKE_HASH_CACHE_FILE))" != "$(CMAKE_SOURCES_HASH)" ]; then \
-# 		printf '\033[33mWarning: CMake sources hash has changed; You may want to clean and reconfigure.\nUse `make deep-clean` and `make configure-<mode>`.\033[0m\n'; \
-# 	fi
-# 	@mkdir -p $$(dirname $(CMAKE_HASH_CACHE_FILE))
-# 	@echo $(CMAKE_SOURCES_HASH) > $(CMAKE_HASH_CACHE_FILE)
 
 .PHONY: list-opts
 list-opts: ## list available CMake options

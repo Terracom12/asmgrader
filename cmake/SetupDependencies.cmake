@@ -7,10 +7,10 @@
 
 # CPM.cmake README:
 # > We recommend that if you use PATCHES, you also set CPM_SOURCE_CACHE. See issue 577.
-# cpm-cmake/CPM.cmake/issues/577
+# https://github.com/cpm-cmake/CPM.cmake/issues/577
 if(NOT (DEFINED CPM_SOURCE_CACHE OR DEFINED ENV{CPM_SOURCE_CACHE}))
     message(WARNING "It is highly recommended to set the enviornment or cmake variable `CPM_SOURCE_CACHE` so as to not unnecessarily re-download libraries. Defaulting to ${CPM_SOURCE_DIR}/build/CPM.")
-    set(CPM_SOURCE_CACHE ${CMAKE_SOURCE_DIR}/build/CPM)
+    set(CPM_SOURCE_CACHE ${CMAKE_BINARY_DIR}/CPM)
 endif()
 
 include(cmake/CPM.cmake)
@@ -54,7 +54,7 @@ endfunction()
 # Done as a function so that updates to variables like
 # CMAKE_CXX_FLAGS don't propagate out to other
 # targets
-function(asmgrader_setup_dependencies)
+macro(asmgrader_setup_dependencies)
     # Package summary:
     #
     # fmt::fmt
@@ -120,8 +120,6 @@ function(asmgrader_setup_dependencies)
             URL https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.tar.xz
             URL_HASH SHA256=f48b48390380cfb94a629872346e3a81370dc498896f16019ade727ab72eb1ec
 
-            # Make the compiler think that Boost is a system lib as to not emit warnings
-            PATCHES "${CMAKE_SOURCE_DIR}/cmake/patches/boost-pfr-system.patch"
             OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
                     "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES endian\\\;type_index\\\;describe\\\;mp11\\\;pfr\\\;stacktrace\\\;preprocessor" # Note the escapes!
             SYSTEM TRUE
@@ -194,4 +192,4 @@ function(asmgrader_setup_dependencies)
         CPMAddPackage("gh:catchorg/Catch2@3.8.1")
         _force_system_includes(Catch2::Catch2WithMain)
     endif()
-endfunction()
+endmacro()
