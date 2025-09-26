@@ -47,6 +47,10 @@ jobs:
           ninja: true
           ccache: true
 
+      - name: Set CPM cache location
+        run: |
+          echo "CPM_SOURCE_CACHE=./build/CPM" > .env
+
       - name: Configure
         run: |
           make configure-${{ matrix.build_type }}
@@ -54,7 +58,7 @@ jobs:
       # We want ccache to be capable of caching PCH
       - name: Set ccache Config
         run: |
-          ccache --set-config 'sloppiness=pch_defines,time_macros'
+          ccache --set-config 'sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime'
 
       - name: Build
         run: |
