@@ -47,10 +47,10 @@
 
 namespace asmgrader {
 
-using enum ProgramOptions::VerbosityLevel;
+using enum VerbosityLevel;
 
 PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
-                                         ProgramOptions::VerbosityLevel verbosity)
+                                         VerbosityLevel verbosity)
     : Serializer{sink, verbosity}
     , do_colorize_{process_colorize_opt(colorize_option)}
     , terminal_width_{get_terminal_width()} {}

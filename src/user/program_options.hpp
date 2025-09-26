@@ -5,6 +5,7 @@
 
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
+#include "output/verbosity.hpp"
 #include "program/program.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "version.hpp"
@@ -30,17 +31,9 @@ struct ProgramOptions
 
     // ###### Argument fields
 
+    /// Level of verbosity for cli output.
     /// See \ref verbosity_levels_desc for an explaination of each of the levels.
-    /// `Max` is just used as a sentinal for now
-    enum class VerbosityLevel {
-        Silent,    ///< \ref verbosity_levels_silent_desc
-        Quiet,     ///< \ref verbosity_levels_quiet_desc
-        Summary,   ///< \ref verbosity_levels_summary_desc
-        FailsOnly, ///< \ref verbosity_levels_failsonly_desc
-        All,       ///< \ref verbosity_levels_all_desc
-        Extra,     ///< \ref verbosity_levels_extra_desc
-        Max        ///< \ref verbosity_levels_max_desc
-    } verbosity = DEFAULT_VERBOSITY_LEVEL;
+    VerbosityLevel verbosity = DEFAULT_VERBOSITY_LEVEL;
     std::string assignment_name;
 
     /// Never = stop only on fatal errors

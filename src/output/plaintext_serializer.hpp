@@ -4,6 +4,7 @@
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
+#include "output/verbosity.hpp"
 #include "user/program_options.hpp"
 
 #include <fmt/base.h>
@@ -20,8 +21,7 @@ namespace asmgrader {
 class PlainTextSerializer : public Serializer
 {
 public:
-    PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
-                        ProgramOptions::VerbosityLevel verbosity);
+    PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option, VerbosityLevel verbosity);
 
     void on_student_begin(const StudentInfo& info) override;
     void on_student_end(const StudentInfo& info) override;

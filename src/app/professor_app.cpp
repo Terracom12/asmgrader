@@ -9,6 +9,7 @@
 #include "multi_student_runner.hpp"
 #include "output/plaintext_serializer.hpp"
 #include "output/stdout_sink.hpp"
+#include "output/verbosity.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
@@ -66,8 +67,6 @@ int ProfessorApp::run_impl() {
         LOG_DEBUG("No database loaded. Inferred students: {}", students);
     }
 
-    using enum ProgramOptions::VerbosityLevel;
-
     StdoutSink output_sink;
     std::shared_ptr output_serializer =
         std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity);
@@ -81,7 +80,7 @@ int ProfessorApp::run_impl() {
     auto num_students_failed =
         ranges::count_if(res.results, [](const StudentResult& sres) { return !sres.result.all_passed(); });
 
-    if (OPTS.verbosity == ProgramOptions::VerbosityLevel::Silent) {
+    if (OPTS.verbosity == VerbosityLevel::Silent) {
         return gsl::narrow_cast<int>(num_students_failed);
     }
 
