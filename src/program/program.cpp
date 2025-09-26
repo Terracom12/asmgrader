@@ -67,7 +67,7 @@ Expected<void, std::string> Program::check_is_compat_elf(const std::filesystem::
     }
 
     bool is_little_endian = reader.get_encoding() == ELFIO::ELFDATA2LSB;
-    if (is_little_endian != (ENDIANNESS == EndiannessKind::Little)) {
+    if (is_little_endian != (EndiannessKind::Native == EndiannessKind::Little)) {
         return "endianness does not match system's";
     }
 
