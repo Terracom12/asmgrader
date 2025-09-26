@@ -54,7 +54,7 @@ endfunction()
 # Done as a function so that updates to variables like
 # CMAKE_CXX_FLAGS don't propagate out to other
 # targets
-function(asmgrader_setup_dependencies)
+macro(asmgrader_setup_dependencies)
     # Package summary:
     #
     # fmt::fmt
@@ -194,4 +194,4 @@ function(asmgrader_setup_dependencies)
         CPMAddPackage("gh:catchorg/Catch2@3.8.1")
         _force_system_includes(Catch2::Catch2WithMain)
     endif()
-endfunction()
+endmacro()
