@@ -49,7 +49,7 @@ constexpr bool should_output_grade_percentage(VerbosityLevel level) {
 constexpr bool should_output_requirement_details(VerbosityLevel level) {
     using enum VerbosityLevel;
 
-    return (level >= Extra);
+    return (level >= All);
 }
 
 /// See \ref VerbosityLevel

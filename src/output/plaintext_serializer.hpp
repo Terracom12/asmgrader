@@ -1,6 +1,7 @@
 #pragma once
 
 #include "api/requirement.hpp"
+#include "api/stringize.hpp"
 #include "grading_session.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
@@ -39,7 +40,7 @@ public:
 
 private:
     std::string serialize_req_expr(const exprs::ExpressionRepr& expr);
-
+    std::string serialize_req_expr_simple(const exprs::ExpressionRepr& expr);
     static bool process_colorize_opt(ProgramOptions::ColorizeOpt colorize_option);
     static std::size_t get_terminal_width();
 
@@ -50,6 +51,9 @@ private:
 
     template <fmt::formattable T>
     std::string style_str(const T& arg, fmt::text_style style, fmt::format_string<T> fmt = "{}") const;
+
+    /// syntax highlight iff `do_colorize_` is true
+    std::string maybe_highlight(const stringize::StringizeResult& what) const;
 
     /// Conditionally make a word singular or plural based on `count`
     /// Plural if and only if `count == 1`
