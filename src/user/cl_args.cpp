@@ -6,6 +6,7 @@
 #include "common/terminal_checks.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
+#include "output/verbosity.hpp"
 #include "registrars/global_registrar.hpp"
 #include "user/program_options.hpp"
 #include "version.hpp"
@@ -117,7 +118,7 @@ void CommandLineArgs::setup_parser() {
     arg_parser_.add_argument("--silent")
         .flag()
         .action([this] (const std::string& /*unused*/) {
-                opts_buffer_.verbosity = ProgramOptions::VerbosityLevel::Silent;
+                opts_buffer_.verbosity = VerbosityLevel::Silent;
             })
         .help("Sets verbosity level to 'Silent', suppressing all output except for the return code. Useful for scripting.");
 

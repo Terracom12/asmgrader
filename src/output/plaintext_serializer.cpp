@@ -47,10 +47,10 @@
 
 namespace asmgrader {
 
-using enum ProgramOptions::VerbosityLevel;
+using enum VerbosityLevel;
 
 PlainTextSerializer::PlainTextSerializer(Sink& sink, ProgramOptions::ColorizeOpt colorize_option,
-                                         ProgramOptions::VerbosityLevel verbosity)
+                                         VerbosityLevel verbosity)
     : Serializer{sink, verbosity}
     , do_colorize_{process_colorize_opt(colorize_option)}
     , terminal_width_{get_terminal_width()} {}
@@ -74,8 +74,22 @@ void PlainTextSerializer::on_requirement_result(const RequirementResult& data) {
     }
     std::string out = fmt::format("Requirement {} : {}\n", req_result_str, style(description, VALUE_STYLE));
 
-    if (data.expression_repr.has_value() && should_output_requirement_details(verbosity_)) {
-        out += serialize_req_expr(data.expression_repr.value());
+    if (should_output_requirement_details(verbosity_)) {
+        if (data.expression_repr.has_value()) {
+            out += serialize_req_expr(data.expression_repr.value());
+        } else {
+            LOG_WARN("Expression repr should be output, but it is nullopt");
+        }
+    } else if (!data.passed) {
+        // For failing tests, we still want to let the user know WHY the test failed,
+        // even if the extra info is not enabled for all requirements
+        if (data.expression_repr.has_value()) {
+            out += "    ";
+            out += serialize_req_expr_simple(data.expression_repr.value());
+            out += ' ' + style_str("evaluates to FALSE", fmt::emphasis::underline) + "\n";
+        } else {
+            LOG_WARN("Expression repr should be output, but it is nullopt");
+        }
     }
 
     sink_.write(out);
@@ -336,30 +350,38 @@ void PlainTextSerializer::output_grade_percentage(const AssignmentResult& data) 
     sink_.write(out);
 }
 
-std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr& expr) {
-    static constexpr auto string_style = fmt::fg(fmt::color::alice_blue);
-    static constexpr auto numeric_style = fmt::fg(fmt::color::blanched_almond);
-    static constexpr auto other_value_style = VALUE_STYLE;
-
+// simple serialization for when verbosity < extra and a failed requirement is output
+std::string PlainTextSerializer::serialize_req_expr_simple(const exprs::ExpressionRepr& expr) {
     using Expression = exprs::ExpressionRepr::Expression;
     using Value = exprs::ExpressionRepr::Value;
     using Operator = exprs::ExpressionRepr::Operator;
-    using Repr = exprs::ExpressionRepr::Repr;
 
-    // syntax highlight iff `do_colorize_` is true
-    auto maybe_highlight = [this](const stringize::StringizeResult& what) {
-        try {
-            return do_colorize_ ? what.syntax_highlight() : what.resolve_blocks(/*do_colorize=*/false);
-        } catch (std::exception& ex) {
-            LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what.original, ex);
-            return what.resolve_blocks(do_colorize_);
-        }
+    // TODO: DRY
+    std::function<std::string(const Expression&)> serialize = [&serialize, this](const Expression& expression) {
+        auto impl = Overloaded{
+            [this](const Value& value) -> std::string { return maybe_highlight(value.repr.str); }, //
+            [&serialize](const Operator& op) {
+                ASSERT(op.operands.size() == 2);
+
+                return fmt::format("{} {} {}", serialize(op.operands[0]), op.repr.raw_str, serialize(op.operands[1]));
+            } //
+        };
+
+        return std::visit(impl, expression);
     };
 
+    return serialize(expr.expression);
+}
+
+std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr& expr) {
+    using Expression = exprs::ExpressionRepr::Expression;
+    using Value = exprs::ExpressionRepr::Value;
+    using Operator = exprs::ExpressionRepr::Operator;
+
     std::function<std::string(const Expression&)> serialize_header = [&serialize_header,
-                                                                      &maybe_highlight](const Expression& expression) {
+                                                                      this](const Expression& expression) {
         auto impl = Overloaded{
-            [&maybe_highlight](const Value& value) -> std::string { return maybe_highlight(value.repr.repr); }, //
+            [this](const Value& value) -> std::string { return maybe_highlight(value.repr.repr); }, //
             [&serialize_header](const Operator& op) {
                 ASSERT(op.operands.size() == 2);
 
@@ -381,9 +403,9 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
     };
 
     std::function<std::vector<WhereDetail>(const Expression&)> get_where_details =
-        [&get_where_details, &maybe_highlight](const Expression& expression) {
+        [&get_where_details, this](const Expression& expression) {
             auto impl = Overloaded{
-                [&maybe_highlight](const Value& value) -> std::vector<WhereDetail> {
+                [this](const Value& value) -> std::vector<WhereDetail> {
                     if (value.repr.is_literal) {
                         return {};
                     }
@@ -414,6 +436,15 @@ std::string PlainTextSerializer::serialize_req_expr(const exprs::ExpressionRepr&
 
     return fmt::format("  {}\n  Where:\n    {}\n\n", serialize_header(expr.expression),
                        serialize_where_details(where_details));
+}
+
+std::string PlainTextSerializer::maybe_highlight(const stringize::StringizeResult& what) const {
+    try {
+        return do_colorize_ ? what.syntax_highlight() : what.resolve_blocks(/*do_colorize=*/false);
+    } catch (std::exception& ex) {
+        LOG_WARN("Parsing {:?} failed for syntax highlighting. Error: {}", what.original, ex);
+        return what.resolve_blocks(do_colorize_);
+    }
 }
 
 } // namespace asmgrader

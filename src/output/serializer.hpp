@@ -3,6 +3,7 @@
 #include "common/class_traits.hpp"
 #include "grading_session.hpp"
 #include "output/sink.hpp"
+#include "output/verbosity.hpp"
 #include "user/program_options.hpp"
 
 #include <string_view>
@@ -12,7 +13,7 @@ namespace asmgrader {
 class Serializer : NonCopyable
 {
 public:
-    explicit Serializer(Sink& sink, ProgramOptions::VerbosityLevel verbosity)
+    explicit Serializer(Sink& sink, VerbosityLevel verbosity)
         : sink_{sink}
         , verbosity_{verbosity} {}
 
@@ -36,7 +37,7 @@ public:
 protected:
     // TODO: yes, this is bad practice. Will redesign later
     Sink& sink_;
-    ProgramOptions::VerbosityLevel verbosity_;
+    VerbosityLevel verbosity_;
 };
 
 } // namespace asmgrader

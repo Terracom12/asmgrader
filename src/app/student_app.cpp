@@ -4,6 +4,7 @@
 #include "logging.hpp"
 #include "output/plaintext_serializer.hpp"
 #include "output/stdout_sink.hpp"
+#include "output/verbosity.hpp"
 #include "registrars/global_registrar.hpp"
 #include "test_runner.hpp"
 #include "user/program_options.hpp"
@@ -27,8 +28,6 @@ int StudentApp::run_impl() {
     // should be verified by CLI; double-check here just in case
     ASSERT(assignment, "Error locating assignment {}", OPTS.assignment_name);
 
-    using enum ProgramOptions::VerbosityLevel;
-
     StdoutSink output_sink;
     std::shared_ptr output_serializer =
         std::make_shared<PlainTextSerializer>(output_sink, OPTS.colorize_option, OPTS.verbosity);
@@ -37,7 +36,7 @@ int StudentApp::run_impl() {
     output_serializer->on_run_metadata(RunMetadata{});
     AssignmentResult res = runner.run_all(OPTS.file_name);
 
-    if (OPTS.verbosity == ProgramOptions::VerbosityLevel::Silent) {
+    if (OPTS.verbosity == VerbosityLevel::Silent) {
         return res.num_tests_failed();
     }
 
