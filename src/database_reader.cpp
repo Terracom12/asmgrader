@@ -30,6 +30,14 @@ Expected<std::vector<StudentInfo>, std::string> DatabaseReader::read() const {
 
     std::string line;
     while (std::getline(in_file, line)) {
+        // Remove a CR character; windows linefeed
+        // Technically, as per RFC4180, we should require that the line ends in CRLF ("\r\n")
+        // but that's annoying to the user and there's no good reason to do that.
+        // https://datatracker.ietf.org/doc/html/rfc4180
+        if (line.ends_with('\r')) {
+            line.resize(line.size() - 1);
+        }
+
         // Skip empty lines with a warning
         if (line.empty()) {
             LOG_INFO("Skipping empty line");
