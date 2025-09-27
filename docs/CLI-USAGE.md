@@ -120,10 +120,9 @@ $ grader <lab-name> --silent
 
 
 #### Description of Levels {#verbosity_levels_desc}
- - Professor mode is generally one level "quieter" than student mode for the output of each individual student
  - Each level includes all output from levels below, possibly formatted a little differently
-   e.g., Setting the verbosity to `FailedOnly` results in all output described in:
-        `FailedOnly`, `Summary`, and `Quiet` (though not the retcode from `Silent`)
+   e.g., Setting the verbosity to `All` results in all output described in:
+        `Summary`, and `Quiet` (though not the retcode from `Silent`)
 
 ##### Silent {#verbosity_levels_silent_desc}
 
@@ -133,21 +132,25 @@ $ grader <lab-name> --silent
 ##### Quiet {#verbosity_levels_quiet_desc}
 
 - **Student** - Overall test results only (# of tests and requirements passed/failed)
-- **Professor** - Overall statistics only (# of students passed/failed, etc.) <span style="color:orange;font-weight:bold">(UNIMPLEMENTED)</span>
+![](verbosity-quiet-student-screenshot.png)
+- **Professor** - Per-student score only (percentage and number of tests passed + failed)
+![](verbosity-quiet-prof-screenshot.png)
 
 ##### Summary (default) {#verbosity_levels_summary_desc}
 
-- **Student** - Lists the names of all tests, but only failing requirements
+![](verbosity-summary-screenshot.png)
+- **Student** - Lists the names of all tests, but only failing requirements. If necessary, a brief diagnostic is displayed showing why a requirement failed
 - **Professor**  - Same as above, but for each individual student
 
 ##### All {#verbosity_levels_all_desc}
-- **Student** - Lists the result of all tests and requirements
+
+![](verbosity-all-screenshot.png)
+- **Student** - Lists the result of all tests and requirements. More verbose diagnostics for both failing and passing tests are shown.
 - **Professor**  - Same as above, but for each individual student
 
 ##### Extra {#verbosity_levels_extra_desc}
 
-- **Student** - ...
-- **Professor**  - Same as above, but for each individual student
+(Not yet implemented)
 
 ##### Max {#verbosity_levels_max_desc}
 
