@@ -145,9 +145,11 @@ De La Cruz,Kevin
 O'Reily,Jack
 ```
 
+To understand how student files are matched based on this database, please see [File Matching](#prof_file_matching).
+
 #### Not Providing a Database {#not_providing_a_database}
 
-Without a database, `profgrader` will search for submissions according to the specified assignment and file matcher RegEx. By default, the searching behavior is essentially identical to if a database had been provided, except that a student name may be matched by any sequence of alphabetic characters.
+Without a database, `profgrader` will search for submissions according to the specified assignment and file matcher RegEx (see [File Matching](#prof_file_matching)). By default, the searching behavior is essentially identical to if a database had been provided, except that a student name may be matched by any sequence of alphabetic characters.
 
 For example, the following invocation of `profgrader` will only match the files `doejane_0000_0000_lab1-2.out` and `doejohn_0000_0000_lab1-2.out`.
 
@@ -158,6 +160,32 @@ doejane_0000_0000_lab1-2.out    robertsbob_0000_0000_lab5-3.out
 
 $ profgrader lab1-2
 ```
+
+#### File Matching {#prof_file_matching}
+
+Files are matched based on a Regular Expression (RegEx). This RegEx is special because there is a special *field specifier* syntax which is evaluated **before** the RegEx itself. This syntax is specified surrounding a field name in \`\` (backticks). Here are the possible field names and what each of them are substituted with:
+
+Field Name | Substituted with
+-----------|-----------------
+firstname | student's first name in lowercase with all spaces removed
+lastname | student's last name; same transformation as above
+base | basename of the lab executable
+ext | file extension of the lab executable
+
+Here is the default RegEx, pre-substation:
+```
+`lastname``firstname`_\d+_\d+_`base`\.`ext`
+```
+If we had, for example, a student `Kevin De La Cruz` and were searching for `lab1-2.out`, the RegEx would look as follows after substitution:
+`delacruzkevin_\d+_\d+_lab1-2\.out`
+This would match any of the following files:
+```
+delacruzkevin_0_0_lab1-2.out
+delacruzkevin_12345_999999_lab1-2.out
+delacruzkevin_12749261148_1284337922_lab1-2.out
+```
+
+RegEx matching uses a [Modified EMACScript](https://en.cppreference.com/w/cpp/regex/ecmascript.html) standard. For any basic expression, however, this is entirely unnecessary to understand and the RegEx will simply work as expected. If in doubt, [regex101.com](https://regex101.com/r/Lt1DrG/1) is a great place to test your RegEx.
 
 > [!TIP]
 > More coming soon...
