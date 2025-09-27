@@ -40,12 +40,28 @@ $ grader lab1-2
 Example usage:
 
 ```command
-$ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions
+$ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions --database ~/Documents/students.csv
 ```
 
-### Short Form Output
+Here is an example `students.csv` database:
+```
+Doe,John
+Doe,Jane
+De La Cruz,Carlos
+O'Reily,Jack Bryan
+```
+See more info on the [specification of a database](#student_database_specification).
 
-For less verbose output to just get a list of student scores, invoke with the `-q`|`--quiet` flag.
+Example usage without a database:
+
+```command
+$ profgrader lab5-3 --search-path ~/Documents/lab5-3-submissions
+```
+See more info on [not providing a database](#not_providing_a_database).
+
+### Short and Long Form Output
+
+To change output verbosity, invoke with one of the `-q`|`--quiet` or `-v`|`--verbose` flags.
 
 ```console
 $ profgrader lab1-2 -q
@@ -53,6 +69,45 @@ Jane Doe: Output score 100.00% (7/7 points)
 John Doe: Output score 71.43% (5/7 points)
 Alice Liddell: Could not locate executable
 Bob Roberts: Output score 57.14% (4/7 points
+
+$ profgrader lab1-2 -v
+==================================================================================================
+                                        Student: John Doe
+
+./doejohn_1234_0000_lab1-2.out
+--------------------------------------------------------------------------------------------------
+Test Case: putch
+--------------------------------------------------------------------------------------------------
+Requirement PASSED : putch(&"\x00") runs
+  putch("\x00")
+  Where:
+    putch("\x00") := void
+
+Requirement PASSED : putch(&"\x00") -> stdout = '\x00'
+  ctx.get_stdout() == first_char
+  Where:
+    ctx.get_stdout() := "\x00"
+    first_char := "\x00"
+
+Requirement PASSED : putch(&"#") runs
+  putch("#")
+  Where:
+    putch("#") := void
+
+Requirement FAILED : putch(&"#") -> stdout = '#'
+  ctx.get_stdout() == first_char
+  Where:
+    ctx.get_stdout() := "\x00"
+    first_char := "#"
+
+...
+
+Output score 71.43% (5/7 points)
+--------------------------------------------------------------------------------------------------
+Tests       :      1 total |     0 passed |     1 failed
+Requirements:      7 total |     5 passed |     2 failed
+==================================================================================================
+...
 ```
 
 ### Student Database
@@ -65,9 +120,36 @@ By default, a database named `students.csv` in the current working directory wil
 $ profgrader lab1-2 --database ~/my-custom-database.csv
 ```
 
+#### Database Specification {#student_database_specification}
+
+A student database is a Comma-Separated Values (CSV) file. Where reasonable, the official CSV specification, [RFC1480](https://datatracker.ietf.org/doc/html/rfc4180), is followed. Requirements **2.1**, **2.2** and **2.4** are conformed to, except that lines may be terminated with CRLF (`\r\n`, i.e. Windows line endings) or simply LF (`\n`, i.e. Unix line endings). The remaining requirements are disregarded due to unnecessary complications imposed for our very simple use case.
+
+Each **record** of the database is a single line with the student's last and first name(s), <u>**in that order**</u>, separated by commas. Spaces and special characters other than a `,` (comma) are permitted within each of these two fields. This is necessary if, for instance, a student has multiple first or last names, or a compound name with a `-` (hyphen). Here is an example set of student names, and a corresponding well-formed database:
+First Name(s) | Last Name(s)
+-----------|----------
+John | Doe
+Jane | Doe
+Anna Leigh | Waters
+Alice | Lidell
+Billie-Rose | Tao
+Kevin | De La Cruz
+Jack | O'Reily
+
+```
+Doe,John
+Doe,Jane
+Waters,Anna Leigh
+Lidell,Alice
+Tao,Billie-Rose
+De La Cruz,Kevin
+O'Reily,Jack
+```
+
+To understand how student files are matched based on this database, please see [File Matching](#prof_file_matching).
+
 #### Not Providing a Database {#not_providing_a_database}
 
-Without a database, `profgrader` will search for submissions according to the specified assignment and file matcher RegEx. By default, the searching behavior is essentially identical to if a database had been provided, except that a student name may be matched by any sequence of alphabetic characters.
+Without a database, `profgrader` will search for submissions according to the specified assignment and file matcher RegEx (see [File Matching](#prof_file_matching)). By default, the searching behavior is essentially identical to if a database had been provided, except that a student name may be matched by any sequence of alphabetic characters.
 
 For example, the following invocation of `profgrader` will only match the files `doejane_0000_0000_lab1-2.out` and `doejohn_0000_0000_lab1-2.out`.
 
@@ -78,6 +160,32 @@ doejane_0000_0000_lab1-2.out    robertsbob_0000_0000_lab5-3.out
 
 $ profgrader lab1-2
 ```
+
+#### File Matching {#prof_file_matching}
+
+Files are matched based on a Regular Expression (RegEx). This RegEx is special because there is a special *field specifier* syntax which is evaluated **before** the RegEx itself. This syntax is specified surrounding a field name in \`\` (backticks). Here are the possible field names and what each of them are substituted with:
+
+Field Name | Substituted with
+-----------|-----------------
+firstname | student's first name in lowercase with all spaces removed
+lastname | student's last name; same transformation as above
+base | basename of the lab executable
+ext | file extension of the lab executable
+
+Here is the default RegEx, pre-substation:
+```
+`lastname``firstname`_\d+_\d+_`base`\.`ext`
+```
+If we had, for example, a student `Kevin De La Cruz` and were searching for `lab1-2.out`, the RegEx would look as follows after substitution:
+`delacruzkevin_\d+_\d+_lab1-2\.out`
+This would match any of the following files:
+```
+delacruzkevin_0_0_lab1-2.out
+delacruzkevin_12345_999999_lab1-2.out
+delacruzkevin_12749261148_1284337922_lab1-2.out
+```
+
+RegEx matching uses a [Modified EMACScript](https://en.cppreference.com/w/cpp/regex/ecmascript.html) standard. For any basic expression, however, this is entirely unnecessary to understand and the RegEx will simply work as expected. If in doubt, [regex101.com](https://regex101.com/r/Lt1DrG/1) is a great place to test your RegEx.
 
 > [!TIP]
 > More coming soon...
