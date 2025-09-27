@@ -24,6 +24,7 @@ TEST_CASE("Read small database") {
         {"Pope", "Francis"},
         {"Jack Bryan", "O'Reily"},
         {"Carlos", "De La Cruz"},
+        {"Billie-Rose", "Tao"},
     });
 
     for (const auto& [expected_name, read_name] : ranges::views::zip(EXPECTED_NAMES, *res)) {
