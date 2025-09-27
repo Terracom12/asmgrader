@@ -40,12 +40,29 @@ $ grader lab1-2
 Example usage:
 
 ```command
-$ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions
+$ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions --database ~/Documents/students.csv
 ```
 
-### Short Form Output
+Here is an example `students.csv` database:
+See more info on the [specification of a database](#student_database_specification).
+```
+Doe,John
+Doe,Jane
+De La Cruz,Carlos
+O'Reily,Jack Bryan
 
-For less verbose output to just get a list of student scores, invoke with the `-q`|`--quiet` flag.
+```
+
+Example usage without a database:
+See more info on [not providing a database](#not_providing_a_database).
+
+```command
+$ profgrader lab5-3 --search-path ~/Documents/lab5-3-submissions
+```
+
+### Short and Long Form Output
+
+To change output verbosity, invoke with one of the `-q`|`--quiet` or `-v`|`--verbose` flags.
 
 ```console
 $ profgrader lab1-2 -q
@@ -53,6 +70,45 @@ Jane Doe: Output score 100.00% (7/7 points)
 John Doe: Output score 71.43% (5/7 points)
 Alice Liddell: Could not locate executable
 Bob Roberts: Output score 57.14% (4/7 points
+
+$ profgrader lab1-2 -v
+==================================================================================================
+                                        Student: John Doe
+
+./doejohn_1234_0000_lab1-2.out
+--------------------------------------------------------------------------------------------------
+Test Case: putch
+--------------------------------------------------------------------------------------------------
+Requirement PASSED : putch(&"\x00") runs
+  putch("\x00")
+  Where:
+    putch("\x00") := void
+
+Requirement PASSED : putch(&"\x00") -> stdout = '\x00'
+  ctx.get_stdout() == first_char
+  Where:
+    ctx.get_stdout() := "\x00"
+    first_char := "\x00"
+
+Requirement PASSED : putch(&"#") runs
+  putch("#")
+  Where:
+    putch("#") := void
+
+Requirement FAILED : putch(&"#") -> stdout = '#'
+  ctx.get_stdout() == first_char
+  Where:
+    ctx.get_stdout() := "\x00"
+    first_char := "#"
+
+...
+
+Output score 71.43% (5/7 points)
+--------------------------------------------------------------------------------------------------
+Tests       :      1 total |     0 passed |     1 failed
+Requirements:      7 total |     5 passed |     2 failed
+==================================================================================================
+...
 ```
 
 ### Student Database
@@ -64,6 +120,9 @@ By default, a database named `students.csv` in the current working directory wil
 ```command
 $ profgrader lab1-2 --database ~/my-custom-database.csv
 ```
+
+#### Database Specification {#student_database_specification}
+
 
 #### Not Providing a Database {#not_providing_a_database}
 
