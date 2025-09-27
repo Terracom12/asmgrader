@@ -133,17 +133,12 @@ $ grader <lab-name> --silent
 ##### Quiet {#verbosity_levels_quiet_desc}
 
 - **Student** - Overall test results only (# of tests and requirements passed/failed)
-- **Professor** - Overall statistics only (# of students passed/failed, etc.)
+- **Professor** - Overall statistics only (# of students passed/failed, etc.) <span style="color:orange;font-weight:bold">(UNIMPLEMENTED)</span>
 
 ##### Summary (default) {#verbosity_levels_summary_desc}
 
 - **Student** - Lists the names of all tests, but only failing requirements
-- **Professor** - Pass / fail stats for each individual student (like `Quiet` in student mode)
-
-##### FailsOnly {#verbosity_levels_failsonly_desc}
-
-- **Student** - Same as `Summary`
-- **Professor** - Lists the names of all tests, but only failing requirements for each individual student
+- **Professor**  - Same as above, but for each individual student
 
 ##### All {#verbosity_levels_all_desc}
 - **Student** - Lists the result of all tests and requirements
@@ -151,7 +146,8 @@ $ grader <lab-name> --silent
 
 ##### Extra {#verbosity_levels_extra_desc}
 
-(Not yet implemented)
+- **Student** - ...
+- **Professor**  - Same as above, but for each individual student
 
 ##### Max {#verbosity_levels_max_desc}
 
