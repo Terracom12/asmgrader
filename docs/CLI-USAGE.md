@@ -44,21 +44,20 @@ $ profgrader lab1-2 --search-path ~/Documents/lab1-2-submissions --database ~/Do
 ```
 
 Here is an example `students.csv` database:
-See more info on the [specification of a database](#student_database_specification).
 ```
 Doe,John
 Doe,Jane
 De La Cruz,Carlos
 O'Reily,Jack Bryan
-
 ```
+See more info on the [specification of a database](#student_database_specification).
 
 Example usage without a database:
-See more info on [not providing a database](#not_providing_a_database).
 
 ```command
 $ profgrader lab5-3 --search-path ~/Documents/lab5-3-submissions
 ```
+See more info on [not providing a database](#not_providing_a_database).
 
 ### Short and Long Form Output
 
@@ -123,6 +122,26 @@ $ profgrader lab1-2 --database ~/my-custom-database.csv
 
 #### Database Specification {#student_database_specification}
 
+A student database is a Comma-Separated Values (CSV) file. Where reasonable, the official CSV specification, [RFC1480](https://datatracker.ietf.org/doc/html/rfc4180), is followed. Requirements **2.1**, **2.2** and **2.4** are conformed to, except that lines may be terminated with CRLF (`\r\n`, i.e. Windows line endings) or simply LF (`\n`, i.e. Unix line endings). The remaining requirements are disregarded due to unnecessary complications imposed for our very simple use case.
+
+Each **record** of the database is a single line with the student's last and first name(s), <u>**in that order**</u>, separated by commas. Spaces and special characters other than a `,` (comma) are permitted within each of these two fields. This is necessary if, for instance, a student has multiple first or last names, or a compound name with a `-` (hyphen). Here is an example set of student names, and a corresponding well-formed database:
+First Name(s) | Last Name(s)
+-----------|----------
+John | Doe
+Jane | Doe
+Anna Leigh | Waters
+Alice | Lidell
+Billie-Rose | Tao
+Kevin | De La Cruz
+
+```
+Doe,John
+Doe,Jane
+Waters,Anna Leigh
+Lidell,Alice
+Tao,Billie-Rose
+De La Cruz,Kevin
+```
 
 #### Not Providing a Database {#not_providing_a_database}
 
