@@ -34,6 +34,8 @@ function(asmgrader_enable_doxygen DOXYGEN_THEME)
     set(DOXYGEN_JAVADOC_AUTOBRIEF NO)
     set(DOXYGEN_MULTILINE_CPP_IS_BRIEF YES)
 
+    set(DOXYGEN_IMAGE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/docs/images)
+
     # Use a custom clipboard copying script
     set(DOXYGEN_HTML_COPY_CLIPBOARD NO)
 
