@@ -8,9 +8,11 @@ name: ci
 
 on:
   pull_request:
+    paths-ignore: ['docs/**']
   push:
     tags:
     branches: [main]
+    paths-ignore: ['docs/**']
   workflow_dispatch:
 
 jobs:
