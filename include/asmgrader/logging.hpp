@@ -25,8 +25,6 @@
 #if defined(DEBUG) || defined(TRACE)
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
-#elif defined(RELEASE)
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_ERROR
 #else
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
 #endif
@@ -98,10 +96,8 @@ inline std::string get_err_msg() {
 inline void init_loggers() {
 #if defined(DEBUG)
     spdlog::set_level(spdlog::level::warn);
-#elif defined(RELEASE)
-    spdlog::set_level(spdlog::level::err);
 #else
-    spdlog::set_level(spdlog::level::info);
+    spdlog::set_level(spdlog::level::err);
 #endif
 
     // Override any previously set log-level with the enviornment variable SPDLOG_LEVEL, if set
