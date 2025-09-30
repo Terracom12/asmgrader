@@ -53,8 +53,6 @@ set(
 
     program/program.cpp
 
-    user/cl_args.cpp
-
     api/assignment.cpp
     api/test_context.cpp
     api/syntax_highlighter.cpp
@@ -62,6 +60,8 @@ set(
 
     database_reader.cpp
 
+    user/cl_args.cpp
+    user/program_options.cpp
     user/file_searcher.cpp
     user/assignment_file_searcher.cpp
 
