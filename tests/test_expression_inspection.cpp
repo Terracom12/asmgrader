@@ -31,6 +31,7 @@ constexpr auto int16lit = bind_front(make_token, IntHexLiteral);
 constexpr auto floatlit = bind_front(make_token, FloatLiteral);
 constexpr auto float16lit = bind_front(make_token, FloatHexLiteral);
 constexpr auto id = std::bind_front(make_token, Identifier);
+constexpr auto qual = std::bind_front(make_token, Qualifier);
 constexpr auto grp = std::bind_front(make_token, Grouping);
 constexpr auto op = std::bind_front(make_token, Operator);
 constexpr auto op2 = std::bind_front(make_token, BinaryOperator);
@@ -196,7 +197,7 @@ TEST_CASE("Operator tokens") {
 
     STATIC_REQUIRE(Tokenizer("a <=> b") == toks(id("a"), op2("<=>"), id("b")));
 
-    STATIC_REQUIRE(Tokenizer("std::cout") == toks(id("std"), op2("::"), id("cout")));
+    STATIC_REQUIRE(Tokenizer("std::cout") == toks(qual("std"), op2("::"), id("cout")));
 
     // clang-format off
     STATIC_REQUIRE(Tokenizer("a <= b && c >= d") == toks(
@@ -248,7 +249,7 @@ TEST_CASE("Literal tokens") {
 TEST_CASE("Basic use-case tokenization") {
     // clang-format off
     STATIC_REQUIRE(Tokenizer(R"(std::cout << "Hello, world!" << '\n')") == toks(
-        id("std"), op2("::"), id("cout"),
+        qual("std"), op2("::"), id("cout"),
         op2("<<"),
         strlit(R"("Hello, world!")"),
         op2("<<"),
@@ -331,7 +332,7 @@ TEST_CASE("Binary operator distinction") {
     ));
 
     STATIC_REQUIRE(Tokenizer("::std::string") == toks(
-        op("::"), id("std"), op2("::"), id("string")
+        op("::"), qual("std"), op2("::"), id("string")
     ));
 
     STATIC_REQUIRE(Tokenizer("-123") == toks(
@@ -361,9 +362,9 @@ TEST_CASE("Binary operator distinction") {
     STATIC_REQUIRE(Tokenizer("true ? std::true_type{} : ::std::false_type{}") == toks(
         boollit("true"), 
         op("?"), 
-        id("std"), op2("::"), id("true_type"), grp("{"), grp("}"), 
+        qual("std"), op2("::"), id("true_type"), grp("{"), grp("}"), 
         op(":"),
-        op("::"), id("std"), op2("::"), id("false_type"), grp("{"), grp("}")
+        op("::"), qual("std"), op2("::"), id("false_type"), grp("{"), grp("}")
     ));
 
     // clang-format on

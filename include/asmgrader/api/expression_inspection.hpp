@@ -171,6 +171,11 @@ struct Token
         /// ident-start = 'a'i..'z'i | '_'
         Identifier,
 
+        /// https://en.cppreference.com/w/cpp/language/identifiers.html
+        ///
+        /// An identifier that occurs immediately before a `::` operator.
+        Qualifier,
+
         /// Imperatively defined as:
         /// '{', '}'
         /// '(', ')' - when not as a function call
@@ -258,11 +263,16 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
         return "Grouping";
     case Operator:
         return "Operator";
+    case BinaryOperator:
+        return "BinaryOperator";
     case EndDelimiter:
         return "EndDelimiter";
-    default:
-        UNREACHABLE(token_kind);
+    case BoolLiteral:
+        return "BoolLiteral";
+    case Qualifier:
+        return "Qualifier";
     }
+    UNREACHABLE(token_kind);
 }
 
 constexpr std::pair<Token::Kind, std::string_view> format_as(const Token& tok) {
@@ -920,19 +930,32 @@ static_assert(!matches<FloatLiteral>("0b10"));
 static_assert(!matches<FloatHexLiteral>("0b10"));
 static_assert(!matches<FloatHexLiteral>("0xAB10"));
 
+constexpr Token::Kind match_ident_or_qualifier(const Stream& stream) {
+    // Make sure that the token is not an operator (new, etc.)
+    auto full_token = stream.peek_through(is_ident_like());
+
+    if (full_token.empty()) {
+        return Unknown;
+    }
+
+    if (ranges::contains(operator_tokens, full_token) && !matches<BoolLiteral>(stream)) {
+        return Unknown;
+    }
+
+    auto after_token = substr_past(stream.peek_past(is_ident_like()), isspace);
+    if (after_token.starts_with("::")) {
+        return Qualifier;
+    }
+
+    return Identifier;
+}
+
 /// \overload
 /// Whether the start of `stream` is an identifier token
 /// See \ref Token::Kind::Identifier for details
 template <>
 constexpr bool matches<Identifier>(const Stream& stream) {
-    // Make sure that the token is not an operator (new, etc.)
-    auto full_token = stream.peek_through(is_ident_like());
-
-    if (full_token.empty()) {
-        return false;
-    }
-
-    return !ranges::contains(operator_tokens, full_token) && !matches<BoolLiteral>(stream);
+    return match_ident_or_qualifier(stream) == Identifier;
 }
 
 static_assert(matches<Identifier>("abc"));
@@ -944,6 +967,22 @@ static_assert(!matches<Identifier>("1_abc"));
 static_assert(!matches<Identifier>("+_abc"));
 static_assert(!matches<Identifier>(".123"));
 static_assert(!(matches<Identifier>("new") || matches<Identifier>("sizeof")));
+
+/// \overload
+/// Whether the start of `stream` is a qualifier token
+/// See \ref Token::Kind::Qualifier for details
+template <>
+constexpr bool matches<Qualifier>(const Stream& stream) {
+    return match_ident_or_qualifier(stream) == Qualifier;
+}
+
+static_assert(matches<Qualifier>("abc::"));
+static_assert(matches<Qualifier>("_::"));
+static_assert(matches<Qualifier>("_abc \t::"));
+static_assert(matches<Qualifier>("_12abc ::"));
+static_assert(!matches<Qualifier>("abc"));
+static_assert(!matches<Qualifier>("abc:"));
+static_assert(!matches<Qualifier>("abc: :"));
 
 /// \overload
 /// Whether the start of `stream` is an identifier token
@@ -1560,6 +1599,26 @@ static_assert(test_parse<Identifier>("_abc(2)") == "_abc");
 static_assert(test_parse<Identifier>("a.b") == "a");
 
 /// \overload
+/// See \ref Token::Kind::Identifier for details
+template <>
+constexpr std::string_view parse<Qualifier>(Stream& stream) {
+    if (!matches<Qualifier>(stream)) {
+        throw ParsingError("matches precondition failed in parse", stream.str(), Qualifier);
+    }
+
+    return stream.consume_through(is_ident_like());
+}
+
+static_assert(test_parse<Qualifier>("abc::") == "abc");
+static_assert(test_parse<Qualifier>("_::") == "_");
+static_assert(test_parse<Qualifier>("_abc::") == "_abc");
+static_assert(test_parse<Qualifier>("_12abc::") == "_12abc");
+static_assert(test_parse<Qualifier>("_abc::bed+2") == "_abc");
+static_assert(test_parse<Qualifier>("_abc::hi-2") == "_abc");
+static_assert(test_parse<Qualifier>("_abc ::_(2)") == "_abc");
+static_assert(test_parse<Qualifier>("a \t::__.b") == "a");
+
+/// \overload
 /// See \ref Token::Kind::Grouping for details
 template <>
 constexpr std::string_view parse<Grouping>(Stream& stream) {
@@ -1662,7 +1721,7 @@ constexpr auto parse_tokens(std::string_view str) {
 
     return tokenize::parse_all<MaxNumTokens, BoolLiteral, StringLiteral, RawStringLiteral, CharLiteral, IntBinLiteral,
                                IntOctLiteral, IntDecLiteral, IntHexLiteral, FloatLiteral, FloatHexLiteral, Identifier,
-                               Grouping, BinaryOperator, Operator>(str);
+                               Qualifier, Grouping, BinaryOperator, Operator>(str);
 }
 
 template <std::size_t MaxNumTokens = 1'024>
