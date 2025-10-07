@@ -388,4 +388,13 @@ template <StaticString OpStr, typename T, typename U>
 Requirement(DecomposedExpr<OpStr, T, U>&&, const inspection::Tokenizer<>&, std::string)
     -> Requirement<exprs::OpStrToType<OpStr, T, U>>;
 
+/// Deduction guide for a single type decomposition expr
+template <StaticString OpStr, typename T>
+Requirement(DecomposedExpr<OpStr, T>&&, const inspection::Tokenizer<>&) -> Requirement<exprs::Noop<T>>;
+
+/// Deduction guide for a binary type decomposition expr
+template <StaticString OpStr, typename T, typename U>
+Requirement(DecomposedExpr<OpStr, T, U>&&, const inspection::Tokenizer<>&)
+    -> Requirement<exprs::OpStrToType<OpStr, T, U>>;
+
 } // namespace asmgrader
