@@ -16,6 +16,7 @@ CMAKE_CONFIGURE_EXTRA_ARGS ?=
 CMAKE_BUILD_EXTRA_ARGS ?=
 # gcc or clang
 COMPILER ?= gcc
+NUM_JOBS ?= $(shell echo $$(( $$(nproc) / 2 )))
 
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
@@ -28,7 +29,6 @@ DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
-NUM_JOBS := $(shell echo $$(( $$(nproc) / 2 )))
 
 default: help
 
@@ -109,8 +109,10 @@ deep-clean: ## remove all build files and configuration
 
 .PHONY: list-opts
 list-opts: ## list available CMake options
-	@if ! cmake -S . -B build/ -LAH -N 2>/dev/null \
-			| grep ASMGRADER_ -B 1 \
+	@if ! cmake -S . -B $(shell find build/ -maxdepth 1 -mindepth 1 | head -n1) -LAH -N 2>/dev/null \
+			| grep ASMGRADER_ --before-context 1 --group-separator='' \
+			| sed '/\/\// { s/^/[34m/; s/$$/[0m/; }' \
+			| sed '/^\w/  { s/^/[32m/; s/:/[0m:/; }' \
 			; then \
 		printf '\033[31mError: CMake command failed. Is the project configured?\033[0m\n'; \
 		exit 1; \
