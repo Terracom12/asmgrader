@@ -43,13 +43,13 @@ help: # with thanks to Ben Rady
 # if any cmake sources change, so we don't have to handle that manually here.
 
 $(BUILD_DIR)/$(DEBUG_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
+	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
 
 $(BUILD_DIR)/$(RELEASE_PRESET):
-	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
+	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
 
 $(BUILD_DIR)/$(DOCS_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
+	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
 
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/$(DEBUG_PRESET)
