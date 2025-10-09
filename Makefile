@@ -29,7 +29,6 @@ DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
-NUM_JOBS := $(shell echo $$(( $$(nproc) / 2 )))
 
 default: help
 
