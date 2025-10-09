@@ -29,6 +29,7 @@ DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
+NUM_JOBS := $(shell echo $$(( $$(nproc) / 2 )))
 
 default: help
 
@@ -43,13 +44,13 @@ help: # with thanks to Ben Rady
 # if any cmake sources change, so we don't have to handle that manually here.
 
 $(BUILD_DIR)/$(DEBUG_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 $(BUILD_DIR)/$(RELEASE_PRESET):
-	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 $(BUILD_DIR)/$(DOCS_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/$(DEBUG_PRESET)
