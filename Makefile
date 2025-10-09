@@ -28,6 +28,8 @@ DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
+NUM_JOBS := $(shell echo $$(( $$(nproc) / 2 )))
+
 default: help
 
 ##### --- snipped from gh:compiler-explorer/compiler-explorer/blob/main/Makefile
@@ -41,13 +43,13 @@ help: # with thanks to Ben Rady
 # if any cmake sources change, so we don't have to handle that manually here.
 
 $(BUILD_DIR)/$(DEBUG_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(DEBUG_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 $(BUILD_DIR)/$(RELEASE_PRESET):
-	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(RELEASE_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 $(BUILD_DIR)/$(DOCS_PRESET):
-	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --preset $(DOCS_PRESET) $(CMAKE_CONFIGURE_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: configure-debug
 configure-debug: $(BUILD_DIR)/$(DEBUG_PRESET)
@@ -64,34 +66,34 @@ build: build-debug  ## alias for build-debug
 
 .PHONY: build-debug
 build-debug: configure-debug ## build in debug mode
-	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-release
 build-release: configure-release ## build in release mode (with debug info)
-	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 	
 .PHONY: build-docs
 build-docs: configure-docs ## build in release mode (with debug info)
-	@$(SRC_ENV) && cmake --build --preset $(DOCS_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DOCS_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-tests-debug
 build-tests-debug: configure-debug
-	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-tests-release
 build-tests-release: configure-release
-	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: test
 test: test-debug  ## alias for test-debug
 
 .PHONY: test-debug
 test-debug: build-tests-debug ## run tests in debug mode
-	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS)
+	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: test-release
 test-release: build-tests-release ## run tests in release mode
-	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS)
+	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS) -j $(NUM_JOBS)
 
 
 .PHONY: clean
