@@ -88,7 +88,7 @@ std::string TestContext::get_full_stdout() {
     return prog_.get_subproc().get_full_stdout();
 }
 
-void TestContext::send_stdin(const std::string& input) {
+void TestContext::send_stdin(std::string_view input) {
     TRY_OR_THROW(prog_.get_subproc().send_stdin(input), "failed to write to stdin");
 }
 

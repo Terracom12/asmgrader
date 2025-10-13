@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <sys/types.h>
@@ -37,7 +38,7 @@ public:
     /// Get all stdout since the program has launched
     const std::string& get_full_stdout();
 
-    Result<void> send_stdin(const std::string& str);
+    Result<void> send_stdin(std::string_view str);
 
     // Forks the current process to start a new subprocess as specified
     virtual Result<void> start();

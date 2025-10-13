@@ -14,6 +14,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -225,7 +226,7 @@ Result<void> Subprocess::read_stdout_impl() {
     return {};
 }
 
-Result<void> Subprocess::send_stdin(const std::string& str) {
+Result<void> Subprocess::send_stdin(std::string_view str) {
     // TODO: more abstract write wrapper that ensures all bytes were sent
     TRYE(linux::write(stdin_pipe_.write_fd, str), SyscallFailure);
 
