@@ -8,19 +8,23 @@
 #include <fmt/compile.h>
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace asmgrader {
 
-MultiStudentRunner::MultiStudentRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer)
+MultiStudentRunner::MultiStudentRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer,
+                                       const std::optional<std::string>& tests_filter)
     : assignment_{&assignment}
-    , serializer_{serializer} {}
+    , serializer_{serializer}
+    , filter_{tests_filter} {}
 
 MultiStudentResult MultiStudentRunner::run_all_students(const std::vector<StudentInfo>& students) const {
     MultiStudentResult result;
 
-    AssignmentTestRunner assignment_runner{*assignment_, serializer_};
+    AssignmentTestRunner assignment_runner{*assignment_, serializer_, filter_};
 
     for (const StudentInfo& info : students) {
         serializer_->on_student_begin(info);

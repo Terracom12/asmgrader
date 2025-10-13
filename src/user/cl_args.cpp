@@ -141,6 +141,14 @@ void CommandLineArgs::setup_parser() {
         .help("Whether/when to stop early, to not flood the console with failing test messages.");
 
 
+    arg_parser_.add_argument("--filter")
+        .metavar("STR")
+        .nargs(1)
+        .action([&] (const std::string& opt) {
+            opts_buffer_.tests_filter = opt;
+        })
+        .help("Filter for test cases to be run. Matching occurs if STR occurs anywhere within the test case name.");
+
     arg_parser_.add_argument("-c", "--color")
         .choices("never", "auto", "always")
         .default_value(std::string{"auto"})

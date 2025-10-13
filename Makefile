@@ -16,6 +16,7 @@ CMAKE_CONFIGURE_EXTRA_ARGS ?=
 CMAKE_BUILD_EXTRA_ARGS ?=
 # gcc or clang
 COMPILER ?= gcc
+NUM_JOBS ?= $(shell echo $$(( $$(nproc) / 2 )))
 
 ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
@@ -27,6 +28,7 @@ RELEASE_PRESET := unixlike-$(COMPILER)-release
 DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
+
 
 default: help
 
@@ -64,34 +66,34 @@ build: build-debug  ## alias for build-debug
 
 .PHONY: build-debug
 build-debug: configure-debug ## build in debug mode
-	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-release
 build-release: configure-release ## build in release mode (with debug info)
-	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 	
 .PHONY: build-docs
 build-docs: configure-docs ## build in release mode (with debug info)
-	@$(SRC_ENV) && cmake --build --preset $(DOCS_PRESET) $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DOCS_PRESET) $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-tests-debug
 build-tests-debug: configure-debug
-	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(DEBUG_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: build-tests-release
 build-tests-release: configure-release
-	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS)
+	@$(SRC_ENV) && cmake --build --preset $(RELEASE_PRESET) --target asmgrader_tests $(CMAKE_BUILD_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: test
 test: test-debug  ## alias for test-debug
 
 .PHONY: test-debug
 test-debug: build-tests-debug ## run tests in debug mode
-	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS)
+	 @$(SRC_ENV) && ctest --preset $(DEBUG_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS) -j $(NUM_JOBS)
 
 .PHONY: test-release
 test-release: build-tests-release ## run tests in release mode
-	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS)
+	 @$(SRC_ENV) && ctest --preset $(RELEASE_PRESET) --progress --output-on-failure --no-tests=error $(CTEST_EXTRA_ARGS) -j $(NUM_JOBS)
 
 
 .PHONY: clean
@@ -107,8 +109,10 @@ deep-clean: ## remove all build files and configuration
 
 .PHONY: list-opts
 list-opts: ## list available CMake options
-	@if ! cmake -S . -B build/ -LAH -N 2>/dev/null \
-			| grep ASMGRADER_ -B 1 \
+	@if ! cmake -S . -B $(shell find build/ -maxdepth 1 -mindepth 1 | head -n1) -LAH -N 2>/dev/null \
+			| grep ASMGRADER_ --before-context 1 --group-separator='' \
+			| sed '/\/\// { s/^/[34m/; s/$$/[0m/; }' \
+			| sed '/^\w/  { s/^/[32m/; s/:/[0m:/; }' \
 			; then \
 		printf '\033[31mError: CMake command failed. Is the project configured?\033[0m\n'; \
 		exit 1; \
