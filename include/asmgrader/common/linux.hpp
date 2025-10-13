@@ -17,6 +17,7 @@
 #include <ctime>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -42,7 +43,7 @@ inline std::error_code make_error_code(int err = errno) {
 
 /// writes to a file descriptor. See write(2)
 /// returns success/failure; logs failure at debug level
-inline Expected<ssize_t> write(int fd, const std::string& data) {
+inline Expected<ssize_t> write(int fd, std::string_view data) {
     ssize_t res = ::write(fd, data.data(), data.size());
 
     if (res == -1) {

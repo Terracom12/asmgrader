@@ -91,7 +91,7 @@ public:
     RegistersState get_registers() const;
 
     /// Get any **new** stdout from the program since the last call to this function
-    void send_stdin(const std::string& input);
+    void send_stdin(std::string_view input);
 
     /// Find a named symbol in the associated program
     /// \tparam T  type of data that the symbol refers to
