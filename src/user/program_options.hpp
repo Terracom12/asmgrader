@@ -36,6 +36,11 @@ struct ProgramOptions
     VerbosityLevel verbosity = DEFAULT_VERBOSITY_LEVEL;
     std::string assignment_name;
 
+    /// Filter for test cases to be ran
+    /// Only very basic matching for now: simply checks whether the specified string exists anywhere
+    /// within the test case name.
+    std::optional<std::string> tests_filter;
+
     /// Never = stop only on fatal errors
     /// FirstError = stop completely on the first error encountered
     /// EachTestError = stop each test early upon error, but still attempt to run subsequent tests
