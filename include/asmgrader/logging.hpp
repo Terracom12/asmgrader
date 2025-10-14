@@ -22,11 +22,9 @@
 #include <system_error>
 // #include <fmt/std.h> // FIXME: This generates errors...
 
-#if defined(DEBUG) || defined(TRACE)
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#if defined(DEBUG) || defined(TRACE)
 #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
-#else
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
 #endif
 
 #include <spdlog/cfg/env.h>
