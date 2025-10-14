@@ -132,12 +132,14 @@ std::size_t TestContext::flush_stdin() {
 #warning "Your system does not support the `ppoll` syscall! TestContext::flush_stdin will not work!"
     UNIMPLEMENTED("SYS_ppoll not defined!");
 #else
+    // HACK: This is inefficient for a single program, but will break if static when run for multiple program instances
+
     // Buffer to send SYS_read output to
-    static const AsmBuffer READ_BUFFER = create_buffer<32>();
+    const AsmBuffer READ_BUFFER = create_buffer<32>();
     // struct timespec buffer for ppoll
-    static const AsmBuffer ZERO_TIMESPEC_BUFFER = create_buffer<sizeof(timespec)>();
+    const AsmBuffer ZERO_TIMESPEC_BUFFER = create_buffer<sizeof(timespec)>();
     // A fd_set with only STDIN for SYS_select
-    static const AsmBuffer STDIN_ONLY_POLLFD_BUFFER = create_buffer<sizeof(pollfd)>();
+    const AsmBuffer STDIN_ONLY_POLLFD_BUFFER = create_buffer<sizeof(pollfd)>();
 
     ZERO_TIMESPEC_BUFFER.zero();
 
