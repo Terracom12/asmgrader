@@ -36,12 +36,12 @@ public:
     void add_test(std::unique_ptr<TestBase> test) noexcept;
 
     template <typename Func>
-        requires(std::is_void_v<std::invoke_result_t<Func, Assignment>>)
+        requires(std::is_void_v<std::invoke_result_t<Func, Assignment&>>)
     void for_each_assignment(Func&& fun);
 
     template <typename Func>
-        requires(!std::is_void_v<std::invoke_result_t<Func, Assignment>>)
-    std::vector<std::invoke_result_t<Func, Assignment>> for_each_assignment(Func&& fun);
+        requires(!std::is_void_v<std::invoke_result_t<Func, Assignment&>>)
+    std::vector<std::invoke_result_t<Func, Assignment&>> for_each_assignment(Func&& fun);
 
     auto get_assignments() noexcept {
         return registered_assignments_ |
@@ -52,6 +52,18 @@ public:
     std::optional<std::reference_wrapper<Assignment>> get_assignment(std::string_view name) {
         auto name_matcher = [name](const std::unique_ptr<Assignment>& assignment) {
             return assignment->get_name() == name;
+        };
+
+        if (auto iter = ranges::find_if(registered_assignments_, name_matcher); iter != registered_assignments_.end()) {
+            return **iter;
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::reference_wrapper<Assignment>> get_assignment_by_pathname(std::string_view pathname) {
+        auto name_matcher = [pathname](const std::unique_ptr<Assignment>& assignment) {
+            return assignment->get_exec_path() == pathname;
         };
 
         if (auto iter = ranges::find_if(registered_assignments_, name_matcher); iter != registered_assignments_.end()) {
@@ -102,16 +114,16 @@ Assignment& GlobalRegistrar::find_or_create_assignment(metadata::Metadata<Metada
 }
 
 template <typename Func>
-    requires(std::is_void_v<std::invoke_result_t<Func, Assignment>>)
+    requires(std::is_void_v<std::invoke_result_t<Func, Assignment&>>)
 void GlobalRegistrar::for_each_assignment(Func&& fun) {
-    for (auto& assignement : get_assignments()) {
-        std::forward<Func>(fun)(assignement);
+    for (auto& assignment : get_assignments()) {
+        std::forward<Func>(fun)(assignment);
     }
 }
 
 template <typename Func>
-    requires(!std::is_void_v<std::invoke_result_t<Func, Assignment>>)
-std::vector<std::invoke_result_t<Func, Assignment>> GlobalRegistrar::for_each_assignment(Func&& fun) {
+    requires(!std::is_void_v<std::invoke_result_t<Func, Assignment&>>)
+std::vector<std::invoke_result_t<Func, Assignment&>> GlobalRegistrar::for_each_assignment(Func&& fun) {
     std::vector<std::invoke_result_t<Func, Assignment>> result;
     result.reserve(registered_assignments_.size());
 

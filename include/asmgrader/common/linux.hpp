@@ -1,11 +1,13 @@
 #pragma once
 
+#include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
 #include <asmgrader/logging.hpp>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <gsl/zstring>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/transform.hpp>
 
@@ -100,6 +102,23 @@ inline Expected<> kill(pid_t pid, int sig) {
         auto err = make_error_code(errno);
 
         LOG_DEBUG("kill failed: '{}'", err);
+        return err;
+    }
+
+    return {};
+}
+
+/// see access(2)
+/// returns success/failure; logs failure at debug level
+inline Expected<> access(gsl::czstring path, int mode) {
+    ASSERT((static_cast<u64>(mode) & ~static_cast<u64>(R_OK | W_OK | X_OK | F_OK)) == 0, mode);
+
+    int res = ::access(path, mode);
+
+    if (res == -1) {
+        auto err = make_error_code(errno);
+
+        LOG_DEBUG("access failed: '{}'", err);
         return err;
     }
 

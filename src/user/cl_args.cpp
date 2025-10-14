@@ -61,11 +61,22 @@ void CommandLineArgs::setup_parser() {
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
 
     // clang-format off
+    std::string assignment_help_str = fmt::format("The assignment to run tests on.\n"
+#ifndef PROFESSOR_VERSION
+            "If left unspecified, will attempt to infer the assignment based on files in the current working directory.\n"
+#endif
+            "One of: {}", assignment_names.empty() ? "<No assignments; this is probably an error>" : fmt::format("{:n}", assignment_names));
     auto& assignment_arg = arg_parser_.add_argument("assignment")
         .store_into(opts_buffer_.assignment_name)
-        // Add all assignment names to help msg, since argparse won't add choices by
-        // default for some reason
-        .help(fmt::format("The assignment to run tests on\nOne of: {:n}", assignment_names));
+#ifdef PROFESSOR_VERSION
+        .help(assignment_help_str);
+#else
+        // inferring the lab is only supported in student mode for now
+        .nargs(0, 1)  // [optional]
+        .help(assignment_help_str);
+#endif // !PROFESSOR_VERSION
+    // Add all assignment names to help msg, since argparse won't add choices by
+    // default for some reason
     GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) {
         assignment_arg.add_choice(assignment.get_name());
     });

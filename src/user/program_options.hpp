@@ -116,6 +116,17 @@ struct ProgramOptions
 
         TRY(ensure_is_directory(search_path, "Search path {:?}"));
 
+        // Only check the database path if it's not the default
+        // non-existance will be handled properly in ProfessorApp
+        if (database_path != DEFAULT_DATABASE_PATH) {
+            TRY(ensure_is_regular_file(database_path, "Database file {:?}"));
+        }
+
+        // If the assignment name is empty, we're going to be attempting to infer it elsewhere
+        if (assignment_name.empty()) {
+            return {};
+        }
+
         // The CLI should verify that the specified assignment is valid
         // We'll check here just in case and return an error if it's not
         auto assignment = TRYE(GlobalRegistrar::get().get_assignment(assignment_name),
@@ -127,12 +138,6 @@ struct ProgramOptions
 
             TRY(ensure_is_regular_file(exec_file_name, "File to run tests on {:?}"));
             TRY(Program::check_is_compat_elf(exec_file_name));
-        }
-
-        // Only check the database path if it's not the default
-        // non-existance will be handled properly in ProfessorApp
-        if (database_path != DEFAULT_DATABASE_PATH) {
-            TRY(ensure_is_regular_file(database_path, "Database file {:?}"));
         }
 
         return {};
