@@ -115,44 +115,80 @@ target_compile_definitions(
 ##### Built executables of the CLI library with no user-defined student tests
 # Used to check whether basic flags (--help and --version) work properly
 
-add_executable(asmgrader_cli_empty)
+add_executable(
+    asmgrader_dumb_cli
+
+    dumb_assignment.cpp
+)
+target_compile_definitions(
+    asmgrader_dumb_cli
+
+    PRIVATE
+    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+)
 target_link_libraries(
-    asmgrader_cli_empty
+    asmgrader_dumb_cli
     PRIVATE
     asmgrader_core_with_main
 )
 
-add_executable(asmgrader_profcli_empty)
+add_executable(
+    asmgrader_dumb_profcli
+
+    dumb_assignment.cpp
+)
+target_compile_definitions(
+    asmgrader_dumb_profcli
+
+    PRIVATE
+    "ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\""
+)
 target_link_libraries(
-    asmgrader_profcli_empty
+    asmgrader_dumb_profcli
     PRIVATE
     asmgrader_prof_core_with_main
 )
 
 # Provide a simple smoke test to make sure that the CLI works and can display a --help message
-add_test(
-    NAME cli.has_help
-    COMMAND asmgrader_cli_empty --help
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-add_test(
-    NAME prof_cli.has_help
-    COMMAND asmgrader_profcli_empty  --help
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-add_dependencies(asmgrader_tests asmgrader_profcli_empty asmgrader_cli_empty)
+add_test(NAME cli.has_help COMMAND asmgrader_dumb_cli --help)
+add_test(NAME prof_cli.has_help COMMAND asmgrader_dumb_profcli --help)
 
 # Provide a test to verify that the version being reported from the application
 # matches the version given to CMake. This will be important once you package
 # your program. Real world shows that this is the kind of simple mistake that is easy
 # to make, but also easy to test for.
-add_test(NAME cli.version_matches COMMAND asmgrader_cli_empty --version)
-add_test(NAME prof_cli.version_matches COMMAND asmgrader_profcli_empty --version)
+add_test(NAME cli.version_matches COMMAND asmgrader_dumb_cli --version)
+add_test(NAME prof_cli.version_matches COMMAND asmgrader_dumb_profcli --version)
 set_tests_properties(
     cli.version_matches prof_cli.version_matches
     PROPERTIES PASS_REGULAR_EXPRESSION "${ASMGRADER_VERSION}"
 )
+
+
+# Provide a simple smoke test to verify that the simple "dumb" tests all pass
+# Verify when both inferring file name and when specifying
+add_test(NAME cli.dumb_tests_pass COMMAND asmgrader_dumb_cli thing --file $<TARGET_FILE:asm_tests>)
+add_test(NAME prof_cli.dumb_tests_pass COMMAND asmgrader_dumb_profcli thing --file $<TARGET_FILE:asm_tests>)
+
+add_test(
+    NAME cli.infer_exec_name 
+    COMMAND asmgrader_dumb_cli thing
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+add_test(
+    NAME prof_cli.infer_exec_name 
+    COMMAND asmgrader_dumb_profcli thing
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Provide a simple smoke test to verify that the student mode is capable of inferring the lab name based on the exec
+add_test(
+    NAME cli.infer_assignment 
+    COMMAND asmgrader_dumb_cli
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_dependencies(asmgrader_tests asmgrader_dumb_cli asmgrader_dumb_profcli)
 
 # !!DISCLAIMER!!
 # This was adapted from the following source

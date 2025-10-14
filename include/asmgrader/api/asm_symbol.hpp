@@ -50,7 +50,7 @@ public:
 };
 
 template <typename T>
-class AsmSymbol : AsmData<T>
+class AsmSymbol : public AsmData<T>
 {
 public:
     AsmSymbol(Program& prog, std::string name, std::uintptr_t address);
