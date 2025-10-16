@@ -21,15 +21,20 @@
     STRINGIFY(ASMGRADER_VERSION_MAJOR) "." STRINGIFY(ASMGRADER_VERSION_MINOR) "." STRINGIFY(ASMGRADER_VERSION_PATCH)
 #define ASMGRADER_VERSION_GIT_HASH_STRING STRINGIFY(ASMGRADER_VERSION_GIT_HASH)
 
+#ifndef ASMGRADER_EXTRA_VERSION_INFO
+/// A string with more version info defined by the library user
+/// Most useful for defining a secondary "implementation version" seperate from the library version
+#define ASMGRADER_EXTRA_VERSION_INFO ""
+#endif
+
 namespace asmgrader {
+// The maximum value of any MAJOR / MINOR / PATCH field
+constexpr auto MAX_VERSION_FIELD = 99;
 
 consteval unsigned int get_version() {
-    // The maximum value of any MAJOR / MINOR / PATCH field
-    constexpr auto MAX_VERSION_FIELD = 99;
-
-    static_assert(ASMGRADER_VERSION_MAJOR < MAX_VERSION_FIELD);
-    static_assert(ASMGRADER_VERSION_MINOR < MAX_VERSION_FIELD);
-    static_assert(ASMGRADER_VERSION_PATCH < MAX_VERSION_FIELD);
+    static_assert(ASMGRADER_VERSION_MAJOR <= MAX_VERSION_FIELD);
+    static_assert(ASMGRADER_VERSION_MINOR <= MAX_VERSION_FIELD);
+    static_assert(ASMGRADER_VERSION_PATCH <= MAX_VERSION_FIELD);
 
     constexpr auto MINOR_MULTIPLIER = MAX_VERSION_FIELD + 1;
     constexpr auto MAJOR_MULTIPLIER = MINOR_MULTIPLIER * MINOR_MULTIPLIER;

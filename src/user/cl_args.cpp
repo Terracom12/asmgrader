@@ -2,6 +2,7 @@
 
 #include "api/assignment.hpp"
 #include "common/expected.hpp"
+#include "common/os.hpp"
 #include "common/static_string.hpp"
 #include "common/terminal_checks.hpp"
 #include "grading_session.hpp"
@@ -12,6 +13,7 @@
 #include "version.hpp"
 
 #include <argparse/argparse.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/compile.h>
@@ -51,9 +53,11 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{} {}">(
+    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{}{}{}{}">(
         ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING,
-        APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)");
+        APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)",
+        std::string_view{ASMGRADER_EXTRA_VERSION_INFO}.empty() ? "" : "\n",
+        std::string_view{ASMGRADER_EXTRA_VERSION_INFO});
 
     arg_parser_.add_description(VERSION_STR.str());
 
@@ -87,9 +91,10 @@ void CommandLineArgs::setup_parser() {
         .implicit_value(true)
         .nargs(0)
         .action([&](const auto & /*unused*/) {
+            // FIXME: This is BUILD info
             RunMetadata run_info{};
 
-            fmt::println("{} [{}]\n", std::string_view{VERSION_STR}, run_info.version);
+            fmt::println("{}\n", std::string_view{VERSION_STR});
 
             std::string_view compiler_str = "<unknown>";
 
@@ -99,7 +104,21 @@ void CommandLineArgs::setup_parser() {
                 compiler_str = "Clang";
             }
 
-            fmt::println("Built with {} v{}.{}.{}", compiler_str, run_info.compiler_info.major_version, run_info.compiler_info.minor_version, run_info.compiler_info.patch_version);
+            fmt::println("Build Type: "
+#if defined(DEBUG)
+                "Debug"
+#elif defined(RELEASE)
+                "Release"
+#else
+                "<unknown>"
+#endif
+            );
+            fmt::println("Target: {}, {}", SYSTEM_PROCESSOR, EndiannessKind::Native);
+            fmt::println("Compiler: {} v{}.{}.{}", compiler_str, run_info.compiler_info.major_version, run_info.compiler_info.minor_version, run_info.compiler_info.patch_version);
+
+            fmt::println("");
+            fmt::println("Build Time: {} at {}", __DATE__, __TIME__);
+
             std::exit(0);
         })
         .help("prints version information and exits");
