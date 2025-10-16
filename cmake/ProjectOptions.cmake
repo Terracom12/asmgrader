@@ -62,6 +62,7 @@ macro(asmgrader_setup_options)
 
     asmgrader_supports_sanitizers()
 
+    set(ASMGRADER_EXTRA_VERSION_INFO "" CACHE STRING "Extra info string for CLI" )
     if(NOT PROJECT_IS_TOP_LEVEL)
         option(ASMGRADER_ENABLE_TRACING "Enable tracing logs (default on in DEBUG mode)" OFF)
         option(ASMGRADER_BUILD_TESTS "Enable building unit tests" OFF)
@@ -196,6 +197,13 @@ macro(asmgrader_local_options)
             asmgrader_options
             INTERFACE
             "TRACE"
+        )
+    endif()
+    if(ASMGRADER_EXTRA_VERSION_INFO)
+        target_compile_definitions(
+            asmgrader_options
+            INTERFACE
+            ASMGRADER_EXTRA_VERSION_INFO="${ASMGRADER_EXTRA_VERSION_INFO}"
         )
     endif()
 
