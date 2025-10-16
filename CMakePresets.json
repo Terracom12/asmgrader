@@ -42,6 +42,18 @@
             }
         },
         {
+            "name": "aarch64-overlay",
+            "hidden": true,
+            "description": "Overrides for AArch64 cross-compilation",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-toolchain.cmake",
+                "ASMGRADER_ENABLE_SANITIZER_ADDRESS": "OFF",
+                "ASMGRADER_ENABLE_SANITIZER_LEAK": "OFF",
+                "ASMGRADER_ENABLE_SANITIZER_THREAD": "OFF",
+                "ASMGRADER_ENABLE_SANITIZER_UNDEFINED": "OFF"
+            }
+        },
+        {
             "name": "unixlike-gcc-debug",
             "displayName": "gcc Debug",
             "description": "Target Unix-like OS with the gcc compiler, debug build type",
@@ -84,6 +96,26 @@
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo"
             }
+        },
+        {
+            "name": "aarch64-clang-debug",
+            "inherits": ["unixlike-clang-debug", "aarch64-overlay"],
+            "displayName": "clang Debug (AArch64)"
+        },
+        {
+            "name": "aarch64-clang-release",
+            "inherits": ["unixlike-clang-release", "aarch64-overlay"],
+            "displayName": "clang Release (AArch64)"
+        },
+        {
+            "name": "aarch64-gcc-debug",
+            "inherits": ["unixlike-gcc-debug", "aarch64-overlay"],
+            "displayName": "gcc Debug (AArch64)"
+        },
+        {
+            "name": "aarch64-gcc-release",
+            "inherits": ["unixlike-gcc-release", "aarch64-overlay"],
+            "displayName": "gcc Release (AArch64)"
         },
         {
             "name": "unixlike-docs-only",
@@ -128,6 +160,31 @@
             "description": "Target Unix-like OS, only configure for docs and nothing else",
             "configurePreset": "unixlike-docs-only",
             "targets": "doxygen-docs"
+        },
+        {
+            "name": "aarch64-gcc-debug",
+            "inherits": "unixlike-gcc-debug",
+            "configurePreset": "aarch64-gcc-debug"
+        },
+        {
+            "name": "aarch64-gcc-release",
+            "inherits": "unixlike-gcc-release",
+            "configurePreset": "aarch64-gcc-release"
+        },
+        {
+            "name": "aarch64-clang-debug",
+            "inherits": "unixlike-clang-debug",
+            "configurePreset": "aarch64-clang-debug"
+        },
+        {
+            "name": "aarch64-clang-release",
+            "inherits": "unixlike-clang-release",
+            "configurePreset": "aarch64-clang-release"
+        },
+        {
+            "name": "aarch64-docs-only",
+            "inherits": "unixlike-docs-only",
+            "configurePreset": "unixlike-docs-only"
         }
     ],
     "testPresets": [
@@ -169,6 +226,26 @@
             "description": "Enable output and stop on failure",
             "inherits": "test-common",
             "configurePreset": "unixlike-clang-release"
+        },
+        {
+            "name": "aarch64-gcc-debug",
+            "inherits": "test-common",
+            "configurePreset": "aarch64-gcc-debug"
+        },
+        {
+            "name": "aarch64-gcc-release",
+            "inherits": "test-common",
+            "configurePreset": "aarch64-gcc-release"
+        },
+        {
+            "name": "aarch64-clang-debug",
+            "inherits": "test-common",
+            "configurePreset": "aarch64-clang-debug"
+        },
+        {
+            "name": "aarch64-clang-release",
+            "inherits": "test-common",
+            "configurePreset": "aarch64-clang-release"
         }
     ]
 }

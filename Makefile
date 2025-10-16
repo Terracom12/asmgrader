@@ -14,6 +14,7 @@
 CTEST_EXTRA_ARGS ?=
 CMAKE_CONFIGURE_EXTRA_ARGS ?=
 CMAKE_BUILD_EXTRA_ARGS ?=
+CROSS_COMPILE ?=
 # gcc or clang
 COMPILER ?= gcc
 NUM_JOBS ?= $(shell echo $$(( $$(nproc) / 2 )))
@@ -23,12 +24,18 @@ ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BUILD_DIR := $(ROOT_DIR)/build
 SOURCE_DIR := $(ROOT_DIR)
 
-DEBUG_PRESET := unixlike-$(COMPILER)-debug
-RELEASE_PRESET := unixlike-$(COMPILER)-release
-DOCS_PRESET := unixlike-docs-only
 
 SRC_ENV := if [ -f "$(ROOT_DIR)/.env" ]; then export $$(cat "$(ROOT_DIR)/.env" | xargs); echo "Set enviornment variables:"; sed -E 's/=.*//' "$(ROOT_DIR)/.env"; echo; fi
 
+ifdef CROSS_COMPILE
+	DEBUG_PRESET := aarch64-$(COMPILER)-debug
+	RELEASE_PRESET := aarch64-$(COMPILER)-release
+	DOCS_PRESET := aarch64-docs-only
+else
+	DEBUG_PRESET := unixlike-$(COMPILER)-debug
+	RELEASE_PRESET := unixlike-$(COMPILER)-release
+	DOCS_PRESET := unixlike-docs-only
+endif
 
 default: help
 
