@@ -14,7 +14,7 @@ Build project with preset according to options.
 Do so within a docker container if \`docker\` is specified.
 
 Arguments:
-    [preset-opts]  build-type, compiler, generator
+    [preset-opts]  build-type, compiler, generator OR docs[-only]
                    default triple is: debug-gcc-ninja
     [docker]       build takes place within a docker container defined by Dockerfile
 
@@ -88,6 +88,9 @@ while (($#)); do
     ninja | make)
         generator="$opt"
         ;;
+    docs | docs-only)
+        preset='unixlike-docs-only'
+        ;;
     *)
         >&2 echo 'Invalid option!' "($opt)"
         usage
@@ -102,7 +105,7 @@ if [[ $jobs -gt $(nproc) ]]; then
     jobs=$(nproc)
 fi
 
-preset="${cross_compile}unixlike-${compiler}-${generator}-${build_type}"
+preset="${preset-${cross_compile}unixlike-${compiler}-${generator}-${build_type}}"
 
 if [[ -n $deep_clean ]]; then
     rm -rf "./build/$preset"

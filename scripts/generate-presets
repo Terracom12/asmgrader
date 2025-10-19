@@ -110,6 +110,23 @@ build_docs_only = [
     }
 ]
 
+workflow_docs_only = [
+    {
+        "name": "unixlike-docs-only",
+        "displayName": "Workflow: target Unix-like OS, for only docs",
+        "steps": [
+            {
+                "type": "configure",
+                "name": "unixlike-docs-only"
+            },
+            {
+                "type": "build",
+                "name": "unixlike-docs-only"
+            }
+        ]
+    }
+]
+
 presets = {
     "version": 6,
     "cmakeMinimumRequired": {
@@ -189,7 +206,7 @@ presets = {
             ]
         }
         for (cc, _), (genname, _), (cfgname, _) in itertools.product(compilers, generators, configs)
-    ]
+    ] + workflow_docs_only
 }
 
 def main():

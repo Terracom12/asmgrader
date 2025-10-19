@@ -669,6 +669,20 @@
                     "name": "unixlike-clang-make-release"
                 }
             ]
+        },
+        {
+            "name": "unixlike-docs-only",
+            "displayName": "Workflow: target Unix-like OS, for only docs",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-docs-only"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-docs-only"
+                }
+            ]
         }
     ]
 }
