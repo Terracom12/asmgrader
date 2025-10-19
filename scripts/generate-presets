@@ -93,11 +93,12 @@ test_common = [
         "description": "Test CMake settings that apply to all configurations",
         "hidden": True,
         "output": {
-            "outputOnFailure": True
+            "outputOnFailure": True,
+            "outputJUnitFile": "${sourceDir}/reports/junit-ctest.xml"
         },
         "execution": {
             "noTestsAction": "error"
-        }
+        },
     }
 ]
 

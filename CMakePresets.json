@@ -302,7 +302,8 @@
             "description": "Test CMake settings that apply to all configurations",
             "hidden": true,
             "output": {
-                "outputOnFailure": true
+                "outputOnFailure": true,
+                "outputJUnitFile": "${sourceDir}/reports/junit-ctest.xml"
             },
             "execution": {
                 "noTestsAction": "error"
