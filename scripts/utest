@@ -20,10 +20,6 @@ Options:
 EOF
 } >&2
 
-valid_build_types=("release" "debug")
-valid_compilers=("gcc" "clang")
-valid_generators=("ninja" "make")
-
 expand() {
     eval "IFS='|'; echo \"\${$1[*]}\""
 }
@@ -40,7 +36,7 @@ jobs=${JOBS-$(nproc)}
 cmake_args=()
 
 # Process all args
-until [[ -z $1 ]]; do
+while (($#)); do
     opt=${1,,} # transform to all lowercase
     case "$opt" in
     -n | --dry-run)
@@ -54,6 +50,7 @@ until [[ -z $1 ]]; do
         ;;
     -h | --help)
         usage
+        exit
         ;;
     -j | --jobs)
         if ! [[ $2 =~ ^[0-9]+$ ]]; then
