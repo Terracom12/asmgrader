@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+
+#
+# Generates the set of matrix-like presets for use with cmake presets
+#
+
+import json, itertools
+import subprocess
+import sys
+
+compilers = [
+        ("gcc", "g++"),
+        ("clang", "clang++")
+]
+generators = [
+    ("ninja", "Ninja"),
+    ("make", "Unix Makefiles")
+]
+configs = [
+    ("debug", "Debug"), 
+    ("release", "RelWithDebInfo")
+]
+
+def make_description(comp: str, gen: str, conf: str, crosscomp: bool, kind: str) -> str:
+    res = f"target Unix-like OS using {comp} and {gen} in {conf} mode"
+    if crosscomp:
+        res = "cross-compile to AArch64, " + res
+
+    res = kind[0].upper() + kind[1:] + ": " + res
+
+    return res
+
+# Common configure presets to inherit from
+
+conf_common = [
+    {
+        "name": "conf-base",
+        "description": "General settings that apply to all configurations",
+        "hidden": True,
+        "binaryDir": "${sourceDir}/build/${presetName}",
+        "installDir": "${sourceDir}/install/${presetName}"
+    },
+    {
+        "name": "conf-variables-base",
+        "hidden": True,
+        "description": "General variable options that apply to most configurations",
+        "cacheVariables": {
+            "ASMGRADER_BUILD_TESTS": "ON",
+            "ASMGRADER_ENABLE_CACHE": "ON",
+            "ASMGRADER_ENABLE_PCH": "ON"
+        }
+    },
+    {
+        "name": "conf-unixlike-base",
+        "description": "Unix-like OS settings",
+        "hidden": True,
+        "inherits": "conf-base",
+        "condition": {
+            "type": "inList",
+            "string": "${hostSystemName}",
+            "list": [
+                "Linux",
+                "Darwin"
+            ]
+        }
+    },
+    {
+        "name": "conf-aarch64cross-base",
+        "hidden": True,
+        "description": "Cross-compilation to AArch64 settings",
+        "cacheVariables": {
+            "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-toolchain.cmake"
+        }
+    },
+]
+
+conf_docs_only = [
+    {
+        "name": "unixlike-docs-only",
+        "displayName": "Configure: target Unix-like OS, for only docs",
+        "inherits": "conf-unixlike-base",
+        "cacheVariables": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "ASMGRADER_BUILD_DOCS": "ON",
+            "ASMGRADER_BUILD_DOCS_ONLY": "ON"
+        }
+    }
+]
+
+test_common = [
+    {
+        "name": "test-base",
+        "description": "Test CMake settings that apply to all configurations",
+        "hidden": True,
+        "output": {
+            "outputOnFailure": True
+        },
+        "execution": {
+            "noTestsAction": "error"
+        }
+    }
+]
+
+build_docs_only = [
+    {
+        "name": "unixlike-docs-only",
+        "displayName": "Build: target Unix-like OS, for only docs",
+        "configurePreset": "unixlike-docs-only",
+        "targets": "doxygen-docs"
+    }
+]
+
+presets = {
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+
+    "configurePresets": conf_common + [
+        {
+            "name": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}",
+            "displayName": make_description(cc, genname, cfgname, crosscomp, "configure"),
+            "inherits": ["conf-unixlike-base", "conf-variables-base"]
+                + (["conf-aarch64cross-base"] if crosscomp else []),
+            "generator": gen,
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": cc,
+                "CMAKE_CXX_COMPILER": cxx,
+                "CMAKE_BUILD_TYPE": cfg,
+            },
+        }
+        for (cc, cxx), (genname, gen), (cfgname, cfg), crosscomp in itertools.product(compilers, generators, configs, (False, True)) if not (crosscomp and cc != "gcc")
+    ] + conf_docs_only,
+
+    "buildPresets": [
+        {
+            "name": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}",
+            "displayName": make_description(cc, genname, cfgname, crosscomp, "build"),
+            "configurePreset": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}"
+        }
+        for (cc, _), (genname, _), (cfgname, _), crosscomp in itertools.product(compilers, generators, configs, (False, True)) if not (crosscomp and cc != "gcc")
+    ] + build_docs_only,
+
+    "testPresets": test_common + [
+        {
+            "name": f"unixlike-{cc}-{genname}-{cfgname}",
+            "displayName": make_description(cc, genname, cfgname, False, "test"),
+            "inherits": "test-base",
+            "configurePreset": f"unixlike-{cc}-{genname}-{cfgname}"
+        }
+        for (cc, _), (genname, _), (cfgname, _) in itertools.product(compilers, generators, configs)
+    ],
+
+    "workflowPresets": [
+        {
+            "name": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}",
+            "displayName": make_description(cc, genname, cfgname, crosscomp, "workflow"),
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}"
+                },
+                {
+                    "type": "build",
+                    "name": ("crossaarch64-" if crosscomp else "") + f"unixlike-{cc}-{genname}-{cfgname}"
+                }
+            ]
+        }
+        for (cc, _), (genname, _), (cfgname, _), crosscomp in itertools.product(compilers, generators, configs, (False, True)) if not (crosscomp and cc != "gcc")
+    ] + [
+        {
+            "name": f"unixlike-{cc}-{genname}-{cfgname}-test",
+            "displayName": make_description(cc, genname, cfgname, False, "workflow (with tests)"),
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": f"unixlike-{cc}-{genname}-{cfgname}"
+                },
+                {
+                    "type": "build",
+                    "name": f"unixlike-{cc}-{genname}-{cfgname}"
+                },
+                {
+                    "type": "test",
+                    "name": f"unixlike-{cc}-{genname}-{cfgname}"
+                }
+            ]
+        }
+        for (cc, _), (genname, _), (cfgname, _) in itertools.product(compilers, generators, configs)
+    ]
+}
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] in ("-l", "--list"):
+        list_res = subprocess.run(
+            ["cmake", "--list-presets", "all"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        ).stdout
+
+        print(str(list_res, encoding="utf-8"))
+        return
+
+    file = "CMakePresets.json"
+    json.dump(presets, open(file, "w"), indent=4)
+    print("CMake presets written to", file)
+
+if __name__ == "__main__":
+    main()

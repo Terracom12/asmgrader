@@ -1,10 +1,11 @@
-# Dockerfile.aarch64
 FROM debian:bookworm
 
 RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
     build-essential \
     cmake \
     ninja-build \
+    g++ \
+    gcc \
     g++-aarch64-linux-gnu \
     gcc-aarch64-linux-gnu \
     ccache \
