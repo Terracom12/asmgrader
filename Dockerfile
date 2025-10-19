@@ -16,15 +16,11 @@ RUN apt-get update -qq && apt-get install -qq --no-install-recommends \
 
 WORKDIR /workspace
 
-COPY . /workspace/
-
 ENV CPM_SOURCE_CACHE="/workspace/CPM" \
     CCACHE_DIR="/workspace/ccache" \
     CCACHE_SLOPPINESS="include_file_ctime,include_file_mtime,pch_defines,time_macros" \
     CCACHE_NAMESPACE="asmgrader-aarch64" \
     CCACHE_MAXSIZE="10Gi" \
     CCACHE_PCH_EXTSUM="true"
-
-VOLUME /workspace/CPM
 
 CMD ["/bin/bash"]
