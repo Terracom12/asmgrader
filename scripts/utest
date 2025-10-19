@@ -14,8 +14,8 @@ Arguments:
 
 Options:
     -h, --help                print this help message
-    -j JOBS, --jobs JOBS      Number of threads to use. Fallbacks are env{JOBS} then nproc(1)
     -n, --dry-run             print commands instead of executing them
+    -j JOBS, --jobs JOBS      number of threads to use. Fallbacks are env{JOBS} then nproc(1)
     --no-build                do not attempt to build
 EOF
 } >&2
@@ -31,6 +31,7 @@ compiler="gcc"
 generator="ninja"
 fresh=
 no_build=
+report=
 jobs=${JOBS-$(nproc)}
 
 cmake_args=()
@@ -60,18 +61,19 @@ while (($#)); do
         jobs="$2"
         shift
         ;;
+    release | debug)
+        build_type="$opt"
+        ;;
+    gcc | clang)
+        compiler="$opt"
+        ;;
+    ninja | make)
+        generator="$opt"
+        ;;
     *)
-        if [[ $opt =~ $(expand valid_build_types) ]]; then
-            build_type="$opt"
-        elif [[ $opt =~ $(expand valid_compilers) ]]; then
-            compiler="$opt"
-        elif [[ $opt =~ $(expand valid_generators) ]]; then
-            generator="$opt"
-        else
-            >&2 echo 'Invalid option!' "($opt)"
-            usage
-            exit 1
-        fi
+        >&2 echo 'Invalid option!' "($opt)"
+        usage
+        exit 1
         ;;
     esac
     shift
