@@ -1,0 +1,408 @@
+#!/usr/bin/env bash
+
+#
+# Set up gdb to debug the application
+#
+
+# Exit on error
+# Exit status of a pipeline is nonzero if any command fails
+# Usage of unset variables is treated as an error
+set -e -o pipefail -o nounset
+
+# when env{DEBUG} is set, trace the script
+[[ -v DEBUG ]] && set -o xtrace
+
+# --------------------------------------------------------------------------------
+# Functions
+# --------------------------------------------------------------------------------
+
+usage() {
+    cat <<EOF
+Usage: debug [OPTIONS] [exec] [ -- [gdbargs] ]
+Debug the specified executable according to options.
+Also supports starting and managing a gdbserver.
+
+Arguments:
+    [exec]         Executable to debug [default: tests] [possible values: t[ests], g[rader], p[rof]]
+    [gdbargs]      Extra arguments passed to gdb
+
+Options:
+    -h, --help                print this help message
+    -n, --dry-run             print commands instead of executing them
+    -b, --build <dir>         build directory [a path or just the build preset name]
+                              note that cross-compiled builds have a low chance of working non-natively
+    -t, --target <port>       remote debugging target to connect to
+    -l, --log <level>         log level for exec [may also be specified with env{LOG_LEVEL}]
+    -a, --args <args>         args to pass to executable [consumes until --]
+    -s, --server <arg>        start or manage gdb server
+                              arg is one of:
+                                <port> - start a gdb server on port
+                                k[ill] - kill all running gdb servers
+                                l[ist] - list all running gdb servers
+
+Example:
+    debug tests --build unixlike-clang-release --args --nothrow --invisibles -- --tui
+EOF
+} >&2
+
+# Prompt user for y/n confirmation
+# Defaults to N (no) for any response that is not affirmative
+# Args:
+#   $1 prompt - the string to prompt the user with
+#               " [y/N] " is implicitly appended to the end
+# Returns: zero if user replied affirmatively, nonzero otherwise
+confirm() {
+    read -rp "$1 [y/N] "
+    [[ $REPLY =~ ^[Yy](es)?$ ]]
+}
+
+# Check that a command is available
+# Args:
+#   $1 cmd
+# Returns: zero upon success, nonzero otherwise
+available() {
+    command -v "$1" &>/dev/null
+}
+
+# Returns success if stdout is a terminal
+# used to determine whether to do fancy formatting to output
+stdout_is_term() {
+    [[ -t 1 ]]
+}
+
+# Print an missing arg error along with usage, and exit
+arg_error() {
+    >&2 echo "Missing required argument for $1"
+    usage
+    exit 1
+}
+
+# Get a string to eval/print from an array of cmd+args
+# Args:
+#   $1   cmd
+#   $2-  args
+get_cmd_str() {
+    result="$1"
+    shift
+
+    for arg; do
+        [[ $arg =~ [$IFS] ]] && arg="'$arg'"
+        result+=" $arg"
+    done
+
+    echo "$result"
+}
+
+# Get a default build directory out of those that exist in ./build/
+# Returns: zero if dir was found, nonzero otherwise
+get_default_build_dir() {
+    include_regex='.*'
+    exclude_regex='.*docs.*'
+
+    # FIXME: shit
+    if [[ -n $cross_comp ]]; then
+        include_regex='.*aarch64.*'
+    # We'd only ever be cross-compiling x86_64 => AArch64, so this else is fine
+    elif [[ $(arch) != "aarch64" ]]; then
+        exclude_regex+='|.*aarch64.*'
+    fi
+
+    find ./build/ -regextype egrep \
+        -maxdepth 1 -mindepth 1 \
+        -type d \
+        -not -regex "$exclude_regex" \
+        -regex "$include_regex" \
+        -print -quit |
+        grep . # This is to exit with a nonzero status if no files are found
+
+}
+
+# --------------------------------------------------------------------------------
+# Variables
+# --------------------------------------------------------------------------------
+
+# -----------------------------
+# ---------- OPTIONS ----------
+### left as empty if unspecified
+
+# whether program is in dry-run mode
+dry_run=
+# whether we are attempting to debug a cross-compiled binary
+cross_comp=
+# argument for -s/--server subcommand
+server_arg=
+# build directory where execs are located
+# default is set later if unspecified based on other options (see get_default_build_dir)
+build_dir=
+# executable path relative to build dir; specified with tests|grader|prof
+exec=
+# remote executable or server specified with -t/--target
+remote_target=
+# log level passed to exec
+# defaults to error since logs are generally superfluous when using gdb
+log_level="${LOG_LEVEL-error}"
+# args passed to executable specified with -a/--args
+exec_args=()
+# args passed to gdb specified after --
+gdb_args=(
+    # TODO: disable all sanitizers if running cross-compiled exec non-natively
+    #
+    # LSAN does not work under gdb
+    # abortions will cause gdb to break on ASAN errors
+    '--quiet'
+    '--ex' 'set environment ASAN_OPTIONS detect_leaks=0:abort_on_error=1'
+)
+
+# ------------------------------
+# the command to run, where cmd[0] is the exec and cmd[1:] are the args
+# Printed in the case of dry-run and passed to `eval` otherwise
+cmd=()
+# string to eval/print from cmd generated by get_cmd_str
+cmd_str=
+# file to log to for gdbserver
+gdbserver_logfile=
+# pid of gdbserver
+gdbserver_pid=
+
+# --------------------------------------------------------------------------------
+# Script arguments
+# --------------------------------------------------------------------------------
+
+# ----------------------------------------
+# ---------- Raw arg processing ----------
+while (($#)); do
+    opt=${1,,} # transform to all lowercase
+
+    case "$opt" in
+    --) # end of normal arguments and options delimeter; start of gdbargs
+        shift
+        gdb_args+=("$@")
+        shift $#
+        break
+        ;;
+    # ------------------------------------------
+    # ---------- Positional arguments ----------
+    g | grader)
+        exec="tests/asmgrader_dumb_cli"
+        ;;
+    p | prof)
+        exec="tests/asmgrader_dumb_profcli"
+        ;;
+    t | tests)
+        exec="tests/asmgrader_tests"
+        # Tell catch2 to trigger a breakpoint upon failure
+        exec_args+=(--break)
+        ;;
+    # ----------------------------------------
+    # ---------- OPTIONAL arguments ----------
+    -h | --help)
+        usage
+        exit
+        ;;
+    -n | --dry-run)
+        dry_run=yes
+        ;;
+    -b | --build)
+        (($# > 1)) || arg_error "$1"
+        shift
+        build_dir=build/"$1"
+        ;;
+    -t | --target)
+        (($# > 1)) || arg_error "$1"
+        shift
+        remote_target="$1"
+        ;;
+    -l | --log)
+        (($# > 1)) || arg_error "$1"
+        shift
+        log_level="$1"
+        ;;
+    -a | --args)
+        # consume arguments until --
+        while (($#)) && [[ $1 != -- ]]; do
+            exec_args+=("$1")
+            shift
+        done
+        ;;
+    -s | --server)
+        (($# > 1)) || arg_error "$1"
+        shift
+        server_arg="$1"
+        ;;
+    *)
+        >&2 echo 'Invalid option!' "($1)"
+        usage
+        exit 1
+        ;;
+    esac
+    shift
+done
+
+# -------------------------------------------------
+# ---------- Arg validation + processing ----------
+
+if [[ $remote_target && $server ]]; then
+    >&2 echo 'Error: -t/--target is mutually exclusive with -s/--server'
+    usage
+    exit 1
+fi
+
+if [[ $remote_target ]]; then
+    echo "Attempting to connect to target $remote_target..."
+    gdb_args+=('--ex' "target remote $remote_target")
+fi
+
+if [[ $log_level ]]; then
+    gdb_args+=('--ex' "set environment LOG_LEVEL $log_level")
+fi
+
+if [[ -z $exec ]]; then
+    >&2 echo 'Selecting default executable: tests/asmgrader_tests'
+    exec=tests/asmgrader_tests
+fi
+
+if [[ -z $build_dir ]]; then
+    # Try to find a default build dir
+    if ! build_dir="$(get_default_build_dir)"; then
+        >&2 echo "Could not find a directory in ./build/ based on specs"
+        exit 1
+    else
+        >&2 echo "Selecting default build directory: $build_dir"
+    fi
+fi
+if ! [[ -d $build_dir ]]; then
+    >&2 echo "Build dir '$build_dir' does not exist"
+    exit 1
+fi
+
+if [[ -n $server_arg ]]; then
+    if ! available gdbserver; then
+        >&2 echo 'gdbserver command is not available'
+        exit 1
+    fi
+
+    case $server_arg in
+    k | kill)
+        if ! gdbserver_pid=$(pgrep gdbserver | xargs echo); then
+            >&2 echo 'It seems that no gdbserver is running'
+            exit 1
+        fi
+        ps h $gdbserver_pid
+        num_pids=$(wc -w <<<"$gdbserver_pid")
+        if [[ $num_pids -gt 1 ]]; then
+            pid_list="$(tr ' ' '|' <<<"$gdbserver_pid")"
+            read -rp 'Choose which pid to kill '"[$pid_list] "
+            pid_regex="^$pid_list$"
+            [[ $REPLY =~ $pid_regex ]] || {
+                >&2 echo 'Bad choice'
+                exit 1
+            }
+            echo 'Your choice:'
+            ps h $REPLY
+            gdbserver_pid=$REPLY
+        fi
+        confirm "Kill the above process"
+        kill -9 "$gdbserver_pid"
+        exit
+        ;;
+    l | list)
+        echo 'List of running gdbservers:'
+        pgrep -a gdbserver || echo '<No running servers>'
+        exit
+        ;;
+    *:*) ;;
+    *)
+        if ! [[ $server_arg =~ ^[0-9]+$ ]]; then
+            >&2 echo 'Invalid argument for server!' "($server_arg)"
+            usage
+            exit 1
+        fi
+
+        server_arg="localhost:$server_arg"
+        ;;
+    esac
+fi
+
+# Add directories as found in compile_commands.json
+if [[ -z $server_arg && -f $build_dir/compile_commands.json ]]; then
+    search_dirs=""
+    # Add all -I and -isystem directory entries
+    search_dirs="$(grep -o -e '-I[^ ]*' -e '-isystem [^ ]*' "$build_dir/compile_commands.json" | sed -E 's/-I|-isystem //g')"
+
+    if available jq; then
+        search_dirs+=" $(jq --raw-output '.[].file' "$build_dir/compile_commands.json" | xargs dirname)"
+    else
+        >&2 echo 'Warning: jq does not exist, so parts of compile_commands.json were not parsed to add search dirs for GDB'
+    fi
+
+    search_dirs=$(sort -u <<<"$search_dirs")
+
+    echo "Adding $(wc -l <<<"$search_dirs") directories to GDB search path"
+
+    for d in $search_dirs; do
+        # Directories may not exist if, for instance, we cross-compiled somewhere else
+        [[ -d $d ]] && gdb_args+=("--directory" "$d")
+    done
+fi
+
+# --------------------------------------------------------------------------------
+# Command building
+# --------------------------------------------------------------------------------
+
+if [[ $server_arg ]]; then
+    cmd+=('nohup' 'gdbserver' "$server_arg")
+else
+    cmd+=('gdb' "${gdb_args[@]}" '--args')
+fi
+
+cmd+=("$build_dir/$exec" "${exec_args[@]}")
+
+if [[ -n $server_arg ]]; then
+    gdbserver_logfile="$(mktemp /tmp/gdbserver-log.XXX)"
+    cmd+=("&>$gdbserver_logfile" '&')
+fi
+
+cmd_str="$(get_cmd_str "${cmd[@]}")"
+
+if [[ $dry_run ]]; then
+    stdout_is_term || {
+        echo "$cmd_str"
+        exit
+    }
+
+    # FANCY output
+
+    optc=$'\e[33m' # option color
+    dirc=$'\e[34m' # directory color
+    strc=$'\e[32m' # other string color
+    spec=$'\e[31m' # special operators
+    nc=$'\e[0m'    # no color
+
+    sed -E "
+    # Non-quoted strings
+    s/([^-./][[:graph:]]+)/${strc}\1${nc}/g
+    # Options (start with -)
+    s/((\s|')-[[:graph:]]+)/${optc}\1${nc}/g
+    # Quoted strings
+    s/(['\"][^-][^']+['\"])/${strc}\1${nc}/g
+    # Directories (start with / or ./)
+    s/((\/|\.\/)[[:graph:]]+)/${dirc}\1${nc}/g
+    # Special bash operators
+    s/(&|&>|>(\/|\.\/)[[:graph:]]+)/${spec}\1${nc}/g
+    " <<<"${cmd_str// -/$'\n    '-}"
+    exit
+fi
+
+eval "$cmd_str"
+
+if [[ $server_arg ]]; then
+    gdbserver_pid=$!
+    >&2 echo "Starting gdbserver in the background on $server_arg (pid=$gdbserver_pid)"
+    >&2 echo "Logging to: $gdbserver_logfile"
+    sleep 0.5
+    if ! kill -0 $gdbserver_pid &>/dev/null; then
+        printf '%80s\n' '' | tr ' ' '#' >&2
+        >&2 echo 'Command Failed! Output:'
+        cat "$gdbserver_logfile"
+    fi
+fi

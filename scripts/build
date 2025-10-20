@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+#
+# Util script to simplify build process
+#
+
+# Exit on error; exit status of pipeline is nonzero if any command fails
+set -eo pipefail
+
+usage() {
+    cat <<EOF
+Usage: build [docker] [OPTIONS] [preset-opts]...
+Build project with preset according to options. 
+Do so within a docker container if \`docker\` is specified.
+
+Arguments:
+    [preset-opts]  build-type, compiler, generator OR docs[-only]
+                   default triple is: debug-gcc-ninja
+    [docker]       build takes place within a docker container defined by Dockerfile
+
+Options:
+    -h, --help                print this help message
+    -j JOBS, --jobs JOBS      Number of threads to use. Fallbacks are env{JOBS} then nproc(1)
+    -n, --dry-run             print commands instead of executing them
+    --cross                   cross-compile to AArch64; specify DOCKER to use docker machine
+    --deep-clean              deep clean first before building (removes *everything*)
+    --fresh                   pass --fresh to cmake (essentially just reconfigures from scratch)
+EOF
+} >&2
+
+expand() {
+    eval "IFS='|'; echo \"\${$1[*]}\""
+}
+
+build_type="debug"
+compiler="gcc"
+generator="ninja"
+cross_compile=
+fresh=
+use_docker=
+jobs=${JOBS-$(nproc)}
+
+deep_clean=
+
+cmake_args=()
+
+# Process all args
+while (($#)); do
+    opt=${1,,} # transform to all lowercase
+    case "$opt" in
+    -n | --dry-run)
+        dry_run=yes
+        ;;
+    -j | --jobs)
+        if ! [[ $2 =~ ^[0-9]+$ ]]; then
+            >&2 echo 'Specified JOBS arg is invalid'
+            exit 1
+        fi
+        jobs="$2"
+        shift
+        ;;
+    --cross)
+        if [[ $(uname -m) == 'aarch64' ]]; then
+            >&2 echo 'Should not be cross-compiling on AArch64-based system'
+            exit 1
+        fi
+        cross_compile="crossaarch64-"
+        ;;
+    --fresh)
+        fresh="--fresh"
+        ;;
+    --deep-clean)
+        deep_clean=yes
+        ;;
+    -h | --help)
+        usage
+        exit
+        ;;
+    docker)
+        use_docker=yes
+        ;;
+    release | debug)
+        build_type="$opt"
+        ;;
+    gcc | clang)
+        compiler="$opt"
+        ;;
+    ninja | make)
+        generator="$opt"
+        ;;
+    docs | docs-only)
+        preset='unixlike-docs-only'
+        ;;
+    *)
+        >&2 echo 'Invalid option!' "($opt)"
+        usage
+        exit 1
+        ;;
+    esac
+    shift
+done
+
+if [[ $jobs -gt $(nproc) ]]; then
+    >&2 echo "Warning: number of jobs ($jobs) exceeds nproc ($(nproc)). Reducing to nproc."
+    jobs=$(nproc)
+fi
+
+preset="${preset-${cross_compile}unixlike-${compiler}-${generator}-${build_type}}"
+
+if [[ -n $deep_clean ]]; then
+    rm -rf "./build/$preset"
+fi
+
+cmake_args+=(--workflow --preset "$preset")
+[[ -n $fresh ]] && cmake_args+=("$fresh")
+
+if [[ -n $use_docker ]]; then
+    # Only add :Z if SELinux is enabled
+    if command -v getenforce &>/dev/null && [[ $(getenforce) != "Disabled" ]]; then
+        selinux_flag=":Z"
+    else
+        selinux_flag=""
+    fi
+
+    ccache_dir="$(ccache -p | sed -En 's/^.*cache_dir =\s+(.*)/\1/p')"
+    docker_volumes+=(--volume .:/workspace/asmgrader"$selinux_flag")
+    [[ -n $ccache_dir ]] && docker_volumes+=(--volume "$ccache_dir":/workspace/ccache"$selinux_flag")
+    [[ -n $CPM_SOURCE_CACHE ]] && docker_volumes+=(--volume "$CPM_SOURCE_CACHE":/workspace/CPM"$selinux_flag")
+fi
+
+if [[ -n $dry_run ]]; then
+    if [[ -n $use_docker ]]; then
+        cat <<EOF
+docker run --rm \\
+    --user "$(id -u):$(id -g)" \\
+$(for ((i = 0; i < ${#docker_volumes[@]} - 1; i += 2)); do
+            echo "    ${docker_volumes[i]} ${docker_volumes[i + 1]} \\"
+        done)
+    --cpus="$jobs" \\
+    --env "CMAKE_BUILD_PARALLEL_LEVEL=$jobs" \\
+    --workdir /workspace/asmgrader \\
+    aarch64-cross cmake ${cmake_args[@]}
+EOF
+    else
+        cat <<EOF
+CMAKE_BUILD_PARALLEL_LEVEL="$jobs" cmake ${cmake_args[@]}
+EOF
+    fi
+    exit
+fi
+
+if [[ -n $use_docker ]]; then
+    echo -e "\e[4m(Re)building docker image...\e[0m"
+    docker build -t aarch64-cross .
+    echo -e "\e[4mBuilding $preset on docker image\e[0m"
+    docker run --rm \
+        --user "$(id -u):$(id -g)" \
+        "${docker_volumes[@]}" \
+        --cpus="$jobs" \
+        --env "CMAKE_BUILD_PARALLEL_LEVEL=$jobs" \
+        --workdir /workspace/asmgrader \
+        aarch64-cross cmake "${cmake_args[@]}"
+else
+    CMAKE_BUILD_PARALLEL_LEVEL="$jobs" cmake "${cmake_args[@]}"
+fi

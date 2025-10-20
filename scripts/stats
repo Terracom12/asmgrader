@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+#
+# A fun little script to count the project's lines of code
+#
+
+readarray -t all_files < <(find . -name '*.[hc]pp' -not -path './build/*')
+
+echo "${#all_files[@]} files"
+echo "$(cat "${all_files[@]}" | wc -l) lines"
