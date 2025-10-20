@@ -173,6 +173,8 @@ void Tracer::assert_invariants() const {
                   expected_ppid, info.ppid);
         throw std::runtime_error("contract violation");
     }
+
+    LOG_TRACE("Invariant assertions passed for pid={}", pid_);
 }
 
 SyscallRecord Tracer::get_syscall_entry_info(struct ptrace_syscall_info* entry) const {
@@ -346,6 +348,9 @@ Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pr
 
             // stop process to keep in tracable state
             TRYE(linux::kill(pid_, SIGSTOP), SyscallFailure);
+
+            // wait until process has confirmed stop
+            TRYE(linux::waitid(P_PID, static_cast<id_t>(pid_), WSTOPPED), SyscallFailure);
 
             return ErrorKind::TimedOut;
         }
