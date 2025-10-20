@@ -3,6 +3,7 @@
 #include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
+#include <asmgrader/common/formatters/unknown.hpp>
 #include <asmgrader/logging.hpp>
 
 #include <fmt/format.h>
@@ -51,9 +52,11 @@ inline Expected<ssize_t> write(int fd, std::string_view data) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("write failed: '{}'", err);
+        LOG_DEBUG("write(fd={}, data={:?}, size={}) failed: '{}'", fd, data, data.size(), err);
         return err;
     }
+
+    LOG_TRACE("write(fd={}, data={:?}, size={}) = {}", fd, data, data.size(), res);
 
     return res;
 }
@@ -68,12 +71,15 @@ inline Expected<std::string> read(int fd, size_t count) { // NOLINT
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("read failed: '{}'", err);
+        LOG_DEBUG("read(fd={}, count={}) failed: '{}'", fd, count, err);
+
         return err;
     }
 
     DEBUG_ASSERT(res >= 0, "read result is negative and != -1");
     buffer.resize(static_cast<std::size_t>(res));
+
+    LOG_TRACE("read(fd={}, count={}) = {}; buffer={:?}", fd, count, res, buffer);
 
     return buffer;
 }
@@ -101,9 +107,12 @@ inline Expected<> kill(pid_t pid, int sig) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("kill failed: '{}'", err);
+        LOG_DEBUG("kill(pid={}, sig={}) failed: '{}'", pid, sig, err);
+
         return err;
     }
+
+    LOG_DEBUG("kill(pid={}, sig={}) = {}", pid, sig, res);
 
     return {};
 }
@@ -118,9 +127,12 @@ inline Expected<> access(gsl::czstring path, int mode) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("access failed: '{}'", err);
+        LOG_DEBUG("access(path={:?}, mode={}) failed '{}'", path, mode, err);
+
         return err;
     }
+
+    LOG_TRACE("access(path={:?}, mode={}) = {}", path, mode, res);
 
     return {};
 }
@@ -189,9 +201,11 @@ inline Expected<int> open(const std::string& pathname, int flags, mode_t mode = 
 
     if (res == -1) {
         auto err = make_error_code(errno);
-        LOG_DEBUG("open failed: '{}'", err);
+        LOG_DEBUG("open(pathname={:?}, flags={}, mode={}) failed: '{}'", pathname, flags, mode, err);
         return err;
     }
+
+    LOG_TRACE("open(pathname={:?}, flags={}, mode={}) = {}", pathname, flags, mode, res);
 
     return res;
 }
@@ -281,10 +295,13 @@ inline Expected<siginfo_t> waitid(idtype_t idtype, id_t id, int options = WSTOPP
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("waitid failed: '{}'", err);
+        LOG_DEBUG("waitid(idtype={}, id={}, options={}) failed: '{}'", fmt::underlying(idtype), id, options, err);
 
         return err;
     }
+
+    LOG_TRACE("waitid(idtype={}, id={}, options={}) = {}; info={}", fmt::underlying(idtype), id, options, res,
+              format_or_unknown(info));
 
     return info;
 }
@@ -297,10 +314,12 @@ inline Expected<> raise(int sig) {
     if (res == -1) {
         auto err = std::error_code(errno, std::system_category());
 
-        LOG_DEBUG("raise failed: '{}'", err);
+        LOG_DEBUG("raise({}) failed: '{}'", sig, err);
 
         return err;
     }
+
+    LOG_TRACE("raise(sig={}) = {}", sig, res);
 
     return {};
 }
@@ -324,10 +343,12 @@ inline Expected<Pipe> pipe2(int flags = 0) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("pipe failed: '{}'", err);
+        LOG_DEBUG("pipe(..., flags={}) failed: '{}'", flags, err);
 
         return err;
     }
+
+    LOG_TRACE("pipe(..., flags={}) = {}; pipes=(r={}, w={})", flags, res, pipe.read_fd, pipe.write_fd);
 
     return pipe;
 }
@@ -363,6 +384,9 @@ inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, Data
         return err;
     }
 
+    LOG_TRACE("ptrace(req={}, pid={}, addr={}, data={}) = {}", request, pid, format_or_unknown(addr),
+              format_or_unknown(data), res);
+
     return res;
 }
 
@@ -379,6 +403,8 @@ inline Expected<struct ::stat> stat(const std::string& pathname) {
 
         return err;
     }
+
+    LOG_TRACE("stat(pathname={:?}) = {}; data={}", pathname, res, format_or_unknown(data_result));
 
     return data_result;
 }
