@@ -36,7 +36,6 @@ set(
     subprocess/tracer.cpp
     subprocess/memory/memory_io_base.cpp
     subprocess/memory/ptrace_memory_io.cpp
-    subprocess/run_result.cpp
 
     common/terminal_checks.cpp
 
