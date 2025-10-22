@@ -27,6 +27,7 @@ set(
     test_registers_state.cpp
     test_file_searcher.cpp
     test_byte_ranges.cpp
+    test_tempfile.cpp
 )
 
 ##### Simple assembly executable
