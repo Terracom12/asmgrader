@@ -1,6 +1,7 @@
 #include "api/tempfile.hpp"
 
 #include "common/aliases.hpp"
+#include "common/expected.hpp"
 #include "logging.hpp"
 
 #include <libassert/assert.hpp>
@@ -154,6 +155,18 @@ TempFile::FileInfo TempFile::generate_unique_file() {
     }
 
     return ret;
+}
+
+Expected<> TempFile::remove(const fs::path& path) {
+    std::error_code err;
+    fs::remove(path, err);
+
+    if (err != std::error_code{}) {
+        LOG_ERROR("Failed remove file {} : {}", path, err);
+        return err;
+    }
+
+    return {};
 }
 
 } // namespace asmgrader
