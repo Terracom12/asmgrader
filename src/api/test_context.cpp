@@ -2,6 +2,7 @@
 
 #include "api/asm_buffer.hpp"
 #include "api/metadata.hpp"
+#include "api/process_statistics.hpp"
 #include "api/registers_state.hpp"
 #include "api/requirement.hpp"
 #include "api/test_base.hpp"
@@ -92,7 +93,7 @@ void TestContext::send_stdin(std::string_view input) {
     TRY_OR_THROW(prog_.get_subproc().send_stdin(input), "failed to write to stdin");
 }
 
-RunResult TestContext::run() {
+Result<RunResult> TestContext::run() {
     int exit_code{};
 
     auto res = prog_.run_until([&exit_code](const SyscallRecord& syscall) {
@@ -112,7 +113,29 @@ RunResult TestContext::run() {
         return RunResult::make_exited(exit_code);
     }
 
-    return TRY_OR_THROW(res, "failed to run program");
+    return res;
+}
+
+Result<RunResult> TestContext::run_until(u64 syscallnr) {
+    std::optional<int> exit_code{};
+
+    auto res = prog_.run_until([&exit_code, syscallnr](const SyscallRecord& syscall) {
+        if (syscall.num == SYS_exit || syscall.num == SYS_exit_group) {
+            exit_code = std::get<int>(syscall.args.at(0));
+            return true;
+        }
+        return syscall.num == syscallnr;
+    });
+
+    if (exit_code.has_value()) {
+        return RunResult::make_exited(*exit_code);
+    }
+
+    return res;
+}
+
+ProcessStats TestContext::stats() {
+    return ProcessStats{prog_.get_subproc().get_pid()};
 }
 
 void TestContext::restart_program() {

@@ -55,6 +55,7 @@ set(
     user/cl_args.cpp
 
     api/tempfile.cpp
+    api/process_statistics.cpp
     api/assignment.cpp
     api/test_context.cpp
     api/syntax_highlighter.cpp
