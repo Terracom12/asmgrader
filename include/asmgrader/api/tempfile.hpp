@@ -4,6 +4,7 @@
 
 #include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/class_traits.hpp>
+#include <asmgrader/common/expected.hpp>
 #include <asmgrader/logging.hpp>
 
 #include <gsl/pointers>
@@ -32,6 +33,10 @@ public:
     std::string path_str() const { return file_info_.path.string(); }
 
     [[nodiscard]] static std::filesystem::path unique_path();
+
+    /// Remove (delete) a file. Intended for use with files created based on
+    /// \ref unique_path, but could be used to safely remove any arbitrary file.
+    static Expected<> remove(const std::filesystem::path& path);
 
 private:
     struct FileInfo
