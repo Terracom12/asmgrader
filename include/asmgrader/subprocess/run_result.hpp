@@ -73,6 +73,10 @@ inline std::string format_as(const RunResult& from) {
     return fmt::format("{}({})", from.get_kind(), from.get_code());
 }
 
+constexpr std::string_view str(const RunResult::Kind& from) {
+    return format_as(from);
+}
+
 inline std::string RunResult::str() const {
     return fmt::to_string(*this);
 }

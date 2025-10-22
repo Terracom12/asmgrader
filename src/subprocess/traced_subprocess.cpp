@@ -7,6 +7,8 @@
 #include "subprocess/syscall_record.hpp"
 #include "subprocess/tracer.hpp"
 
+#include <fmt/ranges.h>
+
 #include <chrono>
 #include <functional>
 #include <thread>
@@ -28,6 +30,7 @@ TracedSubprocess::~TracedSubprocess() {
     }
 
     LOG_DEBUG("Processed {} syscalls", tracer_.get_records().size());
+    LOG_TRACE("Syscalls: {:?}", fmt::join(tracer_.get_records(), "\n"));
 
     if (is_alive()) {
         std::ignore = kill();
