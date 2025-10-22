@@ -30,6 +30,7 @@
 #include <vector>
 
 #include <linux/ptrace.h>
+#include <sched.h>
 #include <sys/ptrace.h>
 #include <sys/types.h> // pid_t
 #include <sys/user.h>  // user_regs_struct, user_fpregs_struct (user_fpsimd_struct)
@@ -114,6 +115,8 @@ public:
     MemoryIOBase& get_memory_io();
 
     std::uintptr_t get_mmapped_addr() const { return mmaped_address_; }
+
+    pid_t get_pid() const { return pid_; };
 
 private:
     /// Ensure that invariants hold
