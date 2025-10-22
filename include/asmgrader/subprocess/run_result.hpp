@@ -21,6 +21,8 @@ public:
 
     constexpr bool operator==(const RunResult&) const = default;
 
+    std::string str() const;
+
 private:
     constexpr RunResult(Kind kind, int code);
 
@@ -69,6 +71,10 @@ constexpr std::string_view format_as(const RunResult::Kind& from) {
 
 inline std::string format_as(const RunResult& from) {
     return fmt::format("{}({})", from.get_kind(), from.get_code());
+}
+
+inline std::string RunResult::str() const {
+    return fmt::to_string(*this);
 }
 
 } // namespace asmgrader
