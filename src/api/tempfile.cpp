@@ -27,8 +27,12 @@ namespace asmgrader {
 
 namespace fs = std::filesystem;
 
-TempFile::TempFile()
-    : file_info_{generate_unique_file()} {}
+TempFile::TempFile(bool create)
+    : file_info_{.path = unique_path(), .handle = {}} {
+    if (create) {
+        ensure_created();
+    }
+}
 
 TempFile::TempFile(u16 perms)
     : TempFile() {
@@ -53,7 +57,27 @@ TempFile::~TempFile() noexcept {
     }
 }
 
+bool TempFile::exists() const {
+    return fs::exists(file_info_.path);
+}
+
+bool TempFile::ensure_created() {
+    if (!file_info_.handle.is_open()) {
+        file_info_.handle.open(file_info_.path, std::ios::in | std::ios::out | std::ios::trunc);
+
+        LOG_DEBUG("Creating a temporary file at {}", file_info_.path);
+        if (!file_info_.handle) {
+            LOG_FATAL("Failed to create temporary file {}", file_info_.path);
+        }
+    }
+
+    return true;
+}
+
 std::string TempFile::read_all() {
+    if (!ensure_created()) {
+        return "";
+    }
     // seek to the beginning of the file
     file_info_.handle.seekg(0);
 
@@ -63,12 +87,19 @@ std::string TempFile::read_all() {
 }
 
 void TempFile::write(std::string_view str) {
+    if (!ensure_created()) {
+        return;
+    }
     // seek to the end of the file
     file_info_.handle.seekg(0, std::ios::end);
     file_info_.handle << str;
+    file_info_.handle.flush();
 }
 
 void TempFile::truncate() {
+    if (!ensure_created()) {
+        return;
+    }
     std::error_code err;
     fs::resize_file(file_info_.path, 0, err);
     if (err != std::error_code{}) {
@@ -144,15 +175,6 @@ TempFile::FileInfo TempFile::generate_unique_file() {
 
     // FIXME: technically could have a race condition
     auto path = unique_path();
-
-    ret.handle.open(path, std::ios::in | std::ios::out | std::ios::trunc);
-    ret.path = std::move(path);
-
-    LOG_DEBUG("Creating a temporary file at {}", ret.path);
-    if (!ret.handle) {
-        LOG_FATAL("Failed to create temporary file {}", ret.path);
-        throw std::runtime_error("Failed to create temporary file");
-    }
 
     return ret;
 }

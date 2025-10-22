@@ -38,6 +38,12 @@ ProcessStats::OpenFds ProcessStats::get_open_fds() const {
         std::string filename = dir_entry.path().filename().string();
 
         LOG_DEBUG("Got filename: {:?}", filename);
+
+        try {
+            res.fds.push_back(std::stoi(filename));
+        } catch (...) {
+            res.fds.push_back(-1);
+        }
     }
 
     return res;

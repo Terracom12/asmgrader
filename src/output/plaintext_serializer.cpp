@@ -109,6 +109,10 @@ void PlainTextSerializer::on_test_result(const TestResult& data) {
     if (!should_output_test(verbosity_)) {
         return;
     }
+    if (data.error.has_value()) {
+        sink_.write(style_str("Internal test context error: ", ERROR_STYLE));
+        sink_.write(fmt::to_string(*data.error) + '\n');
+    }
 
     // Potentially output a msg for an empty test
     if (data.num_total == 0) {

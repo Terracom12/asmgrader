@@ -20,13 +20,15 @@ namespace asmgrader {
 class TempFile : NonMovable
 {
 public:
-    TempFile();
+    explicit TempFile(bool create = true);
     explicit TempFile(u16 perms);
     ~TempFile() noexcept;
 
     std::string read_all();
     void write(std::string_view str);
     void truncate();
+
+    bool exists() const;
 
     std::filesystem::path path() const { return file_info_.path; }
 
@@ -46,6 +48,8 @@ private:
     };
 
     [[nodiscard]] static FileInfo generate_unique_file();
+
+    bool ensure_created();
 
     FileInfo file_info_;
 };
