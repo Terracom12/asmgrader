@@ -34,18 +34,18 @@ function(asmgrader_set_target_warnings target_name WARNINGS_AS_ERRORS)
         -Wsuggest-override # warn if an overridden member function is not marked 'override' or 'final'
     )
 
+    if(WARNINGS_AS_ERRORS)
+        message(TRACE "Warnings are treated as errors")
+        list(APPEND CLANG_WARNINGS -Werror)
+        list(APPEND GCC_WARNINGS -Werror)
+    endif()
+
     if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
         set(TARGET_WARNINGS_CXX ${CLANG_WARNINGS})
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(TARGET_WARNINGS_CXX ${GCC_WARNINGS})
     else()
         message(AUTHOR_WARNING "No compiler warnings set for CXX compiler: '${CMAKE_CXX_COMPILER_ID}'")
-    endif()
-
-    if(WARNINGS_AS_ERRORS)
-        message(TRACE "Warnings are treated as errors")
-        list(APPEND CLANG_WARNINGS -Werror)
-        list(APPEND GCC_WARNINGS -Werror)
     endif()
 
     target_compile_options(
