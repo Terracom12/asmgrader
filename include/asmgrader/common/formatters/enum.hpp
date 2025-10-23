@@ -38,6 +38,8 @@ struct EnumFormatter
 
     constexpr auto get_enumerator(const Enum& from) const {
         auto val = [from] {
+            // from is unused when the list of enumerators is empty
+            (void)from; // [[maybe_unused]] is unsupported in capture list
             std::optional<::asmgrader::pair<std::string_view, Enum>> res;
             ((Enumerators.second == from ? res = Enumerators : res), ...);
             return res;
