@@ -63,7 +63,7 @@ struct AggregateFormatter
         const std::tuple fields{get_named_fields(from)};
 
         // Transform fields to printable output`
-        auto field_writer = [&, this, first = true](const auto& pair) mutable {
+        auto field_writer = [&, first = true](const auto& pair) mutable {
             if (!first) {
                 ranges::copy(sep, ctx_iter);
             }
