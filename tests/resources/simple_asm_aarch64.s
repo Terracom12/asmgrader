@@ -23,24 +23,44 @@ sum:
     add    x0, x0, x1    // x0 += x1
     ret
 
-/// sum_and_write
+/// write_to
 ///   sums two numbers and writes the result to stdout. Overflow may occur.
 ///   Parameters:
-///     x0 (u64) - the first number
-///     x1 (u64) - the second number
+///     x0 (const char*) - string to write
+///     x1 (int) - the fd to write to
+///     x2 (size_t) - length of the string
 ///   Result:
-///     x0 + x1 written to stdout as 8 bytes.
-sum_and_write:
-    add     x0, x0, x1     // x0 += x1
-    STR     x0, [sp, -8]!
+///     length bytes of string written to fd
+write_to:
+    mov     x3, x0   # save x0 (str) into x3
 
     mov     x8, 64         // SYS_write
-    mov     x0, 1          // fd param = stdout
-    mov     x1, sp         // str param = stack addr (sum result)
-    mov     x2, 8          // len param = 8
+    mov     x0, x1         // fd param = fd
+    mov     x1, x3         // str param = string
+    // len param [already set by param]
     svc     0              // SYS_write
 
-    add     sp, sp, 8      // pop x0 off of the stack
+    ret
+
+/// sum_and_write_fd
+///   sums two numbers and writes the result to specified fd. Overflow may occur.
+///   Parameters:
+///     rdi (u64) - the first number
+///     rsi (u64) - the second number
+///     rdx (int) - the fd to write to
+///   Result:
+///     rdi + rsi written to fd as 8 bytes.
+sum_and_write_fd:
+    add    rsi, rdi    # rsi += rdi
+    push   rsi
+
+    mov     rax, 1     # SYS_write
+    mov     rdi, rdx   # fd
+    lea     rsi, [rsp] # rsi = stack addr - 8 (sum result)
+    mov     rdx, 8     # rdx (len) = 8
+    syscall            # SYS_write
+
+    pop     rsi        # pop rsi off the stack
     ret
 
 /// This subroutine will timeout in an infinitely recurring loop
