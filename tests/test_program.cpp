@@ -8,10 +8,13 @@
 #include <cstdint>
 #include <string>
 
+#include <unistd.h>
+
 using namespace asmgrader::aliases;
 
 using sum = u64(std::uint64_t, std::uint64_t);
 using sum_and_write = void(u64, std::uint64_t);
+using write_to = void(const char*, int, size_t);
 using timeout_fn = void();
 using segfaulting_fn = void();
 using exiting_fn = void(u64);
@@ -59,6 +62,22 @@ TEST_CASE("Call sum_and_write function") {
     static_assert(' ' == 0x10 + 0x10, "Somehow not ASCII encoded???");
     // 0x10 + 0x10 = 0x20 (space ' ')
     REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "        ");
+}
+
+TEST_CASE("Call write_to function") {
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
+
+    std::string test_str = "I am a test string\nNOPE\n123897g51%%~";
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, STDOUT_FILENO, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stdout_str == test_str);
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, STDERR_FILENO, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stderr_str == test_str);
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, 0, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stdout_str == "");
+    REQUIRE(prog.get_subproc().read_output().stderr_str == "");
 }
 
 TEST_CASE("Test that timeouts are handled properly with timeout_fn") {
