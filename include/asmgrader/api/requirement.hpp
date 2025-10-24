@@ -241,8 +241,8 @@ public:
 
     explicit Requirement(Op op, std::string description)
         : op_{op}
-        , description_{std::move(description)}
-        , res_{op.eval()} {}
+        , res_{op.eval()}
+        , description_{std::move(description)} {}
 
     std::string get_description() const { return description_; }
 
