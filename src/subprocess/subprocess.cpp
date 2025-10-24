@@ -265,6 +265,10 @@ Result<void> Subprocess::create(const std::string& exec, const std::vector<std::
         LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
     }
 
+    if (!mark_cloexec_all()) {
+        LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
+    }
+
     linux::Fork fork_res = TRYE(linux::fork(), SyscallFailure);
 
     // Child process
@@ -294,6 +298,24 @@ Result<void> Subprocess::init_child() {
     TRYE(linux::close(stdin_pipe_.write_fd), SyscallFailure);
     TRYE(linux::close(stdout_.pipe.read_fd), SyscallFailure);
     TRYE(linux::close(stderr_.pipe.read_fd), SyscallFailure);
+
+    namespace fs = std::filesystem;
+
+    for (const auto& entry : fs::directory_iterator("/proc/self/fd")) {
+        int fd = std::stoi(entry.path().filename().string());
+
+        // skip stdin, stdout, stderr
+        if (fd <= 2) {
+            continue;
+        }
+
+        // auto res = linux::close(fd);
+        //
+        // // If close(2) failed for a reason other than the fd not existing, return an error
+        // if (!res && res != linux::make_error_code(EBADF)) {
+        //     return ErrorKind::SyscallFailure;
+        // }
+    }
 
     namespace fs = std::filesystem;
 
