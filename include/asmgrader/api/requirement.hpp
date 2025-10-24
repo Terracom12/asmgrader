@@ -266,7 +266,7 @@ public:
             return exprs::ExpressionRepr{.expression = make_expr_value<Arg0T>(std::get<0>(op_.args), arg0_str)};
         } else {
             using ResultT = decltype(res_);
-            exprs::ExpressionRepr::Repr repr{.repr = "==", //
+            exprs::ExpressionRepr::Repr repr{.repr = {"=="}, //
                                              .str = stringize::str(res_),
                                              .raw_str = Op::raw_str,
                                              .raw_str_tokens =
