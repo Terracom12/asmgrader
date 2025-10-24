@@ -1,9 +1,12 @@
 #pragma once
 
+#include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/class_traits.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/linux.hpp>
+
+#include <fmt/format.h>
 
 #include <chrono>
 #include <cstddef>
@@ -28,17 +31,35 @@ public:
     Subprocess(Subprocess&&) noexcept;
     Subprocess& operator=(Subprocess&&) noexcept;
 
+    /// Which output file descriptor to read from
+    enum class WhichOutput : u8 { None = 0, Stdout = 1, Stderr = 2, StdoutAndStderr = Stdout | Stderr };
+
+    /// stdout_str is only valid if WhichOutput::Stdout was included in the request
+    /// stderr_str is only valid if WhichOutput::Stderr was included in the request
+    struct OutputResult
+    {
+        std::string stdout_str;
+        std::string stderr_str;
+    };
+
+    /// Read buffered output since the last call to this function
+    OutputResult read_output(WhichOutput which = WhichOutput::StdoutAndStderr);
+
+    /// Get all output since the program has launched
+    OutputResult read_full_output(WhichOutput which = WhichOutput::StdoutAndStderr);
+
     template <typename Rep, typename Period>
-    Result<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
-        return read_stdout_poll_impl(std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+    [[deprecated]] Result<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
+        read_pipe_poll(stdout_, std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+        return new_output(WhichOutput::Stdout).stdout_str;
     }
 
-    Result<std::string> read_stdout();
+    /// Updates output result based on cursor positions
+    /// If the cursor is located before the end of the string, then a substring is used
+    /// (starting at the cursor position)
+    void get_new_output(OutputResult& res);
 
-    /// Get all stdout since the program has launched
-    const std::string& get_full_stdout();
-
-    Result<void> send_stdin(std::string_view str);
+    Result<void> send_stdin(std::string_view str) const;
 
     // Forks the current process to start a new subprocess as specified
     virtual Result<void> start();
@@ -78,12 +99,16 @@ private:
     /// pipes to communicate with subprocess' stdout and stdin respectively
     /// The parent process will only make use of the write end of stdin_pipe_, and the read end of stdout_pipe_
     linux::Pipe stdin_pipe_{};
-    linux::Pipe stdout_pipe_{};
 
-    std::string stdout_buffer_;
-    std::size_t stdout_cursor_{};
+    struct OutputPipe
+    {
+        linux::Pipe pipe;
+        std::string buffer;
+        std::size_t cursor;
+    };
 
-    Result<std::string> read_stdout_poll_impl(int timeout_ms);
+    OutputPipe stdout_{};
+    OutputPipe stderr_{};
 
     /// Marks all open fds (other than 0,1,2) as FD_CLOEXEC so that they get closed in the child proc
     /// Run in the PARENT process.
@@ -92,10 +117,49 @@ private:
     /// Reads any data on the stdout pipe to stdout_buffer_
     Result<void> read_stdout_impl();
 
+    /// Reads any immediately available data available on the specified pipe's read end
+    /// Writes any new data to that OutputPipe's buffer
+    /// Throws a std::logic_error if any syscalls fail
+    static void read_pipe_nonblock(OutputPipe& pipe);
+
+    /// Polls the pipe's read end for timeout_ms millis, or until available input arrives
+    /// Writes any new data to that OutputPipe's buffer
+    /// \returns true if a successful read occurred, false if timed out
+    static bool read_pipe_poll(OutputPipe& pipe, int timeout_ms);
+
+    /// Obtain new output based on cursor positions and buffers,
+    /// and set cursors to the end of their resp. buffers
+    OutputResult new_output(WhichOutput which);
+
     std::optional<int> exit_code_;
 
     std::string exec_;
     std::vector<std::string> args_;
 };
+
+// TODO: macro for bitfield enums
+
+constexpr std::string_view format_as(const Subprocess::WhichOutput& from) {
+    switch (from) {
+    case Subprocess::WhichOutput::None:
+        return "none";
+    case Subprocess::WhichOutput::Stdout:
+        return "stdout";
+    case Subprocess::WhichOutput::Stderr:
+        return "stderr";
+    case Subprocess::WhichOutput::StdoutAndStderr:
+        return "stdout&stderr";
+    default:
+        return "<unknown>";
+    }
+}
+
+constexpr Subprocess::WhichOutput operator&(const Subprocess::WhichOutput& lhs, const Subprocess::WhichOutput& rhs) {
+    return static_cast<Subprocess::WhichOutput>(fmt::underlying(lhs) & fmt::underlying(rhs));
+}
+
+constexpr Subprocess::WhichOutput operator|(const Subprocess::WhichOutput& lhs, const Subprocess::WhichOutput& rhs) {
+    return static_cast<Subprocess::WhichOutput>(fmt::underlying(lhs) | fmt::underlying(rhs));
+}
 
 } // namespace asmgrader
