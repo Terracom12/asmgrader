@@ -85,6 +85,10 @@ private:
 
     Result<std::string> read_stdout_poll_impl(int timeout_ms);
 
+    /// Marks all open fds (other than 0,1,2) as FD_CLOEXEC so that they get closed in the child proc
+    /// Run in the PARENT process.
+    Expected<> mark_cloexec_all() const;
+
     /// Reads any data on the stdout pipe to stdout_buffer_
     Result<void> read_stdout_impl();
 

@@ -36,7 +36,6 @@ set(
     subprocess/tracer.cpp
     subprocess/memory/memory_io_base.cpp
     subprocess/memory/ptrace_memory_io.cpp
-    subprocess/run_result.cpp
 
     common/terminal_checks.cpp
 
@@ -55,6 +54,8 @@ set(
 
     user/cl_args.cpp
 
+    api/tempfile.cpp
+    api/process_statistics.cpp
     api/assignment.cpp
     api/test_context.cpp
     api/syntax_highlighter.cpp
