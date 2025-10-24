@@ -17,6 +17,7 @@
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/run_result.hpp"
+#include "subprocess/subprocess.hpp"
 #include "subprocess/syscall_record.hpp"
 
 #include <fmt/color.h>
@@ -83,11 +84,19 @@ std::string_view TestContext::get_name() const {
 }
 
 std::string TestContext::get_stdout() {
-    return TRY_OR_THROW(prog_.get_subproc().read_stdout(), "failed to read stdout");
+    return get_output(Subprocess::WhichOutput::Stdout).stdout_str;
 }
 
 std::string TestContext::get_full_stdout() {
-    return prog_.get_subproc().get_full_stdout();
+    return get_full_output(Subprocess::WhichOutput::Stdout).stdout_str;
+}
+
+Subprocess::OutputResult TestContext::get_output(Subprocess::WhichOutput which) {
+    return prog_.get_subproc().read_output(which);
+}
+
+Subprocess::OutputResult TestContext::get_full_output(Subprocess::WhichOutput which) {
+    return prog_.get_subproc().read_full_output(which);
 }
 
 void TestContext::send_stdin(std::string_view input) {

@@ -3,14 +3,18 @@
 #include "common/aliases.hpp"
 #include "common/error_types.hpp"
 #include "program/program.hpp"
+#include "subprocess/subprocess.hpp"
 
 #include <cstdint>
 #include <string>
+
+#include <unistd.h>
 
 using namespace asmgrader::aliases;
 
 using sum = u64(std::uint64_t, std::uint64_t);
 using sum_and_write = void(u64, std::uint64_t);
+using write_to = void(const char*, int, size_t);
 using timeout_fn = void();
 using segfaulting_fn = void();
 using exiting_fn = void(u64);
@@ -46,16 +50,34 @@ TEST_CASE("Call sum_and_write function") {
     asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0, 0));
-    REQUIRE(prog.get_subproc().read_stdout() == std::string{"\0\0\0\0\0\0\0\0", 8});
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str ==
+            std::string{"\0\0\0\0\0\0\0\0", 8});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 'a', 5));
     // 'a' + 5 = 'f'
-    REQUIRE(prog.get_subproc().read_stdout() == std::string{"f\0\0\0\0\0\0\0", 8});
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str ==
+            std::string{"f\0\0\0\0\0\0\0", 8});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0x1010101010101010, 0x1010101010101010));
     static_assert(' ' == 0x10 + 0x10, "Somehow not ASCII encoded???");
     // 0x10 + 0x10 = 0x20 (space ' ')
-    REQUIRE(prog.get_subproc().read_stdout() == "        ");
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "        ");
+}
+
+TEST_CASE("Call write_to function") {
+    asmgrader::Program prog(ASM_TESTS_EXEC, {});
+
+    std::string test_str = "I am a test string\nNOPE\n123897g51%%~";
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, STDOUT_FILENO, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stdout_str == test_str);
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, STDERR_FILENO, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stderr_str == test_str);
+
+    REQUIRE(prog.call_function<write_to>("write_to", test_str, 0, test_str.size()));
+    REQUIRE(prog.get_subproc().read_output().stdout_str == "");
+    REQUIRE(prog.get_subproc().read_output().stderr_str == "");
 }
 
 TEST_CASE("Test that timeouts are handled properly with timeout_fn") {

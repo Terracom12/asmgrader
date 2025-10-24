@@ -13,7 +13,6 @@ _start:
     mov     rdi, 42  # retcode
     syscall
 
-
 /// sum
 ///   sums two numbers and returns the result
 ///   Parameters:
@@ -45,6 +44,26 @@ sum_and_write:
 
     pop     rsi        # pop rsi off the stack
     ret
+
+/// write_to
+///   sums two numbers and writes the result to specified fd. Overflow may occur.
+///   Parameters:
+///     rdi (const char*) - string to write
+///     rsi (int) - the fd to write to
+///     rdx (size_t) - length of the string
+///   Result:
+///     length bytes of string written to fd
+write_to:
+    mov     r10, rdi   # save rdi (str) into r10
+
+    mov     rax, 1     # SYS_write
+    mov     rdi, rsi   # fd
+    mov     rsi, r10   # rsi = str
+    mov     rdx, rdx   # rdx (len) = length
+    syscall            # SYS_write
+
+    ret
+
 
 /// This subroutine will timeout in an infinitely recurring loop
 timeout_fn:

@@ -9,16 +9,16 @@
 #include <fmt/ranges.h>
 #include <libassert/assert.hpp>
 
-#include <cerrno>
 #include <chrono>
-#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -129,15 +129,20 @@ Result<int> Subprocess::wait_for_exit(std::chrono::microseconds timeout) {
 
 Result<void> Subprocess::close_pipes() {
     // Make sure all available data is read before pipes are closed
-    std::ignore = read_stdout_impl();
+    read_pipe_nonblock(stdout_);
+    read_pipe_nonblock(stderr_);
 
     if (stdin_pipe_.write_fd != -1) {
         TRYE(linux::close(stdin_pipe_.write_fd), SyscallFailure);
         stdin_pipe_.write_fd = -1;
     }
-    if (stdout_pipe_.read_fd != -1) {
-        TRYE(linux::close(stdout_pipe_.read_fd), SyscallFailure);
-        stdout_pipe_.read_fd = -1;
+    if (stdout_.pipe.read_fd != -1) {
+        TRYE(linux::close(stdout_.pipe.read_fd), SyscallFailure);
+        stdout_.pipe.read_fd = -1;
+    }
+    if (stderr_.pipe.read_fd != -1) {
+        TRYE(linux::close(stderr_.pipe.read_fd), SyscallFailure);
+        stderr_.pipe.read_fd = -1;
     }
 
     return {};
@@ -146,16 +151,14 @@ Result<void> Subprocess::close_pipes() {
 Subprocess::Subprocess(Subprocess&& other) noexcept
     : child_pid_{std::exchange(other.child_pid_, 0)}
     , stdin_pipe_{std::exchange(other.stdin_pipe_, {})}
-    , stdout_pipe_{std::exchange(other.stdout_pipe_, {})}
-    , stdout_buffer_{std::exchange(other.stdout_buffer_, {})}
-    , stdout_cursor_{std::exchange(other.stdout_cursor_, 0)} {}
+    , stdout_{std::exchange(other.stdout_, {})}
+    , stderr_{std::exchange(other.stderr_, {})} {}
 
 Subprocess& Subprocess::operator=(Subprocess&& rhs) noexcept {
     child_pid_ = std::exchange(rhs.child_pid_, 0);
     stdin_pipe_ = std::exchange(rhs.stdin_pipe_, {});
-    stdout_pipe_ = std::exchange(rhs.stdout_pipe_, {});
-    stdout_buffer_ = std::exchange(rhs.stdout_buffer_, {});
-    stdout_cursor_ = std::exchange(rhs.stdout_cursor_, 0);
+    stdout_ = std::exchange(rhs.stdout_, {});
+    stderr_ = std::exchange(rhs.stderr_, {});
 
     return *this;
 }
@@ -164,72 +167,89 @@ bool Subprocess::is_alive() const {
     return linux::kill(child_pid_, 0) != std::make_error_code(std::errc::no_such_process);
 }
 
-Result<std::string> Subprocess::read_stdout_poll_impl(int timeout_ms) {
-    // If the pipe is already closed, all we can do is try reading from the buffer
-    if (stdout_pipe_.read_fd == -1) {
-        return read_stdout();
+Subprocess::OutputResult Subprocess::read_output(WhichOutput which) {
+    if ((which & WhichOutput::Stdout) != WhichOutput::None) {
+        read_pipe_nonblock(stdout_);
+    }
+    if ((which & WhichOutput::Stderr) != WhichOutput::None) {
+        read_pipe_nonblock(stderr_);
     }
 
-    struct pollfd poll_struct = {.fd = stdout_pipe_.read_fd, .events = POLLIN, .revents = 0};
+    return new_output(which);
+}
+
+Subprocess::OutputResult Subprocess::read_full_output(WhichOutput which) {
+    if ((which & WhichOutput::Stdout) != WhichOutput::None) {
+        read_pipe_nonblock(stdout_);
+    }
+    if ((which & WhichOutput::Stderr) != WhichOutput::None) {
+        read_pipe_nonblock(stderr_);
+    }
+
+    return OutputResult{.stdout_str = stdout_.buffer, .stderr_str = stderr_.buffer};
+}
+
+void Subprocess::read_pipe_nonblock(OutputPipe& pipe) {
+    std::size_t num_bytes_avail = 0;
+
+    if (pipe.pipe.read_fd == -1) {
+        LOG_TRACE("Attempted to read from a fd that's already closed ({})", pipe.pipe.read_fd);
+        return;
+    }
+
+    if (!linux::ioctl(pipe.pipe.read_fd, FIONREAD, &num_bytes_avail)) {
+        throw std::logic_error("ioctl for pipe failed");
+    }
+
+    LOG_DEBUG("{} bytes available from fd ({})", num_bytes_avail, pipe.pipe.read_fd);
+
+    if (num_bytes_avail == 0) {
+        return;
+    }
+
+    if (auto res = linux::read(pipe.pipe.read_fd, num_bytes_avail)) {
+        pipe.buffer += res.value();
+    } else {
+        throw std::logic_error("read from pipe failed");
+    }
+}
+
+bool Subprocess::read_pipe_poll(Subprocess::OutputPipe& pipe, int timeout_ms) {
+    struct pollfd poll_struct = {.fd = pipe.pipe.read_fd, .events = POLLIN, .revents = 0};
 
     // TODO: Create wrapper in linux.hpp
     int res = poll(&poll_struct, 1, timeout_ms);
-    // Error
+    // Syscall error
     if (res == -1) {
-        LOG_WARN("Error polling for read from stdout pipe: '{}'", get_err_msg());
-        return ErrorKind::SyscallFailure;
+        throw std::logic_error("poll for pipe failed");
     }
     // Timeout occured
     if (res == 0) {
-        return "";
+        return false;
     }
 
-    return read_stdout();
+    read_pipe_nonblock(pipe);
+
+    return true;
 }
 
-Result<std::string> Subprocess::read_stdout() {
-    TRY(read_stdout_impl());
+Subprocess::OutputResult Subprocess::new_output(WhichOutput which) {
+    OutputResult res;
 
-    // Cursor is still at the end of the buffer -> no data was read
-    if (stdout_cursor_ == stdout_buffer_.size()) {
-        return "";
+    // Update res and cursor positions
+    if ((which & WhichOutput::Stdout) != WhichOutput::None && stdout_.cursor < stdout_.buffer.size()) {
+        res.stdout_str = stdout_.buffer.substr(stdout_.cursor);
+        stdout_.cursor = stdout_.buffer.size();
     }
-
-    auto res = stdout_buffer_.substr(stdout_cursor_);
-    stdout_cursor_ = stdout_buffer_.size();
+    if ((which & WhichOutput::Stderr) != WhichOutput::None && stderr_.cursor < stderr_.buffer.size()) {
+        res.stderr_str = stderr_.buffer.substr(stderr_.cursor);
+        stderr_.cursor = stderr_.buffer.size();
+    }
 
     return res;
 }
 
-const std::string& Subprocess::get_full_stdout() {
-    std::ignore = read_stdout_impl();
-
-    return stdout_buffer_;
-}
-
-Result<void> Subprocess::read_stdout_impl() {
-    std::size_t num_bytes_avail = 0;
-
-    if (stdout_pipe_.read_fd == -1) {
-        return {};
-    }
-
-    TRYE(linux::ioctl(stdout_pipe_.read_fd, FIONREAD, &num_bytes_avail), SyscallFailure);
-
-    LOG_DEBUG("{} bytes available from stdout_pipe", num_bytes_avail);
-
-    if (num_bytes_avail == 0) {
-        return {};
-    }
-
-    std::string res = TRYE(linux::read(stdout_pipe_.read_fd, num_bytes_avail), SyscallFailure);
-
-    stdout_buffer_ += res;
-
-    return {};
-}
-
-Result<void> Subprocess::send_stdin(std::string_view str) {
+Result<void> Subprocess::send_stdin(std::string_view str) const {
     // TODO: more abstract write wrapper that ensures all bytes were sent
     TRYE(linux::write(stdin_pipe_.write_fd, str), SyscallFailure);
 
@@ -237,8 +257,13 @@ Result<void> Subprocess::send_stdin(std::string_view str) {
 }
 
 Result<void> Subprocess::create(const std::string& exec, const std::vector<std::string>& args) {
-    stdout_pipe_ = TRYE(linux::pipe2(), SyscallFailure);
     stdin_pipe_ = TRYE(linux::pipe2(), SyscallFailure);
+    stdout_.pipe = TRYE(linux::pipe2(), SyscallFailure);
+    stderr_.pipe = TRYE(linux::pipe2(), SyscallFailure);
+
+    if (!mark_cloexec_all()) {
+        LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
+    }
 
     if (!mark_cloexec_all()) {
         LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
@@ -264,13 +289,33 @@ Result<void> Subprocess::create(const std::string& exec, const std::vector<std::
 
 Result<void> Subprocess::init_child() {
     TRYE(linux::dup2(stdin_pipe_.read_fd, STDIN_FILENO), SyscallFailure);
-    TRYE(linux::dup2(stdout_pipe_.write_fd, STDOUT_FILENO), SyscallFailure);
+    TRYE(linux::dup2(stdout_.pipe.write_fd, STDOUT_FILENO), SyscallFailure);
+    TRYE(linux::dup2(stderr_.pipe.write_fd, STDERR_FILENO), SyscallFailure);
 
     // Close the pipe ends not being used in the child proc
     //  - read end for stdout
-    //  - write end for stdin
+    //  - write end for stdin and stderr
     TRYE(linux::close(stdin_pipe_.write_fd), SyscallFailure);
-    TRYE(linux::close(stdout_pipe_.read_fd), SyscallFailure);
+    TRYE(linux::close(stdout_.pipe.read_fd), SyscallFailure);
+    TRYE(linux::close(stderr_.pipe.read_fd), SyscallFailure);
+
+    namespace fs = std::filesystem;
+
+    for (const auto& entry : fs::directory_iterator("/proc/self/fd")) {
+        int fd = std::stoi(entry.path().filename().string());
+
+        // skip stdin, stdout, stderr
+        if (fd <= 2) {
+            continue;
+        }
+
+        // auto res = linux::close(fd);
+        //
+        // // If close(2) failed for a reason other than the fd not existing, return an error
+        // if (!res && res != linux::make_error_code(EBADF)) {
+        //     return ErrorKind::SyscallFailure;
+        // }
+    }
 
     namespace fs = std::filesystem;
 
@@ -296,16 +341,20 @@ Result<void> Subprocess::init_child() {
 Result<void> Subprocess::init_parent() {
     // Close the pipe ends being used in the parent proc
     //  - write end for stdout
-    //  - read end for stdin
+    //  - read end for stdin and stderr
     TRYE(linux::close(stdin_pipe_.read_fd), SyscallFailure);
-    TRYE(linux::close(stdout_pipe_.write_fd), SyscallFailure);
+    TRYE(linux::close(stdout_.pipe.write_fd), SyscallFailure);
+    TRYE(linux::close(stderr_.pipe.write_fd), SyscallFailure);
     // stdin_pipefd_ = stdin_pipe.write_fd;  // write end of stdin pipe
     // stdout_pipefd_ = stdout_pipe.read_fd; // read end of stdout pipe
 
-    // Make reading from stdout non-blocking
-    int pre_flags = TRYE(linux::fcntl(stdout_pipe_.read_fd, F_GETFL), SyscallFailure);
+    // Make reading from stdout and stderr non-blocking
+    int pre_flags_stdout = TRYE(linux::fcntl(stdout_.pipe.read_fd, F_GETFL), SyscallFailure);
+    int pre_flags_stderr = TRYE(linux::fcntl(stderr_.pipe.read_fd, F_GETFL), SyscallFailure);
 
-    TRYE(linux::fcntl(stdout_pipe_.read_fd, F_SETFL, pre_flags | O_NONBLOCK), // NOLINT
+    TRYE(linux::fcntl(stdout_.pipe.read_fd, F_SETFL, pre_flags_stdout | O_NONBLOCK), // NOLINT
+         SyscallFailure);
+    TRYE(linux::fcntl(stderr_.pipe.read_fd, F_SETFL, pre_flags_stderr | O_NONBLOCK), // NOLINT
          SyscallFailure);
 
     return {};

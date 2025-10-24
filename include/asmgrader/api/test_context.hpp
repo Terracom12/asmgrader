@@ -14,6 +14,7 @@
 #include <asmgrader/program/program.hpp>
 #include <asmgrader/subprocess/memory/concepts.hpp>
 #include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/subprocess.hpp>
 #include <asmgrader/subprocess/syscall_record.hpp>
 
 #include <fmt/base.h>
@@ -80,6 +81,9 @@ public:
 
     /// Get all stdout from since the beginning of the test invokation
     std::string get_full_stdout();
+
+    Subprocess::OutputResult get_output(Subprocess::WhichOutput which = Subprocess::WhichOutput::StdoutAndStderr);
+    Subprocess::OutputResult get_full_output(Subprocess::WhichOutput which = Subprocess::WhichOutput::StdoutAndStderr);
 
     /// Flushes any reamaining unread data in the stdin buffer
     /// Returns: number of bytes flushed, or error kind if failure occured
