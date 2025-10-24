@@ -3,6 +3,7 @@
 #include "common/aliases.hpp"
 #include "common/error_types.hpp"
 #include "program/program.hpp"
+#include "subprocess/subprocess.hpp"
 
 #include <cstdint>
 #include <string>
@@ -46,16 +47,18 @@ TEST_CASE("Call sum_and_write function") {
     asmgrader::Program prog(ASM_TESTS_EXEC, {});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0, 0));
-    REQUIRE(prog.get_subproc().read_stdout() == std::string{"\0\0\0\0\0\0\0\0", 8});
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str ==
+            std::string{"\0\0\0\0\0\0\0\0", 8});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 'a', 5));
     // 'a' + 5 = 'f'
-    REQUIRE(prog.get_subproc().read_stdout() == std::string{"f\0\0\0\0\0\0\0", 8});
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str ==
+            std::string{"f\0\0\0\0\0\0\0", 8});
 
     REQUIRE(prog.call_function<sum_and_write>("sum_and_write", 0x1010101010101010, 0x1010101010101010));
     static_assert(' ' == 0x10 + 0x10, "Somehow not ASCII encoded???");
     // 0x10 + 0x10 = 0x20 (space ' ')
-    REQUIRE(prog.get_subproc().read_stdout() == "        ");
+    REQUIRE(prog.get_subproc().read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "        ");
 }
 
 TEST_CASE("Test that timeouts are handled properly with timeout_fn") {

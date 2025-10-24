@@ -40,7 +40,7 @@ TEST_CASE("Read /bin/echo stdout") {
 
     proc.wait_for_exit();
 
-    REQUIRE(proc.read_stdout() == "Hello world!");
+    REQUIRE(proc.read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "Hello world!");
 }
 
 TEST_CASE("Interact with /bin/cat") {
@@ -68,7 +68,7 @@ TEST_CASE("Get results of asm program") {
     REQUIRE(run_res->get_code() == 42);
 
     REQUIRE(proc.get_exit_code() == 42);
-    REQUIRE(proc.read_stdout() == "Hello, from assembly!\n");
+    REQUIRE(proc.read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "Hello, from assembly!\n");
 
     auto syscall_records = proc.get_tracer().get_records();
 
