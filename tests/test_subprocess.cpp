@@ -43,6 +43,10 @@ TEST_CASE("Read /bin/echo stdout") {
     REQUIRE(proc.read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "Hello world!");
 }
 
+// rational: even though the function is deprecated, it should still be tested
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 TEST_CASE("Interact with /bin/cat") {
     using namespace std::chrono_literals;
 
@@ -57,6 +61,8 @@ TEST_CASE("Interact with /bin/cat") {
 
     REQUIRE(proc.read_stdout(100ms) == "Du Du DUHHH");
 }
+
+#pragma GCC diagnostic pop
 
 TEST_CASE("Get results of asm program") {
     asmgrader::TracedSubprocess proc(ASM_TESTS_EXEC, {});

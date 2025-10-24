@@ -75,6 +75,7 @@ target_link_libraries(
     PRIVATE 
     Catch2::Catch2
     asmgrader_core_interface
+    asmgrader_warnings
 )
 
 # TODO: Migh want to look into changing this later.
@@ -94,6 +95,7 @@ target_link_libraries(
     PRIVATE 
     Catch2::Catch2WithMain
     asmgrader_core_interface
+    asmgrader_warnings
 )
 
 set(asm_tests_weird_name_exec "${CMAKE_CURRENT_BINARY_DIR}/(asm_tests () weird \\(name) ~`")
@@ -129,8 +131,10 @@ target_compile_definitions(
 )
 target_link_libraries(
     asmgrader_dumb_cli
+
     PRIVATE
     asmgrader_core_with_main
+    asmgrader_warnings
 )
 
 add_executable(
@@ -146,8 +150,10 @@ target_compile_definitions(
 )
 target_link_libraries(
     asmgrader_dumb_profcli
+
     PRIVATE
     asmgrader_prof_core_with_main
+    asmgrader_warnings
 )
 
 # Provide a simple smoke test to make sure that the CLI works and can display a --help message
