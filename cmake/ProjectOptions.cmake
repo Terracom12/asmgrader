@@ -156,6 +156,7 @@ macro(asmgrader_local_options)
         target_precompile_headers(
             asmgrader_options
             INTERFACE
+            "cmake/pch_preamble.hpp"
             <limits>
             <compare>
 
