@@ -60,18 +60,20 @@ macro(asmgrader_setup_dependencies)
     # fmt::fmt
     # spdlog
     # argparse
-    # Boost::endian
-    # Boost::type_index
-    # Boost::mp11
-    # Boost::pfr
-    # Boost::describe
-    # Boost::stacktrace
-    # Boost::preprocessor
+    # Boost::
+    #   endian
+    #   type_index
+    #   mp11
+    #   pfr
+    #   describe
+    #   stacktrace
+    #   preprocessor
     # range-v3
     # Microsoft.GSL::GSL
     # nlohmann_json::nlohmann_json
     # elfio::elfio
     # Catch2::Catch2WithMain
+    # cpptrace::cpptrace
     # libassert::assert
 
     # For each dependency, see if it's
@@ -156,7 +158,7 @@ macro(asmgrader_setup_dependencies)
             GITHUB_REPOSITORY "microsoft/GSL"
             VERSION 4.2.0
             GIT_SHALLOW TRUE
-            OPTIONS "GSL_MSVC_STATIC_ANALYZER=OFF"
+            OPTIONS "GSL_MSVC_STATIC_ANALYZER OFF"
             SYSTEM TRUE
         )
         _force_system_includes(Microsoft.GSL::GSL)
@@ -177,15 +179,60 @@ macro(asmgrader_setup_dependencies)
             NAME elfio
             GITHUB_REPOSITORY "serge1/ELFIO"
             GIT_TAG Release_3.12
+            VERSION 3.12
         )
         _force_system_includes(elfio::elfio)
     endif()
 
+    if(NOT TARGET zstd)
+        # zstd as a dependant of cpptrace
+        CPMAddPackage(
+            NAME zstd
+            GITHUB_REPOSITORY "facebook/zstd"
+            VERSION 1.5.7
+            SOURCE_SUBDIR build/cmake
+        )
+        _force_system_includes(zstd)
+    endif()
+
+
+    if(NOT TARGET libdwarf::dwarf)
+        # libdwarf as a dependant of cpptrace
+        CPMAddPackage(
+            NAME libdwarf
+            GITHUB_REPOSITORY "jeremy-rifkin/libdwarf-lite"
+            VERSION 2.1.0
+            OPTIONS "BUILD_DWARFDUMP OFF"
+        )
+        # _force_system_includes(libdwarf::dwarf)
+    endif()
+
+    if(NOT TARGET cpptrace::cpptrace)
+        # cpptrace as a dependant of libassert and a useful library for nice backtraces
+        CPMAddPackage(
+            NAME cpptrace
+            GITHUB_REPOSITORY "jeremy-rifkin/cpptrace"
+            VERSION 1.0.4
+            OPTIONS "CPPTRACE_UNWIND_WITH_EXECINFO ON"
+                    "CPPTRACE_USE_EXTERNAL_LIBDWARF ON"
+                    "CPPTRACE_USE_EXTERNAL_ZSTD ON" # this option does not seem to be properly documented
+
+        )
+        _force_system_includes(cpptrace::cpptrace)
+    endif()
+
+
     if(NOT TARGET libassert::assert)
         # libassert for fancy, overengineered assertions
-        CPMAddPackage("gh:jeremy-rifkin/libassert@2.2.1")
+        CPMAddPackage(
+            NAME libassert
+            GITHUB_REPOSITORY "jeremy-rifkin/libassert"
+            VERSION 2.2.1
+            OPTIONS "LIBASSERT_USE_EXTERNAL_CPPTRACE ON" 
+        )
         _force_system_includes(libassert::assert)
     endif()
+
 
 
     if(NOT TARGET Catch2::Catch2WithMain)
