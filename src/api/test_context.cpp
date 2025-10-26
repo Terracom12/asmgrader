@@ -72,7 +72,7 @@ TestResult TestContext::finalize() {
 }
 
 bool TestContext::require(bool condition, RequirementResult::DebugInfo debug_info) {
-    return require(condition, "<no message>", debug_info);
+    return require_impl(condition, "<no message>", std::nullopt, debug_info);
 }
 
 bool TestContext::require(bool condition, const std::string& msg, RequirementResult::DebugInfo debug_info) {

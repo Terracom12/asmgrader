@@ -34,18 +34,28 @@ function(asmgrader_set_target_warnings target_name WARNINGS_AS_ERRORS)
         -Wsuggest-override # warn if an overridden member function is not marked 'override' or 'final'
     )
 
+    if(WARNINGS_AS_ERRORS)
+        message(TRACE "Warnings are treated as errors")
+        list(APPEND CLANG_WARNINGS -Werror)
+
+        if(CMAKE_BUILD_TYPE MATCHES ".*Rel.*")
+            message(WARNING
+                "Disabling -Werror and removing -Wmaybe-uninitialized and -Wnull-dereference to work around gcc bug emitting warnings for system includes; "
+                "build in Debug mode to see these warnings enabled")
+            list(REMOVE_ITEM GCC_WARNINGS -Wmaybe-uninitialized -Wnull-dereference)
+            list(APPEND GCC_WARNINGS -Wno-maybe-uninitialized -Wno-null-dereference)
+        else()
+            list(APPEND GCC_WARNINGS -Werror)
+        endif()
+
+    endif()
+
     if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
         set(TARGET_WARNINGS_CXX ${CLANG_WARNINGS})
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(TARGET_WARNINGS_CXX ${GCC_WARNINGS})
     else()
         message(AUTHOR_WARNING "No compiler warnings set for CXX compiler: '${CMAKE_CXX_COMPILER_ID}'")
-    endif()
-
-    if(WARNINGS_AS_ERRORS)
-        message(TRACE "Warnings are treated as errors")
-        list(APPEND CLANG_WARNINGS -Werror)
-        list(APPEND GCC_WARNINGS -Werror)
     endif()
 
     target_compile_options(

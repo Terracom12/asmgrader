@@ -7,16 +7,18 @@
 #include <asmgrader/common/linux.hpp>
 
 #include <fmt/format.h>
+#include <gsl/util>
+#include <libassert/assert.hpp>
 
 #include <chrono>
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 namespace asmgrader {
@@ -50,7 +52,11 @@ public:
 
     template <typename Rep, typename Period>
     [[deprecated]] Result<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
-        read_pipe_poll(stdout_, std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+        auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count();
+
+        ASSERT(millis <= std::numeric_limits<int>::max(), "poll(2) is defined to accept an int parameter for millis");
+
+        read_pipe_poll(stdout_, gsl::narrow_cast<int>(millis));
         return new_output(WhichOutput::Stdout).stdout_str;
     }
 
@@ -109,10 +115,6 @@ private:
 
     OutputPipe stdout_{};
     OutputPipe stderr_{};
-
-    /// Marks all open fds (other than 0,1,2) as FD_CLOEXEC so that they get closed in the child proc
-    /// Run in the PARENT process.
-    Expected<> mark_cloexec_all() const;
 
     /// Marks all open fds (other than 0,1,2) as FD_CLOEXEC so that they get closed in the child proc
     /// Run in the PARENT process.

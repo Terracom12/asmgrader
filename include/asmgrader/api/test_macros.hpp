@@ -53,12 +53,12 @@
 #endif // PROFESSOR_VERSION
 
 #define REQUIRE_IMPL(unq_ident, condition, condition_raw_str, ...)                                                     \
-    do { /* NOLINT(cppcoreguidelines-avoid-do-while) */                                                                \
-         /*NOLINTNEXTLINE(bugprone-chained-comparison)*/                                                               \
+    _Pragma("GCC diagnostic push")                                                                                     \
+        _Pragma("GCC diagnostic ignored \"-Wparentheses\"") /*NOLINTNEXTLINE(bugprone-chained-comparison)*/            \
         const auto& unq_ident = ::asmgrader::Requirement{asmgrader::Decomposer{} <= condition,                         \
                                                          {condition_raw_str} __VA_OPT__(, ONLY_FIRST(__VA_ARGS__))};   \
-        bool CONCAT(bool_, unq_ident) = ctx.require(unq_ident);                                                        \
-    } while (false);
+    _Pragma("GCC diagnostic pop") ctx.require(unq_ident) /*premits usage in `if`                                       \
+                                                                                     conditionals*/
 
 #define REQUIRE(condition, ...) REQUIRE_IMPL(CONCAT(require_unq_, __COUNTER__), condition, #condition, __VA_ARGS__)
 
