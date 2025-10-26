@@ -31,44 +31,18 @@
 
 namespace asmgrader {
 
-struct CompilerInfo
-{
-    enum Vendor { Unknown, GCC, Clang } kind;
-
-    int major_version;
-    int minor_version;
-    int patch_version;
-};
-
-static consteval CompilerInfo get_compiler_info() {
-    CompilerInfo compiler_info{};
-
-#if defined(__GNUC__) && !defined(__clang__)
-    compiler_info.kind = CompilerInfo::GCC;
-    compiler_info.major_version = __GNUC__;
-    compiler_info.minor_version = __GNUC_MINOR__;
-    compiler_info.patch_version = __GNUC_PATCHLEVEL__;
-#elif defined(__clang__)
-    compiler_info.kind = CompilerInfo::Clang;
-    compiler_info.major_version = __clang_major__;
-    compiler_info.minor_version = __clang_minor__;
-    compiler_info.patch_version = __clang_patchlevel__;
-#endif
-
-    return compiler_info;
-}
-
+// FIXME: Remove build metadata from this struct
 struct RunMetadata
 {
-    int version = get_version();
-    std::string_view version_string = ASMGRADER_VERSION_STRING;
-    std::string_view git_hash = BOOST_PP_STRINGIZE(ASMGRADER_VERSION_GIT_HASH);
+    int version = -1;
+    std::string version_string = buildinfo::get_version_str();
+    std::string_view git_hash = ASMGRADER_VERSION_GIT_HASH_STR;
 
     std::chrono::time_point<std::chrono::system_clock> start_time = std::chrono::system_clock::now();
 
     decltype(__cplusplus) cpp_standard = __cplusplus;
 
-    CompilerInfo compiler_info = get_compiler_info();
+    buildinfo::CompilerInfo compiler_info = buildinfo::get_build_info().compiler_info;
 };
 
 struct RequirementResult
@@ -181,8 +155,6 @@ struct MultiStudentResult
 } // namespace asmgrader
 
 // I'm crying, please give me reflection :(
-FMT_SERIALIZE_CLASS(::asmgrader::CompilerInfo, kind, major_version, minor_version);
-FMT_SERIALIZE_ENUM(::asmgrader::CompilerInfo::Vendor, Unknown, GCC, Clang);
 FMT_SERIALIZE_CLASS(::asmgrader::RunMetadata, version, version_string, git_hash, start_time, cpp_standard,
                     compiler_info);
 FMT_SERIALIZE_CLASS(::asmgrader::RequirementResult, passed, description, expression_repr, debug_info);

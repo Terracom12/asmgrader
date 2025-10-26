@@ -33,16 +33,16 @@ constexpr bool should_output_test(VerbosityLevel level) {
 constexpr bool should_output_student_summary(VerbosityLevel level) {
     using enum VerbosityLevel;
 
-    return (APP_MODE == AppMode::Student && level >= Quiet)      //
-           ||                                                    //
-           (APP_MODE == AppMode::Professor && level >= Summary); //
+    return (buildinfo::is_student_mode() && level >= Quiet) //
+           ||                                               //
+           (buildinfo::is_prof_mode() && level >= Summary); //
 }
 
 /// See \ref VerbosityLevel
 constexpr bool should_output_grade_percentage(VerbosityLevel level) {
     using enum VerbosityLevel;
 
-    return (APP_MODE == AppMode::Professor && level >= Quiet);
+    return (buildinfo::is_prof_mode() && level >= Quiet);
 }
 
 /// See \ref VerbosityLevel

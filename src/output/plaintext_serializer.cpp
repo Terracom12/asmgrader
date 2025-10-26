@@ -144,7 +144,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
     std::string out;
 
     // We don't want to repeatedly output the same assignment name for every student in prof mode
-    if (APP_MODE == AppMode::Student) {
+    if (buildinfo::is_student_mode()) {
         out = fmt::format("{0}\nAssignment: {1}\n{0}\n", LINE_DIVIDER_EM(terminal_width_), data.name);
     } else {
         out = LINE_DIVIDER(terminal_width_) + "\n";
@@ -188,7 +188,7 @@ void PlainTextSerializer::on_assignment_result(const AssignmentResult& data) {
     out += fmt::format("{}\n{}\n", tests_line, requirements_line);
 
     // Extra line
-    if (APP_MODE == AppMode::Professor) {
+    if (buildinfo::is_prof_mode()) {
         // FIXME: ???
     }
 
@@ -320,7 +320,7 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
 
     std::string version_text = fmt::format("{}-g{}", data.version_string, data.git_hash);
 
-    if (APP_MODE == AppMode::Professor) {
+    if (buildinfo::is_prof_mode()) {
         version_text += " (Professor)";
     } else {
         version_text += " (Student)";

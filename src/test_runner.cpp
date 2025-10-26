@@ -49,7 +49,7 @@ AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::pa
 
     for (TestBase& test : assignment_->get_tests() | maybe_tests_filter) {
         // Skip tests that are marked as professor-only if we're not in professor mode
-        if (test.get_is_prof_only() && APP_MODE != AppMode::Professor) {
+        if (test.get_is_prof_only() && buildinfo::is_prof_mode()) {
             continue;
         }
         const std::string_view assignment_name = test.get_assignment().get_name();

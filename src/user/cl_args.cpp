@@ -32,7 +32,8 @@
 namespace asmgrader {
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
-    : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
+    : arg_parser_{get_basename(args[0]), /*unused*/ buildinfo::get_plain_version_str(),
+                  argparse::default_arguments::help}
     , args_{args.begin(), args.end()} {
     // Add parser arguments
     setup_parser();
@@ -53,13 +54,7 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{}{}{}{}">(
-        ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING,
-        APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)",
-        std::string_view{ASMGRADER_EXTRA_VERSION_INFO}.empty() ? "" : "\n",
-        std::string_view{ASMGRADER_EXTRA_VERSION_INFO});
-
-    arg_parser_.add_description(VERSION_STR.str());
+    arg_parser_.add_description(buildinfo::get_version_str());
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
@@ -91,33 +86,7 @@ void CommandLineArgs::setup_parser() {
         .implicit_value(true)
         .nargs(0)
         .action([&](const auto & /*unused*/) {
-            // FIXME: This is BUILD info
-            RunMetadata run_info{};
-
-            fmt::println("{}\n", std::string_view{VERSION_STR});
-
-            std::string_view compiler_str = "<unknown>";
-
-            if (run_info.compiler_info.kind == CompilerInfo::GCC) {
-                compiler_str = "GCC";
-            } else if (run_info.compiler_info.kind == CompilerInfo::Clang) {
-                compiler_str = "Clang";
-            }
-
-            fmt::println("Build Type: "
-#if defined(DEBUG)
-                "Debug"
-#elif defined(RELEASE)
-                "Release"
-#else
-                "<unknown>"
-#endif
-            );
-            fmt::println("Target: {}, {}", SYSTEM_PROCESSOR, EndiannessKind::Native);
-            fmt::println("Compiler: {} v{}.{}.{}", compiler_str, run_info.compiler_info.major_version, run_info.compiler_info.minor_version, run_info.compiler_info.patch_version);
-
-            fmt::println("");
-            fmt::println("Build Time: {} at {}", __DATE__, __TIME__);
+            fmt::println("{}", asmgrader::buildinfo::get_build_info());
 
             std::exit(0);
         })
@@ -235,7 +204,7 @@ void CommandLineArgs::setup_parser() {
         .action([this] (const std::string& opt) {
                 opts_buffer_.file_name = opt;
         })
-        .help(APP_MODE == AppMode::Professor ?
+        .help(buildinfo::get_app_mode() == buildinfo::AppMode::Professor ?
                 "The *individual* file to run tests on. No other files are searched for, nor is the database read.\n"
                 "This argument's behavior overrides any usage of --file-matcher, --search-path, and --database." :  // professor help msg
                 "The file to run tests on." // student help msg

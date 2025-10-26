@@ -132,7 +132,7 @@ struct ProgramOptions
         auto assignment = TRYE(GlobalRegistrar::get().get_assignment(assignment_name),
                                fmt::format("Error locating assignment {}", assignment_name));
 
-        if (APP_MODE != AppMode::Professor) {
+        if (buildinfo::get_app_mode() != buildinfo::AppMode::Professor) {
             // TODO: A more friendly diagnostic for non-existant file
             std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
 
@@ -157,7 +157,7 @@ struct fmt::formatter<::asmgrader::ProgramOptions> : ::asmgrader::DebugFormatter
                            fmt::underlying(from.verbosity), from.assignment_name, fmt::underlying(from.stop_option),
                            fmt::underlying(from.colorize_option), from.file_name));
 
-        if (asmgrader::APP_MODE == asmgrader::AppMode::Professor) {
+        if (asmgrader::buildinfo::get_app_mode() == asmgrader::buildinfo::AppMode::Professor) {
             return fmt::format_to(ctx.out(), " file_matcher={}, database_path={}, search_path={}", from.file_matcher,
                                   from.database_path, from.search_path);
         }
