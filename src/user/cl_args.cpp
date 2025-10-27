@@ -210,14 +210,20 @@ void CommandLineArgs::setup_parser() {
         })
         .help("RegEx to match files for a given student and assignment.\nSee docs for syntax details.");
 
+    // Path of THIS program
+    // See proc_pid(5) for info on "/proc/PID/exe"
+
+    const auto exec_path = std::filesystem::canonical("/proc/self/exe").parent_path();
+    const std::string default_database_path = (exec_path / ProgramOptions::DEFAULT_DATABASE_NAME).string();
+    opts_buffer_.database_path = default_database_path;
     arg_parser_.add_argument("-db", "--database")
-        .default_value(std::string{ProgramOptions::DEFAULT_DATABASE_PATH})
+        .default_value(default_database_path)
         .nargs(1)
         .metavar("FILE")
         .action([this] (const std::string& opt) {
                 opts_buffer_.database_path = opt;
         })
-        .help("CSV database file with student names. If not specified, "
+        .help("CSV database file with student names. If not specified nor the default found, "
               "will attempt to find student submissions recursively using heuristics.\nSee docs for format spec.");
 
     arg_parser_.add_argument("-p", "--search-path")
