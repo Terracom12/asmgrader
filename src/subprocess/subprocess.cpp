@@ -93,6 +93,12 @@ Result<void> Subprocess::restart() {
         TRY(kill());
     }
 
+    // Clear all old stdout+stderr records
+    stdout_.buffer.clear();
+    stdout_.cursor = 0;
+    stderr_.buffer.clear();
+    stderr_.cursor = 0;
+
     TRY(start());
 
     return {};
