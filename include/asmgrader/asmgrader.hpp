@@ -10,6 +10,7 @@
 #include <asmgrader/common/aliases.hpp>               // IWYU pragma: export
 #include <asmgrader/common/bit_casts.hpp>             // IWYU pragma: export
 #include <asmgrader/common/formatters/formatters.hpp> // IWYU pragma: export
+#include <asmgrader/common/conversions.hpp>           // IWYU pragma: export
 #include <asmgrader/logging.hpp>                      // IWYU pragma: export
 
 #include <fmt/format.h> // IWYU pragma: export
