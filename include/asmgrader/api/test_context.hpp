@@ -3,6 +3,7 @@
 #include <asmgrader/api/asm_buffer.hpp>
 #include <asmgrader/api/asm_function.hpp>
 #include <asmgrader/api/asm_symbol.hpp>
+#include <asmgrader/api/process_statistics.hpp>
 #include <asmgrader/api/registers_state.hpp>
 #include <asmgrader/api/requirement.hpp>
 #include <asmgrader/common/aliases.hpp>
@@ -13,6 +14,7 @@
 #include <asmgrader/program/program.hpp>
 #include <asmgrader/subprocess/memory/concepts.hpp>
 #include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/subprocess.hpp>
 #include <asmgrader/subprocess/syscall_record.hpp>
 
 #include <fmt/base.h>
@@ -80,6 +82,9 @@ public:
     /// Get all stdout from since the beginning of the test invokation
     std::string get_full_stdout();
 
+    Subprocess::OutputResult get_output(Subprocess::WhichOutput which = Subprocess::WhichOutput::StdoutAndStderr);
+    Subprocess::OutputResult get_full_output(Subprocess::WhichOutput which = Subprocess::WhichOutput::StdoutAndStderr);
+
     /// Flushes any reamaining unread data in the stdin buffer
     /// Returns: number of bytes flushed, or error kind if failure occured
     std::size_t flush_stdin();
@@ -91,7 +96,7 @@ public:
     RegistersState get_registers() const;
 
     /// Get any **new** stdout from the program since the last call to this function
-    void send_stdin(const std::string& input);
+    void send_stdin(std::string_view input);
 
     /// Find a named symbol in the associated program
     /// \tparam T  type of data that the symbol refers to
@@ -107,7 +112,19 @@ public:
     AsmFunction<Func> find_function(std::string name);
 
     /// Run the program normally from `_start`, stopping at the first exit(2) or exit_group(2) syscall invocation
-    RunResult run();
+    Result<RunResult> run();
+
+    /// Send SIGCONT to subprocess in case it was stopped for any reason,
+    /// then execute \ref run
+    Result<RunResult> cont();
+
+    /// Run the program from `_start`, stopping at the first syscall matching syscallnr
+    /// OR the first exit(2) or exit_group(2) syscall invocation [whichever happens first]
+    Result<RunResult> run_until(u64 syscallnr);
+
+    /// Obtain statistics for the subprocess being tested
+    /// Data is more limited when the process is not stopped!
+    ProcessStats stats();
 
 private:
     bool require_impl(bool condition, const std::string& description,

@@ -132,7 +132,7 @@ public:
         std::tuple<std::array<Byte, sizeof(Types)>...> bytes;
 
         std::apply(
-            [&bytes, iter = begin()](auto&&... elems) mutable {
+            [iter = begin()](auto&&... elems) mutable {
                 ((ranges::copy_n(std::exchange(iter, iter + sizeof(Types)), sizeof(Types), elems.begin())), ...);
             },
             bytes);

@@ -1,11 +1,14 @@
 #pragma once
 
+#include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/extra_formatters.hpp>
+#include <asmgrader/common/formatters/unknown.hpp>
 #include <asmgrader/logging.hpp>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <gsl/zstring>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/transform.hpp>
 
@@ -17,6 +20,7 @@
 #include <ctime>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -42,15 +46,17 @@ inline std::error_code make_error_code(int err = errno) {
 
 /// writes to a file descriptor. See write(2)
 /// returns success/failure; logs failure at debug level
-inline Expected<ssize_t> write(int fd, const std::string& data) {
+inline Expected<ssize_t> write(int fd, std::string_view data) {
     ssize_t res = ::write(fd, data.data(), data.size());
 
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("write failed: '{}'", err);
+        LOG_TRACE("write(fd={}, data={:?}, size={}) failed: '{}'", fd, data, data.size(), err);
         return err;
     }
+
+    LOG_TRACE("write(fd={}, data={:?}, size={}) = {}", fd, data, data.size(), res);
 
     return res;
 }
@@ -65,12 +71,15 @@ inline Expected<std::string> read(int fd, size_t count) { // NOLINT
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("read failed: '{}'", err);
+        LOG_TRACE("read(fd={}, count={}) failed: '{}'", fd, count, err);
+
         return err;
     }
 
     DEBUG_ASSERT(res >= 0, "read result is negative and != -1");
     buffer.resize(static_cast<std::size_t>(res));
+
+    LOG_TRACE("read(fd={}, count={}) = {}; buffer={:?}", fd, count, res, buffer);
 
     return buffer;
 }
@@ -83,9 +92,11 @@ inline Expected<> close(int fd) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("close failed: '{}'", err);
+        LOG_TRACE("close(fd={}) failed: '{}'", fd, err);
         return err;
     }
+
+    LOG_TRACE("close(fd={}) = {}", fd, res);
 
     return {};
 }
@@ -98,9 +109,32 @@ inline Expected<> kill(pid_t pid, int sig) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("kill failed: '{}'", err);
+        LOG_TRACE("kill(pid={}, sig={}) failed: '{}'", pid, sig, err);
+
         return err;
     }
+
+    LOG_TRACE("kill(pid={}, sig={}) = {}", pid, sig, res);
+
+    return {};
+}
+
+/// see access(2)
+/// returns success/failure; logs failure at debug level
+inline Expected<> access(gsl::czstring path, int mode) {
+    ASSERT((static_cast<u64>(mode) & ~static_cast<u64>(R_OK | W_OK | X_OK | F_OK)) == 0, mode);
+
+    int res = ::access(path, mode);
+
+    if (res == -1) {
+        auto err = make_error_code(errno);
+
+        LOG_TRACE("access(path={:?}, mode={}) failed '{}'", path, mode, err);
+
+        return err;
+    }
+
+    LOG_TRACE("access(path={:?}, mode={}) = {}", path, mode, res);
 
     return {};
 }
@@ -128,9 +162,9 @@ inline Expected<> execve(const std::string& exec, const std::vector<std::string>
     auto err = make_error_code(errno);
 
     if (res == -1) {
-        LOG_DEBUG("execve failed: '{}'", err);
+        LOG_TRACE("execve failed: '{}'", err);
     } else {
-        LOG_DEBUG("execve failed (INVALID RETURN CODE = {}): '{}'", res, err);
+        LOG_TRACE("execve failed (INVALID RETURN CODE = {}): '{}'", res, err);
     }
 
     return err;
@@ -150,7 +184,7 @@ inline Expected<Fork> fork() {
 
     if (res == -1) {
         auto err = make_error_code(errno);
-        LOG_DEBUG("fork failed: '{}'", err);
+        LOG_TRACE("fork failed: '{}'", err);
         return err;
     }
 
@@ -169,9 +203,11 @@ inline Expected<int> open(const std::string& pathname, int flags, mode_t mode = 
 
     if (res == -1) {
         auto err = make_error_code(errno);
-        LOG_DEBUG("open failed: '{}'", err);
+        LOG_TRACE("open(pathname={:?}, flags={}, mode={}) failed: '{}'", pathname, flags, mode, err);
         return err;
     }
+
+    LOG_TRACE("open(pathname={:?}, flags={}, mode={}) = {}", pathname, flags, mode, res);
 
     return res;
 }
@@ -183,7 +219,7 @@ inline Expected<off_t> lseek(int fd, off_t offset, int whence) {
 
     if (res == -1) {
         auto err = make_error_code(errno);
-        LOG_DEBUG("lseek failed: '{}'", err);
+        LOG_TRACE("lseek failed: '{}'", err);
         return err;
     }
 
@@ -199,9 +235,9 @@ inline Expected<> dup2(int oldfd, int newfd) {
         auto err = make_error_code(errno);
 
         if (res == -1) {
-            LOG_DEBUG("dup2 failed: '{}'", err);
+            LOG_TRACE("dup2 failed: '{}'", err);
         } else {
-            LOG_DEBUG("dup2 failed (INVALID RETURN CODE = {}): '{}'", res, err);
+            LOG_TRACE("dup2 failed (INVALID RETURN CODE = {}): '{}'", res, err);
         }
 
         return err;
@@ -220,7 +256,7 @@ inline Expected<int> ioctl(int fd, unsigned long request, void* argp) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("ioctl failed: '{}'", err);
+        LOG_TRACE("ioctl failed: '{}'", err);
 
         return err;
     }
@@ -244,7 +280,7 @@ inline Expected<int> fcntl(int fd, int cmd, std::optional<int> arg = std::nullop
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("fcntl failed: '{}'", err);
+        LOG_TRACE("fcntl failed: '{}'", err);
 
         return err;
     }
@@ -261,10 +297,13 @@ inline Expected<siginfo_t> waitid(idtype_t idtype, id_t id, int options = WSTOPP
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("waitid failed: '{}'", err);
+        LOG_TRACE("waitid(idtype={}, id={}, options={}) failed: '{}'", fmt::underlying(idtype), id, options, err);
 
         return err;
     }
+
+    LOG_TRACE("waitid(idtype={}, id={}, options={}) = {}; info={}", fmt::underlying(idtype), id, options, res,
+              format_or_unknown(info));
 
     return info;
 }
@@ -277,10 +316,12 @@ inline Expected<> raise(int sig) {
     if (res == -1) {
         auto err = std::error_code(errno, std::system_category());
 
-        LOG_DEBUG("raise failed: '{}'", err);
+        LOG_TRACE("raise({}) failed: '{}'", sig, err);
 
         return err;
     }
+
+    LOG_TRACE("raise(sig={}) = {}", sig, res);
 
     return {};
 }
@@ -304,10 +345,12 @@ inline Expected<Pipe> pipe2(int flags = 0) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("pipe failed: '{}'", err);
+        LOG_TRACE("pipe(..., flags={}) failed: '{}'", flags, err);
 
         return err;
     }
+
+    LOG_TRACE("pipe(..., flags={}) = {}; pipes=(r={}, w={})", flags, res, pipe.read_fd, pipe.write_fd);
 
     return pipe;
 }
@@ -337,11 +380,14 @@ inline Expected<long> ptrace(int request, pid_t pid = 0, AddrT addr = NULL, Data
     if (errno) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("ptrace(req={}, pid={}, addr={}, data={}) failed: '{}'", request, pid, format_or_unknown(addr),
+        LOG_TRACE("ptrace(req={}, pid={}, addr={}, data={}) failed: '{}'", request, pid, format_or_unknown(addr),
                   format_or_unknown(data), err);
 
         return err;
     }
+
+    LOG_TRACE("ptrace(req={}, pid={}, addr={}, data={}) = {}", request, pid, format_or_unknown(addr),
+              format_or_unknown(data), res);
 
     return res;
 }
@@ -355,10 +401,12 @@ inline Expected<struct ::stat> stat(const std::string& pathname) {
     if (res == -1) {
         auto err = make_error_code(errno);
 
-        LOG_DEBUG("stat failed: '{}'", err);
+        LOG_TRACE("stat failed: '{}'", err);
 
         return err;
     }
+
+    LOG_TRACE("stat(pathname={:?}) = {}; data={}", pathname, res, format_or_unknown(data_result));
 
     return data_result;
 }

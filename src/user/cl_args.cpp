@@ -1,7 +1,9 @@
 #include "cl_args.hpp"
 
 #include "api/assignment.hpp"
+#include "app_mode.hpp"
 #include "common/expected.hpp"
+#include "common/os.hpp"
 #include "common/static_string.hpp"
 #include "common/terminal_checks.hpp"
 #include "grading_session.hpp"
@@ -12,6 +14,7 @@
 #include "version.hpp"
 
 #include <argparse/argparse.hpp>
+#include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/compile.h>
@@ -30,7 +33,8 @@
 namespace asmgrader {
 
 CommandLineArgs::CommandLineArgs(std::span<const char*> args)
-    : arg_parser_{get_basename(args[0]), /*unused*/ ASMGRADER_VERSION_STRING, argparse::default_arguments::help}
+    : arg_parser_{get_basename(args[0]), /*unused*/ buildinfo::get_plain_version_str(),
+                  argparse::default_arguments::help}
     , args_{args.begin(), args.end()} {
     // Add parser arguments
     setup_parser();
@@ -51,21 +55,28 @@ void CommandLineArgs::setup_parser() {
     const auto assignment_names =
         GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) { return assignment.get_name(); });
 
-    static constexpr auto VERSION_STR = static_format<"AsmGrader v{}-g{} {}">(
-        ASMGRADER_VERSION_STRING, ASMGRADER_VERSION_GIT_HASH_STRING,
-        APP_MODE == AppMode::Professor ? " (Professor's Version)" : " (Student's Version)");
-
-    arg_parser_.add_description(VERSION_STR.str());
+    arg_parser_.add_description(buildinfo::get_version_str());
 
     // FIXME: argparse is kind of annoying. Behavior is dependant upon ORDER of chained fn calls.
     //  maybe want to switch to another lib, or just do it myself. Need arg choices in help.
 
     // clang-format off
+    std::string assignment_help_str = fmt::format("The assignment to run tests on.\n"
+#ifndef PROFESSOR_VERSION
+            "If left unspecified, will attempt to infer the assignment based on files in the current working directory.\n"
+#endif
+            "One of: {}", assignment_names.empty() ? "<No assignments; this is probably an error>" : fmt::format("{:n}", assignment_names));
     auto& assignment_arg = arg_parser_.add_argument("assignment")
         .store_into(opts_buffer_.assignment_name)
-        // Add all assignment names to help msg, since argparse won't add choices by
-        // default for some reason
-        .help(fmt::format("The assignment to run tests on\nOne of: {:n}", assignment_names));
+#ifdef PROFESSOR_VERSION
+        .help(assignment_help_str);
+#else
+        // inferring the lab is only supported in student mode for now
+        .nargs(0, 1)  // [optional]
+        .help(assignment_help_str);
+#endif // !PROFESSOR_VERSION
+    // Add all assignment names to help msg, since argparse won't add choices by
+    // default for some reason
     GlobalRegistrar::get().for_each_assignment([&](const Assignment& assignment) {
         assignment_arg.add_choice(assignment.get_name());
     });
@@ -76,19 +87,8 @@ void CommandLineArgs::setup_parser() {
         .implicit_value(true)
         .nargs(0)
         .action([&](const auto & /*unused*/) {
-            RunMetadata run_info{};
+            fmt::println("{}", asmgrader::buildinfo::get_build_info());
 
-            fmt::println("{} [{}]\n", std::string_view{VERSION_STR}, run_info.version);
-
-            std::string_view compiler_str = "<unknown>";
-
-            if (run_info.compiler_info.kind == CompilerInfo::GCC) {
-                compiler_str = "GCC";
-            } else if (run_info.compiler_info.kind == CompilerInfo::Clang) {
-                compiler_str = "Clang";
-            }
-
-            fmt::println("Built with {} v{}.{}.{}", compiler_str, run_info.compiler_info.major_version, run_info.compiler_info.minor_version, run_info.compiler_info.patch_version);
             std::exit(0);
         })
         .help("prints version information and exits");
@@ -141,6 +141,14 @@ void CommandLineArgs::setup_parser() {
         .help("Whether/when to stop early, to not flood the console with failing test messages.");
 
 
+    arg_parser_.add_argument("--filter")
+        .metavar("STR")
+        .nargs(1)
+        .action([&] (const std::string& opt) {
+            opts_buffer_.tests_filter = opt;
+        })
+        .help("Filter for test cases to be run. Matching occurs if STR occurs anywhere within the test case name.");
+
     arg_parser_.add_argument("-c", "--color")
         .choices("never", "auto", "always")
         .default_value(std::string{"auto"})
@@ -172,14 +180,20 @@ void CommandLineArgs::setup_parser() {
         })
         .help("RegEx to match files for a given student and assignment.\nSee docs for syntax details.");
 
+    // Path of THIS program
+    // See proc_pid(5) for info on "/proc/PID/exe"
+
+    const auto exec_path = std::filesystem::canonical("/proc/self/exe").parent_path();
+    const std::string default_database_path = (exec_path / ProgramOptions::DEFAULT_DATABASE_NAME).string();
+    opts_buffer_.database_path = default_database_path;
     arg_parser_.add_argument("-db", "--database")
-        .default_value(std::string{ProgramOptions::DEFAULT_DATABASE_PATH})
+        .default_value(default_database_path)
         .nargs(1)
         .metavar("FILE")
         .action([this] (const std::string& opt) {
                 opts_buffer_.database_path = opt;
         })
-        .help("CSV database file with student names. If not specified, "
+        .help("CSV database file with student names. If not specified nor the default found, "
               "will attempt to find student submissions recursively using heuristics.\nSee docs for format spec.");
 
     arg_parser_.add_argument("-p", "--search-path")
@@ -197,7 +211,7 @@ void CommandLineArgs::setup_parser() {
         .action([this] (const std::string& opt) {
                 opts_buffer_.file_name = opt;
         })
-        .help(APP_MODE == AppMode::Professor ?
+        .help(get_builtin_app_mode() == AppMode::Professor ?
                 "The *individual* file to run tests on. No other files are searched for, nor is the database read.\n"
                 "This argument's behavior overrides any usage of --file-matcher, --search-path, and --database." :  // professor help msg
                 "The file to run tests on." // student help msg

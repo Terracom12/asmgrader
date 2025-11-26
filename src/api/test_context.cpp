@@ -2,6 +2,7 @@
 
 #include "api/asm_buffer.hpp"
 #include "api/metadata.hpp"
+#include "api/process_statistics.hpp"
 #include "api/registers_state.hpp"
 #include "api/requirement.hpp"
 #include "api/test_base.hpp"
@@ -9,6 +10,7 @@
 #include "common/bit_casts.hpp"
 #include "common/byte_array.hpp"
 #include "common/error_types.hpp"
+#include "common/linux.hpp"
 #include "common/macros.hpp"
 #include "common/unreachable.hpp"
 #include "exceptions.hpp"
@@ -16,6 +18,7 @@
 #include "logging.hpp"
 #include "program/program.hpp"
 #include "subprocess/run_result.hpp"
+#include "subprocess/subprocess.hpp"
 #include "subprocess/syscall_record.hpp"
 
 #include <fmt/color.h>
@@ -32,6 +35,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <sys/poll.h>
@@ -69,7 +73,7 @@ TestResult TestContext::finalize() {
 }
 
 bool TestContext::require(bool condition, RequirementResult::DebugInfo debug_info) {
-    return require(condition, "<no message>", debug_info);
+    return require_impl(condition, "<no message>", std::nullopt, debug_info);
 }
 
 bool TestContext::require(bool condition, const std::string& msg, RequirementResult::DebugInfo debug_info) {
@@ -81,18 +85,26 @@ std::string_view TestContext::get_name() const {
 }
 
 std::string TestContext::get_stdout() {
-    return TRY_OR_THROW(prog_.get_subproc().read_stdout(), "failed to read stdout");
+    return get_output(Subprocess::WhichOutput::Stdout).stdout_str;
 }
 
 std::string TestContext::get_full_stdout() {
-    return prog_.get_subproc().get_full_stdout();
+    return get_full_output(Subprocess::WhichOutput::Stdout).stdout_str;
 }
 
-void TestContext::send_stdin(const std::string& input) {
+Subprocess::OutputResult TestContext::get_output(Subprocess::WhichOutput which) {
+    return prog_.get_subproc().read_output(which);
+}
+
+Subprocess::OutputResult TestContext::get_full_output(Subprocess::WhichOutput which) {
+    return prog_.get_subproc().read_full_output(which);
+}
+
+void TestContext::send_stdin(std::string_view input) {
     TRY_OR_THROW(prog_.get_subproc().send_stdin(input), "failed to write to stdin");
 }
 
-RunResult TestContext::run() {
+Result<RunResult> TestContext::run() {
     int exit_code{};
 
     auto res = prog_.run_until([&exit_code](const SyscallRecord& syscall) {
@@ -112,7 +124,35 @@ RunResult TestContext::run() {
         return RunResult::make_exited(exit_code);
     }
 
-    return TRY_OR_THROW(res, "failed to run program");
+    return res;
+}
+
+Result<RunResult> TestContext::cont() {
+    TRYE(linux::kill(prog_.get_subproc().get_pid(), SIGCONT), SyscallFailure);
+
+    return run();
+}
+
+Result<RunResult> TestContext::run_until(u64 syscallnr) {
+    std::optional<int> exit_code{};
+
+    auto res = prog_.run_until([&exit_code, syscallnr](const SyscallRecord& syscall) {
+        if (syscall.num == SYS_exit || syscall.num == SYS_exit_group) {
+            exit_code = std::get<int>(syscall.args.at(0));
+            return true;
+        }
+        return syscall.num == syscallnr;
+    });
+
+    if (exit_code.has_value()) {
+        return RunResult::make_exited(*exit_code);
+    }
+
+    return res;
+}
+
+ProcessStats TestContext::stats() {
+    return ProcessStats{prog_.get_subproc().get_pid()};
 }
 
 void TestContext::restart_program() {
@@ -132,12 +172,14 @@ std::size_t TestContext::flush_stdin() {
 #warning "Your system does not support the `ppoll` syscall! TestContext::flush_stdin will not work!"
     UNIMPLEMENTED("SYS_ppoll not defined!");
 #else
+    // HACK: This is inefficient for a single program, but will break if static when run for multiple program instances
+
     // Buffer to send SYS_read output to
-    static const AsmBuffer READ_BUFFER = create_buffer<32>();
+    const AsmBuffer READ_BUFFER = create_buffer<32>();
     // struct timespec buffer for ppoll
-    static const AsmBuffer ZERO_TIMESPEC_BUFFER = create_buffer<sizeof(timespec)>();
+    const AsmBuffer ZERO_TIMESPEC_BUFFER = create_buffer<sizeof(timespec)>();
     // A fd_set with only STDIN for SYS_select
-    static const AsmBuffer STDIN_ONLY_POLLFD_BUFFER = create_buffer<sizeof(pollfd)>();
+    const AsmBuffer STDIN_ONLY_POLLFD_BUFFER = create_buffer<sizeof(pollfd)>();
 
     ZERO_TIMESPEC_BUFFER.zero();
 

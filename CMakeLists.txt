@@ -31,14 +31,23 @@ project(AsmGrader
 
 enable_language(ASM)
 
-##### Project configuration source file
-# For now, just substitutes version numbers as defined in root CMake project() decl
-
-configure_file(src/version.hpp.in asmgrader/version.hpp @ONLY)
-
 # Set up CMake project options (ASMGRADER_* args)
 include(cmake/ProjectOptions.cmake)
 asmgrader_setup_options()
+
+
+asmgrader_global_options()
+
+# Set up project dependencies
+# CPM (CMake package manager) is used for easy dependency management
+include(cmake/SetupDependencies.cmake)
+asmgrader_setup_dependencies()
+
+asmgrader_local_options()
+
+##### Project configuration source file
+include(cmake/ConfigureVersionInfo.cmake)
+
 
 # Set up docs subproject, if option is specified
 if(${ASMGRADER_BUILD_DOCS})
@@ -53,15 +62,6 @@ if(${ASMGRADER_BUILD_DOCS})
     endif()
 endif()
 
-
-asmgrader_global_options()
-
-# Set up project dependencies
-# CPM (CMake package manager) is used for easy dependency management
-include(cmake/SetupDependencies.cmake)
-asmgrader_setup_dependencies()
-
-asmgrader_local_options()
 
 add_subdirectory(src)
 

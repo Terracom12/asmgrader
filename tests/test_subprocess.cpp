@@ -40,8 +40,12 @@ TEST_CASE("Read /bin/echo stdout") {
 
     proc.wait_for_exit();
 
-    REQUIRE(proc.read_stdout() == "Hello world!");
+    REQUIRE(proc.read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "Hello world!");
 }
+
+// rational: even though the function is deprecated, it should still be tested
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 TEST_CASE("Interact with /bin/cat") {
     using namespace std::chrono_literals;
@@ -58,6 +62,8 @@ TEST_CASE("Interact with /bin/cat") {
     REQUIRE(proc.read_stdout(100ms) == "Du Du DUHHH");
 }
 
+#pragma GCC diagnostic pop
+
 TEST_CASE("Get results of asm program") {
     asmgrader::TracedSubprocess proc(ASM_TESTS_EXEC, {});
     REQUIRE(proc.start());
@@ -68,7 +74,7 @@ TEST_CASE("Get results of asm program") {
     REQUIRE(run_res->get_code() == 42);
 
     REQUIRE(proc.get_exit_code() == 42);
-    REQUIRE(proc.read_stdout() == "Hello, from assembly!\n");
+    REQUIRE(proc.read_output(asmgrader::Subprocess::WhichOutput::Stdout).stdout_str == "Hello, from assembly!\n");
 
     auto syscall_records = proc.get_tracer().get_records();
 

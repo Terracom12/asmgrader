@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Docs
         run: |
-            make build-docs
+            make build-docs NUM_JOBS=$(nproc)
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5

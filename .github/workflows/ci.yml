@@ -51,18 +51,22 @@ jobs:
         run: |
           echo "CPM_SOURCE_CACHE=./build/CPM" > .env
 
-      - name: Configure
+      - name: Strip compiler version
         run: |
-          make configure-${{ matrix.build_type }}
+          base_compiler="${{ matrix.compiler }}"
+          base_compiler="${base_compiler%%-*}"
+          base_compiler="${base_compiler/llvm/clang}"
+          echo "Base compiler: $base_compiler"
+          echo "BASE_COMPILER=$base_compiler" >> "$GITHUB_ENV"
 
-      # We want ccache to be capable of caching PCH
+      # We want ccache to be capable of caching with a PCH
       - name: Set ccache Config
         run: |
           ccache --set-config 'sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime'
 
       - name: Build
         run: |
-          make build-${{ matrix.build_type }} CMAKE_CONFIGURE_EXTRA_ARGS="-DASMGRADER_ENABLE_TRACE=ON"
+          ./scripts/build ${{ matrix.build_type }} $BASE_COMPILER ${{ matrix.generator }}
 
       - name: ccache Stats
         run: |
@@ -70,7 +74,7 @@ jobs:
 
       - name: Test
         run: |
-          LOG_LEVEL=trace make test-${{ matrix.build_type }} CTEST_EXTRA_ARGS="--output-junit \"$PWD/reports/junit-ctest.xml\""
+          LOG_LEVEL=trace ./scripts/utest --no-build ${{ matrix.build_type }} $BASE_COMPILER ${{ matrix.generator }}
 
       - uses: actions/upload-artifact@v4  # upload test results
         if: ${{ !cancelled() }}           # run this step even if previous step failed

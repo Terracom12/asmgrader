@@ -36,7 +36,6 @@ set(
     subprocess/tracer.cpp
     subprocess/memory/memory_io_base.cpp
     subprocess/memory/ptrace_memory_io.cpp
-    subprocess/run_result.cpp
 
     common/terminal_checks.cpp
 
@@ -53,6 +52,10 @@ set(
 
     program/program.cpp
 
+    user/cl_args.cpp
+
+    api/tempfile.cpp
+    api/process_statistics.cpp
     api/assignment.cpp
     api/test_context.cpp
     api/syntax_highlighter.cpp
@@ -68,6 +71,8 @@ set(
     app/professor_app.cpp
     app/student_app.cpp
     app/test_theme_app.cpp
+
+    version.cpp
 )
 
 set(
@@ -157,6 +162,15 @@ endfunction()
 
 ##### Student version
 create_target(asmgrader)
+
+# Courtesy of triclosan
+#  CC BY-SA 4.0
+# https://stackoverflow.com/a/61206137
+add_custom_command(
+    TARGET asmgrader_core
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
+)
 
 ##### Professor version
 create_target(asmgrader_prof)

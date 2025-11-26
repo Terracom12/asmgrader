@@ -58,6 +58,10 @@ using namespace std::chrono_literals;
 Result<void> Tracer::begin(pid_t pid) {
     pid_ = pid;
 
+    // Remove all OLD syscall records
+    // relevant when using Subrocess::restart
+    syscall_records_.clear();
+
     assert_invariants();
 
     // TODO: Extract this
@@ -173,6 +177,8 @@ void Tracer::assert_invariants() const {
                   expected_ppid, info.ppid);
         throw std::runtime_error("contract violation");
     }
+
+    LOG_TRACE("Invariant assertions passed for pid={}", pid_);
 }
 
 SyscallRecord Tracer::get_syscall_entry_info(struct ptrace_syscall_info* entry) const {
@@ -347,6 +353,9 @@ Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pr
             // stop process to keep in tracable state
             TRYE(linux::kill(pid_, SIGSTOP), SyscallFailure);
 
+            // wait until process has confirmed stop
+            TRYE(linux::waitid(P_PID, static_cast<id_t>(pid_), WSTOPPED), SyscallFailure);
+
             return ErrorKind::TimedOut;
         }
 
@@ -393,11 +402,13 @@ Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pr
 
         // trapped by a signal (such as by a SEGFAULT)
         if (waitid_data.type == CLD_TRAPPED) {
-            // FIXME: better macro, or abstracted registers
-#ifndef ASMGRADER_AARCH64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
                       format_or_unknown(get_registers()));
-#endif
+
+            if (*waitid_data.signal_num == SIGCONT) {
+                LOG_TRACE("Ignoring SIGCONT in child proc");
+                continue;
+            }
             return RunResult::make_signal_caught(*waitid_data.signal_num);
         }
 

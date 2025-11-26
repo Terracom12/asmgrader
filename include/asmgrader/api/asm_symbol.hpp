@@ -50,7 +50,7 @@ public:
 };
 
 template <typename T>
-class AsmSymbol : AsmData<T>
+class AsmSymbol : public AsmData<T>
 {
 public:
     AsmSymbol(Program& prog, std::string name, std::uintptr_t address);
@@ -87,7 +87,7 @@ AsmSymbolResult<T> AsmSymbol<T>::get_value() const {
     }
     LOG_DEBUG("Read value {} for symbol {:?} @ 0x{:X}", val_str, name_, AsmData<T>::get_address());
 
-    res.set_result(value);
+    res.set_result(std::move(value));
 
     return res;
 }

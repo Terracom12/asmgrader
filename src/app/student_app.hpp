@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api/assignment.hpp"
 #include "app/app.hpp" // IWYU pragma: export
 
 namespace asmgrader {
@@ -11,6 +12,8 @@ public:
 
 private:
     int run_impl() override;
+
+    Assignment& get_assignment_or_exit() const;
 };
 
 } // namespace asmgrader

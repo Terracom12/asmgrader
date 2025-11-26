@@ -32,7 +32,7 @@ sum:
 ///     x0 + x1 written to stdout as 8 bytes.
 sum_and_write:
     add     x0, x0, x1     // x0 += x1
-    STR     x0, [sp, -8]!
+    str     x0, [sp, -8]!  // save x0 onto the stack
 
     mov     x8, 64         // SYS_write
     mov     x0, 1          // fd param = stdout
@@ -41,6 +41,26 @@ sum_and_write:
     svc     0              // SYS_write
 
     add     sp, sp, 8      // pop x0 off of the stack
+    ret
+
+
+/// write_to
+///   sums two numbers and writes the result to stdout. Overflow may occur.
+///   Parameters:
+///     x0 (const char*) - string to write
+///     x1 (int) - the fd to write to
+///     x2 (size_t) - length of the string
+///   Result:
+///     length bytes of string written to fd
+write_to:
+    mov     x3, x0         // save x0 (str) into x3
+
+    mov     x8, 64         // SYS_write
+    mov     x0, x1         // fd param = fd
+    mov     x1, x3         // str param = string
+    // len param [already set by param]
+    svc     0              // SYS_write
+
     ret
 
 /// This subroutine will timeout in an infinitely recurring loop

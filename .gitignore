@@ -10,6 +10,9 @@ build/
 *.a
 *.exe
 
+# Cached files
+.cache/
+
 ##### From Python.gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -142,6 +145,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.envrc
 .env
 .venv
 env/

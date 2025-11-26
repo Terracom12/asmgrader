@@ -3,6 +3,7 @@
 #include "api/assignment.hpp"
 #include "api/test_base.hpp"
 #include "api/test_context.hpp"
+#include "app_mode.hpp"
 #include "exceptions.hpp"
 #include "grading_session.hpp"
 #include "logging.hpp"
@@ -10,6 +11,7 @@
 #include "program/program.hpp"
 #include "version.hpp"
 
+#include <range/v3/view/filter.hpp>
 #include <range/v3/view/map.hpp>
 
 #include <filesystem>
@@ -23,9 +25,11 @@
 
 namespace asmgrader {
 
-AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer)
+AssignmentTestRunner::AssignmentTestRunner(Assignment& assignment, const std::shared_ptr<Serializer>& serializer,
+                                           const std::optional<std::string>& tests_filter)
     : assignment_{&assignment}
-    , serializer_{serializer} {}
+    , serializer_{serializer}
+    , filter_{tests_filter} {}
 
 AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::path> alternative_path) const {
     // Assignment name -> TestResults
@@ -36,9 +40,17 @@ AssignmentResult AssignmentTestRunner::run_all(std::optional<std::filesystem::pa
         assignment_->set_exec_path(std::move(*alternative_path));
     }
 
-    for (TestBase& test : assignment_->get_tests()) {
+    auto maybe_tests_filter = ranges::views::filter([this](const TestBase& test) -> bool {
+        if (!filter_.has_value()) {
+            return true;
+        }
+
+        return test.get_name().find(*filter_) != std::string::npos;
+    });
+
+    for (TestBase& test : assignment_->get_tests() | maybe_tests_filter) {
         // Skip tests that are marked as professor-only if we're not in professor mode
-        if (test.get_is_prof_only() && APP_MODE != AppMode::Professor) {
+        if (test.get_is_prof_only() && is_prof_mode()) {
             continue;
         }
         const std::string_view assignment_name = test.get_assignment().get_name();

@@ -11,6 +11,7 @@
 
 #include <fmt/format.h>
 #include <gsl/narrow>
+#include <gsl/util>
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/algorithm/contains.hpp>
@@ -21,6 +22,7 @@
 #include <range/v3/algorithm/find.hpp>
 #include <range/v3/algorithm/find_if.hpp>
 #include <range/v3/algorithm/find_if_not.hpp>
+#include <range/v3/algorithm/fold_left.hpp>
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/range/access.hpp>
 #include <range/v3/range/concepts.hpp>
@@ -240,7 +242,9 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
     using enum Token::Kind;
     switch (token_kind) {
     case Unknown:
-        return "Unknown";
+        return "<Unknown>";
+    case Max:
+        return "<Max>";
     case StringLiteral:
         return "StringLiteral";
     case RawStringLiteral:
@@ -268,7 +272,7 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
     case BinaryOperator:
         return "BinaryOperator";
     case EndDelimiter:
-        return "EndDelimiter";
+        return "<EndDelimiter>";
     case BoolLiteral:
         return "BoolLiteral";
     case Qualifier:
@@ -1747,9 +1751,15 @@ public:
         ranges::copy(tokens_.begin() + start, tokens_.begin() + start + len, result.tokens_.begin());
         result.num_tokens_ = len;
 
-        auto str_start = result.tokens_.front().str.data() - original_.data();
-        auto str_len = (result[len - 1].str.data() + result[len - 1].str.size()) - result.tokens_.front().str.data();
-        result.original_ = original_.substr(str_start, str_len);
+        auto sum_token_lens = [](ranges::range auto&& rng) {
+            return ranges::fold_left(
+                rng | ranges::views::transform([](const Token& token) { return token.str.size(); }), 0, std::plus<>{});
+        };
+
+        std::size_t removed_str_prefix = sum_token_lens(tokens_ | ranges::views::take(start));
+        std::size_t str_len = sum_token_lens(result.tokens_);
+
+        result.original_ = original_.substr(removed_str_prefix, str_len);
 
         return result;
     }

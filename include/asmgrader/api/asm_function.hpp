@@ -52,7 +52,7 @@ public:
     std::tuple<std::decay_t<Args>...> args;
     std::string_view function_name;
 
-    std::string repr(std::span<const inspection::Token> tokens, std::string_view raw_str) const {
+    std::string repr(std::span<const inspection::Token> /*tokens*/, std::string_view /*raw_str*/) const {
         // auto split_arg_tokens_fn = [open_groupings = std::stack<char>{}](const inspection::Token& tok) mutable {
         //     using inspection::Token::Kind::Grouping;
         //

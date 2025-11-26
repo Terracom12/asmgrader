@@ -1,24 +1,20 @@
 {
-    "version": 3,
+    "version": 6,
     "cmakeMinimumRequired": {
         "major": 3,
-        "minor": 21,
+        "minor": 25,
         "patch": 0
     },
     "configurePresets": [
         {
-            "name": "conf-common",
+            "name": "conf-base",
             "description": "General settings that apply to all configurations",
             "hidden": true,
-            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
-            "installDir": "${sourceDir}/install/${presetName}",
-            "warnings": {
-                "uninitialized": true
-            }
+            "installDir": "${sourceDir}/install/${presetName}"
         },
         {
-            "name": "conf-variables",
+            "name": "conf-variables-base",
             "hidden": true,
             "description": "General variable options that apply to most configurations",
             "cacheVariables": {
@@ -28,10 +24,10 @@
             }
         },
         {
-            "name": "conf-unixlike-common",
-            "description": "Unix-like OS settings toolchains",
+            "name": "conf-unixlike-base",
+            "description": "Unix-like OS settings",
             "hidden": true,
-            "inherits": "conf-common",
+            "inherits": "conf-base",
             "condition": {
                 "type": "inList",
                 "string": "${hostSystemName}",
@@ -42,10 +38,21 @@
             }
         },
         {
-            "name": "unixlike-gcc-debug",
-            "displayName": "gcc Debug",
-            "description": "Target Unix-like OS with the gcc compiler, debug build type",
-            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "name": "conf-aarch64cross-base",
+            "hidden": true,
+            "description": "Cross-compilation to AArch64 settings",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-toolchain.cmake"
+            }
+        },
+        {
+            "name": "unixlike-gcc-ninja-debug",
+            "displayName": "Configure: target Unix-like OS using gcc and ninja in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Ninja",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++",
@@ -53,10 +60,28 @@
             }
         },
         {
-            "name": "unixlike-gcc-release",
-            "displayName": "gcc Release",
-            "description": "Target Unix-like OS with the gcc compiler, release build type",
-            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "name": "crossaarch64-unixlike-gcc-ninja-debug",
+            "displayName": "Configure: cross-compile to AArch64, target Unix-like OS using gcc and ninja in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base",
+                "conf-aarch64cross-base"
+            ],
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "unixlike-gcc-ninja-release",
+            "displayName": "Configure: target Unix-like OS using gcc and ninja in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Ninja",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++",
@@ -64,10 +89,86 @@
             }
         },
         {
-            "name": "unixlike-clang-debug",
-            "displayName": "clang Debug",
-            "description": "Target Unix-like OS with the clang compiler, debug build type",
-            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "name": "crossaarch64-unixlike-gcc-ninja-release",
+            "displayName": "Configure: cross-compile to AArch64, target Unix-like OS using gcc and ninja in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base",
+                "conf-aarch64cross-base"
+            ],
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "unixlike-gcc-make-debug",
+            "displayName": "Configure: target Unix-like OS using gcc and make in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-debug",
+            "displayName": "Configure: cross-compile to AArch64, target Unix-like OS using gcc and make in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base",
+                "conf-aarch64cross-base"
+            ],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "unixlike-gcc-make-release",
+            "displayName": "Configure: target Unix-like OS using gcc and make in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-release",
+            "displayName": "Configure: cross-compile to AArch64, target Unix-like OS using gcc and make in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base",
+                "conf-aarch64cross-base"
+            ],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "unixlike-clang-ninja-debug",
+            "displayName": "Configure: target Unix-like OS using clang and ninja in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Ninja",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++",
@@ -75,10 +176,41 @@
             }
         },
         {
-            "name": "unixlike-clang-release",
-            "displayName": "clang Release",
-            "description": "Target Unix-like OS with the clang compiler, release build type",
-            "inherits": ["conf-unixlike-common", "conf-variables"],
+            "name": "unixlike-clang-ninja-release",
+            "displayName": "Configure: target Unix-like OS using clang and ninja in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "unixlike-clang-make-debug",
+            "displayName": "Configure: target Unix-like OS using clang and make in debug mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Unix Makefiles",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "unixlike-clang-make-release",
+            "displayName": "Configure: target Unix-like OS using clang and make in release mode",
+            "inherits": [
+                "conf-unixlike-base",
+                "conf-variables-base"
+            ],
+            "generator": "Unix Makefiles",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++",
@@ -87,9 +219,8 @@
         },
         {
             "name": "unixlike-docs-only",
-            "displayName": "docs only",
-            "description": "Target Unix-like OS, only configure for docs and nothing else",
-            "inherits": "conf-unixlike-common",
+            "displayName": "Configure: target Unix-like OS, for only docs",
+            "inherits": "conf-unixlike-base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "ASMGRADER_BUILD_DOCS": "ON",
@@ -99,76 +230,460 @@
     ],
     "buildPresets": [
         {
-            "name": "unixlike-gcc-debug",
-            "displayName": "gcc Debug",
-            "description": "Target Unix-like OS with the gcc compiler, debug build type",
-            "configurePreset": "unixlike-gcc-debug"
+            "name": "unixlike-gcc-ninja-debug",
+            "displayName": "Build: target Unix-like OS using gcc and ninja in debug mode",
+            "configurePreset": "unixlike-gcc-ninja-debug"
         },
         {
-            "name": "unixlike-gcc-release",
-            "displayName": "gcc Release",
-            "description": "Target Unix-like OS with the gcc compiler, release build type",
-            "configurePreset": "unixlike-gcc-release"
+            "name": "crossaarch64-unixlike-gcc-ninja-debug",
+            "displayName": "Build: cross-compile to AArch64, target Unix-like OS using gcc and ninja in debug mode",
+            "configurePreset": "crossaarch64-unixlike-gcc-ninja-debug"
         },
         {
-            "name": "unixlike-clang-debug",
-            "displayName": "clang Debug",
-            "description": "Target Unix-like OS with the clang compiler, debug build type",
-            "configurePreset": "unixlike-clang-debug"
+            "name": "unixlike-gcc-ninja-release",
+            "displayName": "Build: target Unix-like OS using gcc and ninja in release mode",
+            "configurePreset": "unixlike-gcc-ninja-release"
         },
         {
-            "name": "unixlike-clang-release",
-            "displayName": "clang Release",
-            "description": "Target Unix-like OS with the clang compiler, release build type",
-            "configurePreset": "unixlike-clang-release"
+            "name": "crossaarch64-unixlike-gcc-ninja-release",
+            "displayName": "Build: cross-compile to AArch64, target Unix-like OS using gcc and ninja in release mode",
+            "configurePreset": "crossaarch64-unixlike-gcc-ninja-release"
+        },
+        {
+            "name": "unixlike-gcc-make-debug",
+            "displayName": "Build: target Unix-like OS using gcc and make in debug mode",
+            "configurePreset": "unixlike-gcc-make-debug"
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-debug",
+            "displayName": "Build: cross-compile to AArch64, target Unix-like OS using gcc and make in debug mode",
+            "configurePreset": "crossaarch64-unixlike-gcc-make-debug"
+        },
+        {
+            "name": "unixlike-gcc-make-release",
+            "displayName": "Build: target Unix-like OS using gcc and make in release mode",
+            "configurePreset": "unixlike-gcc-make-release"
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-release",
+            "displayName": "Build: cross-compile to AArch64, target Unix-like OS using gcc and make in release mode",
+            "configurePreset": "crossaarch64-unixlike-gcc-make-release"
+        },
+        {
+            "name": "unixlike-clang-ninja-debug",
+            "displayName": "Build: target Unix-like OS using clang and ninja in debug mode",
+            "configurePreset": "unixlike-clang-ninja-debug"
+        },
+        {
+            "name": "unixlike-clang-ninja-release",
+            "displayName": "Build: target Unix-like OS using clang and ninja in release mode",
+            "configurePreset": "unixlike-clang-ninja-release"
+        },
+        {
+            "name": "unixlike-clang-make-debug",
+            "displayName": "Build: target Unix-like OS using clang and make in debug mode",
+            "configurePreset": "unixlike-clang-make-debug"
+        },
+        {
+            "name": "unixlike-clang-make-release",
+            "displayName": "Build: target Unix-like OS using clang and make in release mode",
+            "configurePreset": "unixlike-clang-make-release"
         },
         {
             "name": "unixlike-docs-only",
-            "displayName": "docs only",
-            "description": "Target Unix-like OS, only configure for docs and nothing else",
+            "displayName": "Build: target Unix-like OS, for only docs",
             "configurePreset": "unixlike-docs-only",
             "targets": "doxygen-docs"
         }
     ],
     "testPresets": [
         {
-            "name": "test-common",
+            "name": "test-base",
             "description": "Test CMake settings that apply to all configurations",
             "hidden": true,
             "output": {
-                "outputOnFailure": true
+                "outputOnFailure": true,
+                "outputJUnitFile": "${sourceDir}/reports/junit-ctest.xml"
             },
             "execution": {
                 "noTestsAction": "error"
             }
         },
         {
-            "name": "unixlike-gcc-debug",
-            "displayName": "Strict",
-            "description": "Enable output and stop on failure",
-            "inherits": "test-common",
-            "configurePreset": "unixlike-gcc-debug"
+            "name": "unixlike-gcc-ninja-debug",
+            "displayName": "Test: target Unix-like OS using gcc and ninja in debug mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-gcc-ninja-debug"
         },
         {
-            "name": "unixlike-gcc-release",
-            "displayName": "Strict",
-            "description": "Enable output and stop on failure",
-            "inherits": "test-common",
-            "configurePreset": "unixlike-gcc-release"
+            "name": "unixlike-gcc-ninja-release",
+            "displayName": "Test: target Unix-like OS using gcc and ninja in release mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-gcc-ninja-release"
         },
         {
-            "name": "unixlike-clang-debug",
-            "displayName": "Strict",
-            "description": "Enable output and stop on failure",
-            "inherits": "test-common",
-            "configurePreset": "unixlike-clang-debug"
+            "name": "unixlike-gcc-make-debug",
+            "displayName": "Test: target Unix-like OS using gcc and make in debug mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-gcc-make-debug"
         },
         {
-            "name": "unixlike-clang-release",
-            "displayName": "Strict",
-            "description": "Enable output and stop on failure",
-            "inherits": "test-common",
-            "configurePreset": "unixlike-clang-release"
+            "name": "unixlike-gcc-make-release",
+            "displayName": "Test: target Unix-like OS using gcc and make in release mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-gcc-make-release"
+        },
+        {
+            "name": "unixlike-clang-ninja-debug",
+            "displayName": "Test: target Unix-like OS using clang and ninja in debug mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-clang-ninja-debug"
+        },
+        {
+            "name": "unixlike-clang-ninja-release",
+            "displayName": "Test: target Unix-like OS using clang and ninja in release mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-clang-ninja-release"
+        },
+        {
+            "name": "unixlike-clang-make-debug",
+            "displayName": "Test: target Unix-like OS using clang and make in debug mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-clang-make-debug"
+        },
+        {
+            "name": "unixlike-clang-make-release",
+            "displayName": "Test: target Unix-like OS using clang and make in release mode",
+            "inherits": "test-base",
+            "configurePreset": "unixlike-clang-make-release"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "unixlike-gcc-ninja-debug",
+            "displayName": "Workflow: target Unix-like OS using gcc and ninja in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-ninja-debug",
+            "displayName": "Workflow: cross-compile to AArch64, target Unix-like OS using gcc and ninja in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "crossaarch64-unixlike-gcc-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "crossaarch64-unixlike-gcc-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-ninja-release",
+            "displayName": "Workflow: target Unix-like OS using gcc and ninja in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-ninja-release",
+            "displayName": "Workflow: cross-compile to AArch64, target Unix-like OS using gcc and ninja in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "crossaarch64-unixlike-gcc-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "crossaarch64-unixlike-gcc-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-make-debug",
+            "displayName": "Workflow: target Unix-like OS using gcc and make in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-make-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-make-debug"
+                }
+            ]
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-debug",
+            "displayName": "Workflow: cross-compile to AArch64, target Unix-like OS using gcc and make in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "crossaarch64-unixlike-gcc-make-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "crossaarch64-unixlike-gcc-make-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-make-release",
+            "displayName": "Workflow: target Unix-like OS using gcc and make in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-make-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-make-release"
+                }
+            ]
+        },
+        {
+            "name": "crossaarch64-unixlike-gcc-make-release",
+            "displayName": "Workflow: cross-compile to AArch64, target Unix-like OS using gcc and make in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "crossaarch64-unixlike-gcc-make-release"
+                },
+                {
+                    "type": "build",
+                    "name": "crossaarch64-unixlike-gcc-make-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-ninja-debug",
+            "displayName": "Workflow: target Unix-like OS using clang and ninja in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-ninja-release",
+            "displayName": "Workflow: target Unix-like OS using clang and ninja in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-make-debug",
+            "displayName": "Workflow: target Unix-like OS using clang and make in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-make-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-make-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-make-release",
+            "displayName": "Workflow: target Unix-like OS using clang and make in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-make-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-make-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-ninja-debug-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using gcc and ninja in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-ninja-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-gcc-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-ninja-release-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using gcc and ninja in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-ninja-release"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-gcc-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-make-debug-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using gcc and make in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-make-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-make-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-gcc-make-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-gcc-make-release-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using gcc and make in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-gcc-make-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-gcc-make-release"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-gcc-make-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-ninja-debug-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using clang and ninja in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-ninja-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-ninja-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-clang-ninja-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-ninja-release-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using clang and ninja in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-ninja-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-ninja-release"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-clang-ninja-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-make-debug-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using clang and make in debug mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-make-debug"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-make-debug"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-clang-make-debug"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-clang-make-release-test",
+            "displayName": "Workflow (with tests): target Unix-like OS using clang and make in release mode",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-clang-make-release"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-clang-make-release"
+                },
+                {
+                    "type": "test",
+                    "name": "unixlike-clang-make-release"
+                }
+            ]
+        },
+        {
+            "name": "unixlike-docs-only",
+            "displayName": "Workflow: target Unix-like OS, for only docs",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "unixlike-docs-only"
+                },
+                {
+                    "type": "build",
+                    "name": "unixlike-docs-only"
+                }
+            ]
         }
     ]
 }

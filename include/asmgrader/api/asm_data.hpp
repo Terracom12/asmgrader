@@ -26,6 +26,8 @@ public:
     // NOLINTNEXTLINE(google-runtime-operator) - nicer semantics?
     std::uintptr_t operator&() const { return address_; }
 
+    Result<T> operator*() const { return get_value(); }
+
     std::uintptr_t get_address() const { return address_; }
 
     /// Get the value currently present in the asm program

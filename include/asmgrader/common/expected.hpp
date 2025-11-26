@@ -160,12 +160,24 @@ public:
     }
 
     template <typename Func>
+        requires(!std::is_void_v<T>)
     constexpr Expected<std::invoke_result_t<Func, T>, E> transform(const Func& func) {
         if (!has_value()) {
             return error();
         }
 
         return func(value());
+    }
+
+    template <typename Func>
+    constexpr Expected<std::invoke_result_t<Func, T>, E> transform(const Func& func)
+        requires(std::is_void_v<T>)
+    {
+        if (!has_value()) {
+            return error();
+        }
+
+        return func();
     }
 
     template <typename Func>
