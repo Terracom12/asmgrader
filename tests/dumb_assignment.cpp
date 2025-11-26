@@ -11,7 +11,7 @@ constexpr std::string_view exec_filename = [] {
 FILE_METADATA(Assignment("thing", exec_filename));
 
 TEST("sum function") {
-    AsmFunction sum = ctx.find_function<u64(u64, u64)>("putch");
+    AsmFunction sum = ctx.find_function<u64(u64, u64)>("sum");
     AsmFunction sum_and_write = ctx.find_function<void(u64, u64)>("sum_and_write");
 
     REQUIRE(sum(0, 0) == 0u, "0 + 0 = 0");
