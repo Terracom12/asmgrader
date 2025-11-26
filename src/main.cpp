@@ -3,7 +3,7 @@
 #else
 #include "app/student_app.hpp"
 #endif // PROFESSOR_VERSION
-
+#include "app/test_theme_app.hpp"
 #include "logging.hpp"
 #include "user/cl_args.hpp"
 #include "user/program_options.hpp"
@@ -25,11 +25,17 @@ int main(int argc, const char* argv[]) {
     std::span<const char*> args{argv, static_cast<std::size_t>(argc)};
     const asmgrader::ProgramOptions options = asmgrader::parse_args_or_exit(args);
 
-    std::unique_ptr<asmgrader::App> app =
+    std::unique_ptr<asmgrader::App> app;
+
+    if (options.test_syntax_highlighter) {
+        app = std::make_unique<asmgrader::TestThemeApp>(options);
+        return app->run();
+    }
+
 #ifdef PROFESSOR_VERSION
-        std::make_unique<asmgrader::ProfessorApp>(options);
+    app = std::make_unique<asmgrader::ProfessorApp>(options);
 #else
-        std::make_unique<asmgrader::StudentApp>(options);
+    app = std::make_unique<asmgrader::StudentApp>(options);
 #endif // PROFESSOR_VERSION
 
     return app->run();

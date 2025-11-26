@@ -67,6 +67,7 @@ set(
 
     app/professor_app.cpp
     app/student_app.cpp
+    app/test_theme_app.cpp
 )
 
 set(

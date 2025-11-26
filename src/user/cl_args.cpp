@@ -209,6 +209,10 @@ Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
     parse_successful_ = false;
 
     try {
+        // Special "subprograms"
+        if (maybe_parse_subprog()) {
+            return opts_buffer_;
+        }
         arg_parser_.parse_args(args_);
     } catch (const std::exception& err) {
         return err.what();
@@ -223,6 +227,15 @@ Expected<ProgramOptions, std::string> CommandLineArgs::parse() {
     LOG_DEBUG("Parsed CLI arguments: {}", opts_buffer_);
 
     return opts_buffer_;
+}
+
+bool CommandLineArgs::maybe_parse_subprog() {
+    if (args_.size() >= 2 && args_.at(1) == "test-highlighter") {
+        opts_buffer_.test_syntax_highlighter = true;
+        return true;
+    }
+
+    return false;
 }
 
 std::string CommandLineArgs::help_message() const {
