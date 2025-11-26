@@ -87,7 +87,7 @@ AsmSymbolResult<T> AsmSymbol<T>::get_value() const {
     }
     LOG_DEBUG("Read value {} for symbol {:?} @ 0x{:X}", val_str, name_, AsmData<T>::get_address());
 
-    res.set_result(value);
+    res.set_result(std::move(value));
 
     return res;
 }

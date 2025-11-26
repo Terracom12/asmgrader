@@ -10,6 +10,7 @@
 #include "common/bit_casts.hpp"
 #include "common/byte_array.hpp"
 #include "common/error_types.hpp"
+#include "common/linux.hpp"
 #include "common/macros.hpp"
 #include "common/unreachable.hpp"
 #include "exceptions.hpp"
@@ -124,6 +125,12 @@ Result<RunResult> TestContext::run() {
     }
 
     return res;
+}
+
+Result<RunResult> TestContext::cont() {
+    TRYE(linux::kill(prog_.get_subproc().get_pid(), SIGCONT), SyscallFailure);
+
+    return run();
 }
 
 Result<RunResult> TestContext::run_until(u64 syscallnr) {

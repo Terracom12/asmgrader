@@ -114,6 +114,10 @@ public:
     /// Run the program normally from `_start`, stopping at the first exit(2) or exit_group(2) syscall invocation
     Result<RunResult> run();
 
+    /// Send SIGCONT to subprocess in case it was stopped for any reason,
+    /// then execute \ref run
+    Result<RunResult> cont();
+
     /// Run the program from `_start`, stopping at the first syscall matching syscallnr
     /// OR the first exit(2) or exit_group(2) syscall invocation [whichever happens first]
     Result<RunResult> run_until(u64 syscallnr);

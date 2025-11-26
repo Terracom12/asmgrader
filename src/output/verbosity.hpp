@@ -1,6 +1,6 @@
 #pragma once
 
-#include "version.hpp"
+#include "app_mode.hpp"
 
 namespace asmgrader {
 
@@ -33,16 +33,16 @@ constexpr bool should_output_test(VerbosityLevel level) {
 constexpr bool should_output_student_summary(VerbosityLevel level) {
     using enum VerbosityLevel;
 
-    return (APP_MODE == AppMode::Student && level >= Quiet)      //
-           ||                                                    //
-           (APP_MODE == AppMode::Professor && level >= Summary); //
+    return (get_builtin_app_mode() == AppMode::Student && level >= Quiet)      //
+           ||                                                                  //
+           (get_builtin_app_mode() == AppMode::Professor && level >= Summary); //
 }
 
 /// See \ref VerbosityLevel
 constexpr bool should_output_grade_percentage(VerbosityLevel level) {
     using enum VerbosityLevel;
 
-    return (APP_MODE == AppMode::Professor && level >= Quiet);
+    return (get_builtin_app_mode() == AppMode::Professor && level >= Quiet);
 }
 
 /// See \ref VerbosityLevel

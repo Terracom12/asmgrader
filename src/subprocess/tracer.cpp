@@ -58,6 +58,10 @@ using namespace std::chrono_literals;
 Result<void> Tracer::begin(pid_t pid) {
     pid_ = pid;
 
+    // Remove all OLD syscall records
+    // relevant when using Subrocess::restart
+    syscall_records_.clear();
+
     assert_invariants();
 
     // TODO: Extract this
@@ -398,11 +402,13 @@ Result<RunResult> Tracer::run_until(const std::function<bool(SyscallRecord)>& pr
 
         // trapped by a signal (such as by a SEGFAULT)
         if (waitid_data.type == CLD_TRAPPED) {
-            // FIXME: better macro, or abstracted registers
-#ifndef ASMGRADER_AARCH64
             LOG_TRACE("Child proc trapped by signal ({}). Regs state: {}", *waitid_data.signal_num,
                       format_or_unknown(get_registers()));
-#endif
+
+            if (*waitid_data.signal_num == SIGCONT) {
+                LOG_TRACE("Ignoring SIGCONT in child proc");
+                continue;
+            }
             return RunResult::make_signal_caught(*waitid_data.signal_num);
         }
 
