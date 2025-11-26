@@ -42,5 +42,7 @@
 #include <variant>     // IWYU pragma: export
 #include <vector>      // IWYU pragma: export
 
+using namespace std::literals;
+
 // should always include last if possible, as the short macro names may conflict with other libraries.
 #include <asmgrader/api/test_macros.hpp> // IWYU pragma: export
