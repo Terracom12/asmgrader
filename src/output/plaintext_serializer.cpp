@@ -332,18 +332,23 @@ void PlainTextSerializer::on_run_metadata(const RunMetadata& data) {
         asmgrader::to_localtime_string(data.start_time, "%a %b %d %T %Y").value_or("<ERROR>");
 
     std::string out = fmt::format("{:#^{}}\n", header_text, terminal_width_);
-    out += fmt::format("{}{:>{}}\n", version_label, version_text, terminal_width_ - version_label.size());
-    out += fmt::format("{:}{:>{}}\n", date_label, local_timepoint_text, terminal_width_ - date_label.size());
+    out += fmt::format("{}{:>{}}\n", version_label, version_text, std::max<std::size_t>(0, terminal_width_ - version_label.size()));
+    out += fmt::format("{:}{:>{}}\n", date_label, local_timepoint_text, std::max<std::size_t>(0, terminal_width_ - date_label.size()));
     out += LINE_DIVIDER_2EM(terminal_width_) + "\n\n";
 
     sink_.write(out);
 }
 
 std::size_t PlainTextSerializer::get_terminal_width() {
+    std::size_t min_width = 40;
     auto width = terminal_size(stdout).transform([](const winsize& size) { return size.ws_col; });
 
     if (width.has_error()) {
         LOG_WARN("Could not obtain terminal width because {}. Defaulting to {}", width.error(), DEFAULT_WIDTH);
+    } else if (width.value() < min_width) {
+        LOG_WARN("Terminal width {} is less than minimum width {}. Defaulting to {}", width.value(), min_width,
+                 DEFAULT_WIDTH);
+        return DEFAULT_WIDTH;
     }
 
     return width.value_or(DEFAULT_WIDTH);
