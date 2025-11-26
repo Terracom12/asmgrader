@@ -160,6 +160,15 @@ endfunction()
 ##### Student version
 create_target(asmgrader)
 
+# Courtesy of triclosan
+#  CC BY-SA 4.0
+# https://stackoverflow.com/a/61206137
+add_custom_command(
+    TARGET asmgrader_core
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
+)
+
 ##### Professor version
 create_target(asmgrader_prof)
 target_compile_definitions(
