@@ -168,6 +168,15 @@ public:
         return func(value());
     }
 
+    template <typename Func>
+    constexpr Expected<T, E> or_else(const Func& func) {
+        if (has_value()) {
+            return *this;
+        }
+
+        return func(error());
+    }
+
 private:
     template <typename Td, typename Ed>
     struct ExpectedData
