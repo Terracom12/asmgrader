@@ -225,9 +225,11 @@ struct Token
         Operator,
 
         /// Deliminates the end of the token sequence.
-        /// Also serves to obtain a count of the number of token types, as this is guaranteed
+        EndDelimiter,
+
+        /// Serves to obtain a count of the number of token types, as this is guaranteed
         /// to be defined as the last enumerator.
-        EndDelimiter
+        Max
     };
 
     Kind kind;
