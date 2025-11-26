@@ -68,6 +68,8 @@ set(
 
     app/professor_app.cpp
     app/student_app.cpp
+
+    version.cpp
 )
 
 set(

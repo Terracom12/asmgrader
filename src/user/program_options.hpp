@@ -3,13 +3,13 @@
 #include <asmgrader/common/formatters/debug.hpp>
 #include <asmgrader/registrars/global_registrar.hpp>
 
+#include "app_mode.hpp"
 #include "common/error_types.hpp"
 #include "common/expected.hpp"
 #include "logging.hpp"
 #include "output/verbosity.hpp"
 #include "program/program.hpp"
 #include "user/assignment_file_searcher.hpp"
-#include "version.hpp"
 
 #include <fmt/base.h>
 #include <fmt/compile.h>
@@ -133,7 +133,7 @@ struct ProgramOptions
         auto assignment = TRYE(GlobalRegistrar::get().get_assignment(assignment_name),
                                fmt::format("Error locating assignment {}", assignment_name));
 
-        if (buildinfo::get_app_mode() != buildinfo::AppMode::Professor) {
+        if (get_builtin_app_mode() != AppMode::Professor) {
             // TODO: A more friendly diagnostic for non-existant file
             std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
 
@@ -158,7 +158,7 @@ struct fmt::formatter<::asmgrader::ProgramOptions> : ::asmgrader::DebugFormatter
                            fmt::underlying(from.verbosity), from.assignment_name, fmt::underlying(from.stop_option),
                            fmt::underlying(from.colorize_option), from.file_name));
 
-        if (asmgrader::buildinfo::get_app_mode() == asmgrader::buildinfo::AppMode::Professor) {
+        if (asmgrader::get_builtin_app_mode() == asmgrader::AppMode::Professor) {
             return fmt::format_to(ctx.out(), " file_matcher={}, database_path={}, search_path={}", from.file_matcher,
                                   from.database_path, from.search_path);
         }

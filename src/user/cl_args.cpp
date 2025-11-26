@@ -1,6 +1,7 @@
 #include "cl_args.hpp"
 
 #include "api/assignment.hpp"
+#include "app_mode.hpp"
 #include "common/expected.hpp"
 #include "common/os.hpp"
 #include "common/static_string.hpp"
@@ -210,7 +211,7 @@ void CommandLineArgs::setup_parser() {
         .action([this] (const std::string& opt) {
                 opts_buffer_.file_name = opt;
         })
-        .help(buildinfo::get_app_mode() == buildinfo::AppMode::Professor ?
+        .help(get_builtin_app_mode() == AppMode::Professor ?
                 "The *individual* file to run tests on. No other files are searched for, nor is the database read.\n"
                 "This argument's behavior overrides any usage of --file-matcher, --search-path, and --database." :  // professor help msg
                 "The file to run tests on." // student help msg
