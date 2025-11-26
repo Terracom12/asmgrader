@@ -4,14 +4,18 @@
     {
       "label": "Build Project",
       "type": "shell",
-      "command": "${workspaceFolder}/build.sh",
+      "command": "${workspaceFolder}/scripts/build",
+      "args": [],
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": [
-        "$gcc"
-      ]
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
     }
   ]
 }

@@ -2,43 +2,68 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Executable with GDB",
-            "type": "cppdbg",
+            "name": "Debug: Unit tests",
+            "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/autograder/autograder",
+            "program": "${workspaceFolder}/build/${input:buildDir}/tests/asmgrader_tests",
             "args": [
-                "${input:programArg}"
+                "${input:execArgs}"
             ],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [
-                {
-                    "name": "ASAN_OPTIONS",
-                    "value": "detect_leaks=0:abort_on_error=1"
-                },
-                {
-                    "name": "LOG_LEVEL",
-                    "value": "TRACE"
-                }
+            "env": {
+                "LOG_LEVEL": "DEBUG",
+                "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+            },
+            "preLaunchTask": "Build Project"
+        },
+        {
+            "name": "Debug: Grader",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/${input:buildDir}/tests/asmgrader_dumb_cli",
+            "args": [
+                "thing",
+                "-f",
+                "${workspaceFolder}/build/${input:buildDir}/tests/asm_tests",
+                "-v"
             ],
-            "externalConsole": true,
-            "MIMode": "gdb",
-            "miDebuggerPath": "/usr/bin/gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "LOG_LEVEL": "DEBUG",
+                "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+            },
+            "preLaunchTask": "Build Project"
+        },
+        {
+            "name": "Debug: Prof grader",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/${input:buildDir}/tests/asmgrader_dumb_profcli",
+            "args": [
+                "thing",
+                "-f",
+                "${workspaceFolder}/build/${input:buildDir}/tests/asm_tests",
+                "-v"
             ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "LOG_LEVEL": "DEBUG",
+                "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1"
+            },
             "preLaunchTask": "Build Project"
         }
     ],
     "inputs": [
         {
-            "id": "programArg",
+            "id": "buildDir",
             "type": "promptString",
-            "description": "Enter program argument",
+            "description": "Build directory name under ./build/ (leave empty to auto-detect when using scripts/debug)",
+            "default": "unixlike-gcc-ninja-debug"
+        },
+        {
+            "id": "execArgs",
+            "type": "promptString",
+            "description": "Arguments to pass to the executable (leave empty for none)",
             "default": ""
         }
     ]
