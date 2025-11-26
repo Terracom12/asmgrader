@@ -48,6 +48,8 @@ struct ProgramOptions
     // TODO: Premit simplified execution of individual files in prof mode. Has to be mutually excusive with some
     // other opts
 
+    bool test_syntax_highlighter = false;
+
     // Student version only
     std::optional<std::string> file_name;
 

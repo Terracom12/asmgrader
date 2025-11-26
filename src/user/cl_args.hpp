@@ -38,6 +38,13 @@ private:
     /// Used for the program name with argparse
     static std::string get_basename(std::string_view full_name);
 
+    /// Check for special "subprogram" args that must occur first in the argument list
+    /// These are not documented much, because they should really only be used for debug testing
+    /// Example:
+    ///   profgrader test-highlighter
+    /// \returns true if a subprogram arg was found, false otherwise.
+    bool maybe_parse_subprog();
+
     argparse::ArgumentParser arg_parser_;
     std::vector<std::string> args_;
 
