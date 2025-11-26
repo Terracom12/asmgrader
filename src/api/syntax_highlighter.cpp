@@ -1,7 +1,8 @@
 #include <asmgrader/api/syntax_highlighter.hpp>
 
-#include <asmgrader/api/expression_inspection.hpp>
-#include <asmgrader/logging.hpp>
+#include "api/expression_inspection.hpp"
+#include "common/cconstexpr.hpp"
+#include "logging.hpp"
 
 #include <fmt/base.h>
 #include <fmt/color.h>
@@ -49,8 +50,11 @@ std::string Options::Opt::apply(std::string_view str) const {
     return fmt::to_string(fmt::styled(res, style_in_use));
 }
 
-fmt::text_style Options::style_basic_ident_types(fmt::text_style type_style, fmt::text_style default_style,
-                                                 std::string_view ident) {
+namespace {
+
+/// Custom styling functions for identifiers that are types (e.g., void, int, etc.)
+fmt::text_style style_basic_ident_types(fmt::text_style type_style, fmt::text_style default_style,
+                                        std::string_view ident) {
     std::array basic_type_strs{"void", "int", "long", "unsigned", "float", "double", "char", "size_t"};
 
     if (ranges::contains(basic_type_strs, ident)) {
@@ -60,8 +64,7 @@ fmt::text_style Options::style_basic_ident_types(fmt::text_style type_style, fmt
     return default_style;
 }
 
-fmt::text_style Options::style_op_keywords(fmt::text_style keyword_style, fmt::text_style default_style,
-                                           std::string_view op) {
+fmt::text_style style_op_keywords(fmt::text_style keyword_style, fmt::text_style default_style, std::string_view op) {
     ASSERT(!op.empty(), op);
 
     if (isalpha(op.at(0))) {
@@ -71,7 +74,8 @@ fmt::text_style Options::style_op_keywords(fmt::text_style keyword_style, fmt::t
     return default_style;
 }
 
-std::string Options::basic_binary_op_spacing(std::string_view op) {
+/// Add spacing for binary ops
+std::string basic_binary_op_spacing(std::string_view op) {
     constexpr std::array add_spaces_surrounding{
         "+",  "-",  "*",   "/",  "%",                                        //
         "<<", ">>", "^",   "|",  "&",                                        //
@@ -92,7 +96,7 @@ std::string Options::basic_binary_op_spacing(std::string_view op) {
     return std::string{op};
 }
 
-std::string Options::basic_op_spacing(std::string_view op) {
+std::string basic_op_spacing(std::string_view op) {
     constexpr std::array add_spaces_surrounding{
         "?",
         ":" //
@@ -112,6 +116,24 @@ std::string Options::basic_op_spacing(std::string_view op) {
     return std::string{op};
 }
 
+/// Style bool literals with a faded green for "true" and a faded red for "false"
+fmt::text_style style_bool_literal(std::string_view lit) {
+    using enum fmt::color;
+
+    if (lit == "true") {
+        return fg(dark_green);
+    }
+    if (lit == "false") {
+        return fg(dark_red);
+    }
+
+    LOG_WARN("Invalid boolean literal string: {:?}", lit);
+
+    return {};
+}
+
+} // namespace
+
 Options Options::get_default_options() {
     std::array<Opt, num_token_kinds> res{};
 
@@ -119,16 +141,17 @@ Options Options::get_default_options() {
 
     constexpr auto idx = [](inspection::Token::Kind kind) { return static_cast<std::size_t>(kind); };
 
-    auto ident_style_fn = std::bind_front(style_basic_ident_types, fmt::fg(purple), fmt::fg(deep_sky_blue));
-    auto op_style_fn = std::bind_front(style_op_keywords, fmt::fg(purple), fmt::text_style{});
+    auto ident_style_fn = std::bind_front(style_basic_ident_types, fmt::fg(medium_purple), fmt::fg(sky_blue));
+    auto op_style_fn = std::bind_front(style_op_keywords, fmt::fg(medium_purple), fmt::text_style{});
 
     res[idx(StringLiteral)] = Opt{.style = fmt::fg(lawn_green), .style_fn = {}, .transform_fn = {}};
     res[idx(RawStringLiteral)] = Opt{.style = fmt::fg(lawn_green), .style_fn = {}, .transform_fn = {}};
-    res[idx(BoolLiteral)] = Opt{.style = fmt::fg(purple), .style_fn = {}, .transform_fn = {}};
+    res[idx(BoolLiteral)] = Opt{.style = {}, .style_fn = style_bool_literal, .transform_fn = {}};
     res[idx(IntBinLiteral)] = res[idx(IntOctLiteral)] = res[idx(IntDecLiteral)] = res[idx(IntHexLiteral)] =
         Opt{.style = fmt::fg(azure), .style_fn = {}, .transform_fn = {}};
     res[idx(FloatLiteral)] = res[idx(FloatLiteral)] = Opt{.style = fmt::fg(blue), .style_fn = {}, .transform_fn = {}};
     res[idx(Identifier)] = Opt{.style = {}, .style_fn = ident_style_fn, .transform_fn = {}};
+    res[idx(Qualifier)] = Opt{.style = fg(dark_salmon), .style_fn = {}, .transform_fn = {}};
     res[idx(Operator)] = Opt{.style = {}, .style_fn = op_style_fn, .transform_fn = basic_op_spacing};
     res[idx(BinaryOperator)] = Opt{.style = {}, .style_fn = op_style_fn, .transform_fn = basic_binary_op_spacing};
 
@@ -154,7 +177,7 @@ struct LiteralBlock
     /// Possibly empty sequence of style specifiers found between leading `<` `>` tokens
     /// E.g.:
     /// \verbatim
-    /// %#`<bold,fg:#FFFFFF,bg:blue>this is text`
+    /// $`<bold,fg:#FFFFFF,bg:blue>this is text`
     /// \endverbatim
     /// style_specs = `{"bold", "fg:#FFFFFF", "bg:blue"}`
     std::vector<std::string_view> style_specs;
@@ -267,8 +290,8 @@ std::vector<std::string_view> parse_style_specs(std::string_view str) noexcept {
 std::vector<LiteralBlock> find_literal_blocks(std::string_view str) noexcept {
     std::vector<LiteralBlock> results;
 
-    for (std::size_t idx = 0, start_delim = str.find("%#`"); start_delim != std::string_view::npos;
-         start_delim = str.find("%#`")) {
+    for (std::size_t idx = 0, start_delim = str.find("$`"); start_delim != std::string_view::npos;
+         start_delim = str.find("$`")) {
         // create a new block structure
         results.emplace_back();
         auto& current_block = results.back();
@@ -276,9 +299,9 @@ std::vector<LiteralBlock> find_literal_blocks(std::string_view str) noexcept {
         idx += start_delim;
         current_block.start_delim = idx;
         // remove full start delimiter
-        str.remove_prefix(start_delim + 3);
+        str.remove_prefix(start_delim + 2);
         // We want to start one past the final char of the delim
-        idx += 3;
+        idx += 2;
 
         if (str.starts_with('<')) {
             std::size_t end_style_spec = str.find('>');
@@ -330,7 +353,7 @@ std::vector<LiteralBlock> find_literal_blocks(std::string_view str) noexcept {
             LOG_WARN("literal block is invalid because there's no ending ` delim. start-idx={}, str={:?}", idx, str);
             current_block.end = static_cast<std::size_t>(-1);
             current_block.end_delim = static_cast<std::size_t>(-1);
-            // we never found a `, so we should never be able to find a %#` to loop again, but break anyways just to be
+            // we never found a `, so we should never be able to find a $` to loop again, but break anyways just to be
             // safe
             break;
         }

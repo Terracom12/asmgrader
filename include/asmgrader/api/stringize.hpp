@@ -116,7 +116,7 @@ inline std::string str_default(const Expected<T, E>& expected) {
             return str_fn_dispatcher(expected.error()).resolve_blocks(/*do_colorize=*/false);
         }
     }();
-    return fmt::format("%#`<fg:red>{}`", err_str);
+    return fmt::format("$`<fg:red>{}`", err_str);
 }
 
 inline std::string str_default(ErrorKind error_kind) {
@@ -159,7 +159,7 @@ constexpr fmt::formattable auto StrFn::pre(const T& val) const {
         return str_default(val); // default defined BEFORE this struct
     } else {
         LOG_WARN("No `str` implementation for type <{}>", boost::typeindex::type_id<T>().pretty_name());
-        return "%#`...`"; // fallback
+        return "$`...`"; // fallback
     }
 }
 

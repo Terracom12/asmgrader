@@ -60,16 +60,6 @@ struct Options
         std::string apply(std::string_view str) const;
     };
 
-    /// Custom styling functions for identifiers that are types (e.g., void, int, etc.)
-    static fmt::text_style style_basic_ident_types(fmt::text_style type_style, fmt::text_style default_style,
-                                                   std::string_view ident);
-    static fmt::text_style style_op_keywords(fmt::text_style keyword_style, fmt::text_style default_style,
-                                             std::string_view op);
-    /// Add spacing for binary ops
-    static std::string basic_binary_op_spacing(std::string_view op);
-    // Add some spacing around unary and ternary ops
-    static std::string basic_op_spacing(std::string_view op);
-
     static Options get_default_options();
 
     /// Each index is representative of the highlighting option for the token kind
@@ -89,7 +79,7 @@ struct Options
 };
 
 /// Parses and renders literal blocks, returning a form meant for displaying to a console user, as by means of
-/// fmt::styled. The syntax for a literal string is a sequence of characters started by the sequence <code>%#\`</code>
+/// fmt::styled. The syntax for a literal string is a sequence of characters started by the sequence <code>$\`</code>
 /// and ended by a single backtick <code>\`</code>. Backticks within the sequence may be escaped using
 /// <code>\\\`</code>.
 ///
@@ -101,8 +91,8 @@ struct Options
 ///
 /// Example, with possible output from \ref highlight(std::string_view, const Options&):
 /// \verbatim
-/// %#`I am a literal block with a some \`backticks!\``
-/// int main() { return 0; }  %#`hey, this is main!`
+/// $`I am a literal block with a some \`backticks!\``
+/// int main() { return 0; }  $`hey, this is main!`
 /// \endverbatim
 /// <pre>
 /// I am a literal block with a some `backticks!`
@@ -124,8 +114,8 @@ struct Options
 ///
 /// Example:
 /// \verbatim
-/// I am a not formatted, but %#`<fg:red>I am IMPORTANT RED text` and %#`<bold,underline,bg:#66FF00>I'm bolded and
-/// underlined, with a bright green background` and %#`\<I'm not styled, as the < is escaped`
+/// I am a not formatted, but $`<fg:red>I am IMPORTANT RED text` and $`<bold,underline,bg:#66FF00>I'm bolded and
+/// underlined, with a bright green background` and $`\<I'm not styled, as the < is escaped`
 /// \endverbatim
 /// <pre>I am a not formatted, but <span style="color:red">I am IMPORTANT RED text</span> and <span
 /// style="background-color:#66FF00;font-weight:bold;text-decoration:underline">I'm bolded
