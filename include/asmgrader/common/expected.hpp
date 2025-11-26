@@ -179,6 +179,16 @@ public:
         return func();
     }
 
+    template <typename Func>
+        requires(std::is_void_v<T>)
+    constexpr Expected<T, E> or_else(const Func& func) {
+        if (has_value()) {
+            return *this;
+        }
+
+        return func(error());
+    }
+
 private:
     template <typename Td, typename Ed>
     struct ExpectedData
