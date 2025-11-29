@@ -1,11 +1,11 @@
-#include "subprocess/traced_subprocess.hpp"
+#include <asmgrader/subprocess/traced_subprocess.hpp>
 
-#include "common/error_types.hpp"
-#include "logging.hpp"
-#include "subprocess/run_result.hpp"
-#include "subprocess/subprocess.hpp"
-#include "subprocess/syscall_record.hpp"
-#include "subprocess/tracer.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/subprocess.hpp>
+#include <asmgrader/subprocess/syscall_record.hpp>
+#include <asmgrader/subprocess/tracer.hpp>
 
 #include <fmt/ranges.h>
 

@@ -1,8 +1,8 @@
 #include "common/terminal_checks.hpp"
 
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
-#include "common/linux.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/linux.hpp>
 
 #include <range/v3/algorithm/any_of.hpp>
 

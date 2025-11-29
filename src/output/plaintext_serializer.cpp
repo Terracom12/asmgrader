@@ -1,21 +1,23 @@
 #include "output/plaintext_serializer.hpp"
 
-#include "api/expression_inspection.hpp"
-#include "api/requirement.hpp"
-#include "api/stringize.hpp"
-#include "api/syntax_highlighter.hpp"
+#include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/api/requirement.hpp>
+#include <asmgrader/api/stringize.hpp>
+#include <asmgrader/api/syntax_highlighter.hpp>
+#include <asmgrader/app_mode.hpp>
+
+#include <asmgrader/common/overloaded.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/version.hpp>
+
 #include "app/app.hpp"
-#include "app_mode.hpp"
-#include "common/overloaded.hpp"
-#include "common/terminal_checks.hpp"
 #include "common/time.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
+#include "common/terminal_checks.hpp"
+#include "user/program_options.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
 #include "output/verbosity.hpp"
-#include "user/program_options.hpp"
-#include "version.hpp"
 
 #include <fmt/chrono.h>
 #include <fmt/color.h>

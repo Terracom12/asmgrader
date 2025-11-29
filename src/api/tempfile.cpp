@@ -1,8 +1,8 @@
-#include "api/tempfile.hpp"
+#include <asmgrader/api/tempfile.hpp>
 
-#include "common/aliases.hpp"
-#include "common/expected.hpp"
-#include "logging.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm/generate.hpp>

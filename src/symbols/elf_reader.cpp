@@ -1,8 +1,8 @@
 #include "symbols/elf_reader.hpp"
 
-#include "logging.hpp"
-#include "symbols/symbol.hpp"
-#include "symbols/symbol_table.hpp"
+#include <asmgrader/logging.hpp>
+#include <asmgrader/symbols/symbol.hpp>
+#include <asmgrader/symbols/symbol_table.hpp>
 
 #include <elfio/elf_types.hpp>
 #include <elfio/elfio_section.hpp>

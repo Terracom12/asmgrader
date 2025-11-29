@@ -1,10 +1,10 @@
-#include "subprocess/subprocess.hpp"
+#include <asmgrader/subprocess/subprocess.hpp>
 
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
-#include "common/linux.hpp"
-#include "logging.hpp"
-#include "subprocess/tracer_types.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/linux.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/subprocess/tracer_types.hpp>
 
 #include <fmt/ranges.h>
 #include <libassert/assert.hpp>

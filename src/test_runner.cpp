@@ -1,15 +1,16 @@
 #include "test_runner.hpp"
 
-#include "api/assignment.hpp"
-#include "api/test_base.hpp"
-#include "api/test_context.hpp"
-#include "app_mode.hpp"
-#include "exceptions.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/api/test_base.hpp>
+#include <asmgrader/api/test_context.hpp>
+#include <asmgrader/app_mode.hpp>
+#include <asmgrader/exceptions.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/program/program.hpp>
+#include <asmgrader/version.hpp>
+
 #include "output/serializer.hpp"
-#include "program/program.hpp"
-#include "version.hpp"
 
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/map.hpp>

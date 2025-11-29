@@ -1,7 +1,8 @@
 #pragma once
 
+#include <asmgrader/grading_session.hpp>
+
 #include "app/app.hpp" // IWYU pragma: export
-#include "grading_session.hpp"
 
 #include <optional>
 #include <vector>

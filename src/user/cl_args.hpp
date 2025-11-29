@@ -1,6 +1,7 @@
 #pragma once
 
-#include "common/expected.hpp"
+#include <asmgrader/common/expected.hpp>
+
 #include "user/program_options.hpp"
 
 #include <argparse/argparse.hpp>

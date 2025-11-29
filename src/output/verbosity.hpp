@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app_mode.hpp"
+#include <asmgrader/app_mode.hpp>
 
 namespace asmgrader {
 

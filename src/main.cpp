@@ -4,7 +4,7 @@
 #include "app/student_app.hpp"
 #endif // PROFESSOR_VERSION
 
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
 #include "user/cl_args.hpp"
 #include "user/program_options.hpp"
 

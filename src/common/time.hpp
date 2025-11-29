@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/expected.hpp"
-#include "logging.hpp"
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <array>
 #include <cerrno>
@@ -14,8 +14,8 @@
 namespace asmgrader {
 
 __attribute__((format(strftime, 2, 0))) // help the compiler check `format` for validity
-inline Expected<std::string>
-to_localtime_string(std::chrono::system_clock::time_point time_point, const char* format = "%Y-%m-%d %H:%M:%S") {
+inline Expected<std::string> to_localtime_string(std::chrono::system_clock::time_point time_point,
+                                                 const char* format = "%Y-%m-%d %H:%M:%S") {
 
     // Convert to time_t (seconds since epoch)
     std::time_t time = std::chrono::system_clock::to_time_t(time_point);

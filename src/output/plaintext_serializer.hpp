@@ -1,8 +1,9 @@
 #pragma once
 
-#include "api/requirement.hpp"
-#include "api/stringize.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/api/requirement.hpp>
+#include <asmgrader/api/stringize.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
 #include "output/verbosity.hpp"

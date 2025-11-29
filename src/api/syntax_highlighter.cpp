@@ -1,7 +1,7 @@
-#include "api/syntax_highlighter.hpp"
+#include <asmgrader/api/syntax_highlighter.hpp>
 
-#include "api/expression_inspection.hpp"
-#include "logging.hpp"
+#include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <fmt/base.h>
 #include <fmt/color.h>

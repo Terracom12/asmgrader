@@ -1,6 +1,7 @@
 #pragma once
 
-#include "api/assignment.hpp"
+#include <asmgrader/api/assignment.hpp>
+
 #include "app/app.hpp" // IWYU pragma: export
 
 namespace asmgrader {

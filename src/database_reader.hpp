@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/expected.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/grading_session.hpp>
 
 #include <filesystem>
 #include <string>
