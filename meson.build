@@ -20,9 +20,9 @@ project(
 
 # =========
 # Boost
+#
 # ...is *special*
 # =========
-
 boost_module_names = [
   'endian',
   'type_index',
@@ -107,6 +107,14 @@ cpptrace_dep = dependency('cpptrace', include_type: 'system')
 # =========
 libasssert_dep = dependency('libassert', include_type: 'system')
 
+# =========
+# Catch2
+#
+# for testing
+# =========
+catch2_dep = dependency('catch2', include_type: 'system')
+
+
 # ==============================================================================
 # Configuration data
 # ==============================================================================
@@ -138,3 +146,7 @@ asmgrader_conf_data = configuration_data({
 
 subdir('include')
 subdir('src')
+
+if not meson.is_subproject()
+  subdir('tests')
+endif
