@@ -44,7 +44,7 @@ boost_subproj = cmake.subproject('boost',
 )
 boost_dep = []
 foreach mod : boost_module_names
-  boost_dep += [boost_subproj.dependency('boost_' + mod)]
+  boost_dep += [boost_subproj.dependency('boost_' + mod, include_type: 'system')]
 endforeach
 
 # =========
@@ -52,57 +52,85 @@ endforeach
 #
 # for command line argument parsing
 # =========
-argparse_dep = dependency('argparse')
-
-# =========
-# spdlog
-#
-# for fast runtime logging
-# =========
-spdlog_dep = dependency('spdlog')
+argparse_dep = dependency('argparse', include_type: 'system')
 
 # =========
 # fmt
 #
 # for friendly string interpolation
 # =========
-fmt_dep = dependency('fmt')
+fmt_dep = dependency('fmt', include_type: 'system')
+
+# =========
+# spdlog
+#
+# for fast runtime logging
+# =========
+spdlog_dep = dependency(
+  'spdlog',
+  default_options: ['std_format=disabled']
+)
+
 
 # =========
 # gsl (guidelines support library)
 #
 # for better code conformance
 # =========
-gsl_dep = dependency('microsoft_gsl')
+gsl_dep = dependency('microsoft_gsl', include_type: 'system')
 
 # =========
 # range-v3
 #
 # for "modern" range-based patterns
 # =========
-rangev3_dep = dependency('range-v3')
+rangev3_dep = dependency('range-v3', include_type: 'system')
 
 # =========
 # elfio
 #
 # for parsing of ELF files
 # =========
-elfio_dep = dependency('elfio')
+elfio_dep = dependency('elfio', include_type: 'system')
 
 # =========
 # cpptrace
 #
 # for human-readable backtraces
 # =========
-cpptrace_dep = dependency('cpptrace')
+cpptrace_dep = dependency('cpptrace', include_type: 'system')
 
 # =========
 # libassert
 #
 # for human-readable assertions with tons of info
 # =========
-libasssert_dep = dependency('libassert')
+libasssert_dep = dependency('libassert', include_type: 'system')
 
+# ==============================================================================
+# Configuration data
+# ==============================================================================
+
+split_version = meson.project_version().split('.')
+git_hash_cmd = run_command('git', 'log', '-n1', '--format=%H', capture: true, check: false)
+
+if git_hash_cmd.returncode() == 0
+  git_hash_str = git_hash_cmd.stdout().strip()
+else
+  git_hash_str = ''
+endif
+
+# Used to define macros in the file version_config.hpp.in under include/
+
+asmgrader_conf_data = configuration_data({
+  'ASMGRADER_VERSION_MAJOR': split_version[0],
+  'ASMGRADER_VERSION_MINOR': split_version[1],
+  'ASMGRADER_VERSION_PATCH': split_version[2],
+  'ASMGRADER_VERSION_GIT_HASH': git_hash_str,
+  'ASMGRADER_BUILD_TYPE': get_option('buildtype'),
+  'ASMGRADER_IMPL_VERSION_INFO': get_option('impl_version_info'),
+  'ASMGRADER_DEPENDENCY_VERSIONS_STR': '' # TODO
+})
 
 # ==============================================================================
 # Sub-Directories
@@ -110,9 +138,3 @@ libasssert_dep = dependency('libassert')
 
 subdir('include')
 subdir('src')
-
-# project_target = executable(
-#   meson.project_name(),
-#   sources : project_sources,
-#   dependencies: [rangev3_dep, fmt_dep],
-# )

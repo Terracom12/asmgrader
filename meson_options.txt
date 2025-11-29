@@ -1,0 +1,10 @@
+option(
+  'professor_mode',
+  type: 'boolean',
+  value: false,
+)
+option(
+  'impl_version_info',
+  type: 'string',
+  value: '',
+)
