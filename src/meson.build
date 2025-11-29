@@ -1,4 +1,4 @@
-core_link_libs_public = ['fmt::fmt', 'spdlog', 'Boost::endian', 'Boost::type_index', 'Boost::mp11', 'Boost::pfr', 'Boost::describe', 'Boost::stacktrace', 'Boost::preprocessor', 'range-v3', 'Microsoft.GSL::GSL', 'libassert::assert']
+# core_link_libs_public = ['fmt::fmt', 'spdlog', 'Boost::endian', 'Boost::type_index', 'Boost::mp11', 'Boost::pfr', 'Boost::describe', 'Boost::stacktrace', 'Boost::preprocessor', 'range-v3', 'Microsoft.GSL::GSL', 'libassert::assert']
 # core_link_libs_private = ['asmgrader_options', 'asmgrader_warnings', 'argparse', 'nlohmann_json::nlohmann_json', 'elfio::elfio']
 
 asmgrader_private_inc = include_directories('.')
@@ -64,6 +64,7 @@ asmgrader_target = library(
 asmgrader_dep = declare_dependency(
   include_directories: asmgrader_public_inc,
   link_with: asmgrader_target,
+  dependencies: asmgrader_deps,
 )
 
 asmgrader_with_main_target = library(
@@ -75,4 +76,5 @@ asmgrader_with_main_target = library(
 asmgrader_with_main_dep = declare_dependency(
   include_directories: asmgrader_public_inc,
   link_with: asmgrader_with_main_target,
+  dependencies: asmgrader_deps,
 )
