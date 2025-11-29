@@ -2,6 +2,7 @@
 
 #include <asmgrader/api/assignment.hpp>
 #include <asmgrader/grading_session.hpp>
+
 #include "output/serializer.hpp"
 #include "test_runner.hpp"
 

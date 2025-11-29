@@ -5,19 +5,18 @@
 #include <asmgrader/api/stringize.hpp>
 #include <asmgrader/api/syntax_highlighter.hpp>
 #include <asmgrader/app_mode.hpp>
-
 #include <asmgrader/common/overloaded.hpp>
 #include <asmgrader/grading_session.hpp>
 #include <asmgrader/logging.hpp>
 #include <asmgrader/version.hpp>
 
 #include "app/app.hpp"
-#include "common/time.hpp"
 #include "common/terminal_checks.hpp"
-#include "user/program_options.hpp"
+#include "common/time.hpp"
 #include "output/serializer.hpp"
 #include "output/sink.hpp"
 #include "output/verbosity.hpp"
+#include "user/program_options.hpp"
 
 #include <fmt/chrono.h>
 #include <fmt/color.h>

@@ -79,7 +79,7 @@ public:
     constexpr Byte operator op(const Byte& rhs) const { return static_cast<u8>(value op rhs.value); }
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define DEF_BINARY_ASSIGN_OP(op)                                                                                       \
-    constexpr Byte& operator op(const Byte & rhs) {                                                                    \
+    constexpr Byte& operator op(const Byte& rhs) {                                                                     \
         value op rhs.value;                                                                                            \
         return *this;                                                                                                  \
     }

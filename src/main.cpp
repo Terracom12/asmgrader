@@ -5,6 +5,7 @@
 #endif // PROFESSOR_VERSION
 
 #include <asmgrader/logging.hpp>
+
 #include "user/cl_args.hpp"
 #include "user/program_options.hpp"
 

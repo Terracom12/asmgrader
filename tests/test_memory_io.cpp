@@ -31,7 +31,8 @@ public:
         : MemoryIOBase(-1) {}
 
 private:
-    asmgrader::Result<asmgrader::NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) override {
+    asmgrader::Result<asmgrader::NativeByteVector> read_block_impl(std::uintptr_t address,
+                                                                   std::size_t length) override {
         ASSERT(address + length < N);
         return asmgrader::NativeByteVector{begin(data_) + address, begin(data_) + address + length};
     }

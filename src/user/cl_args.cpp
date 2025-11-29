@@ -5,13 +5,14 @@
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/os.hpp>
 #include <asmgrader/common/static_string.hpp>
-#include "common/terminal_checks.hpp"
 #include <asmgrader/grading_session.hpp>
 #include <asmgrader/logging.hpp>
-#include "output/verbosity.hpp"
 #include <asmgrader/registrars/global_registrar.hpp>
-#include "user/program_options.hpp"
 #include <asmgrader/version.hpp>
+
+#include "common/terminal_checks.hpp"
+#include "output/verbosity.hpp"
+#include "user/program_options.hpp"
 
 #include <argparse/argparse.hpp>
 #include <boost/preprocessor/stringize.hpp>

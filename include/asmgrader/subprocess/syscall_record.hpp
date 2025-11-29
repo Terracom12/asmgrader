@@ -43,10 +43,10 @@ struct fmt::formatter<::asmgrader::SyscallRecord> : ::asmgrader::DebugFormatter
 
     auto format(const ::asmgrader::SyscallRecord& from, format_context& ctx) const {
         if (is_debug_format) {
-            return fmt::format_to(ctx.out(),
-                             "SyscallRecord{{.num = {} [SYS_{}], .args = {}, .ret = {}, .ip = 0x{:X}, .sp = 0x{:X}}}",
-                             from.num, ::asmgrader::SYSCALL_MAP.at(from.num).name(), from.args, from.ret,
-                             from.instruction_pointer, from.stack_pointer);
+            return fmt::format_to(
+                ctx.out(), "SyscallRecord{{.num = {} [SYS_{}], .args = {}, .ret = {}, .ip = 0x{:X}, .sp = 0x{:X}}}",
+                from.num, ::asmgrader::SYSCALL_MAP.at(from.num).name(), from.args, from.ret, from.instruction_pointer,
+                from.stack_pointer);
         }
         UNIMPLEMENTED("Use debug format spec `{:?}` for SyscallRecord");
     }

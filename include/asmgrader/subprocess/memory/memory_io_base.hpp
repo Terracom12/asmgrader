@@ -100,8 +100,8 @@ private:
 
     virtual Result<NativeByteVector> read_until(std::uintptr_t address, const std::function<bool(Byte)>& predicate);
     virtual Result<NativeByteVector> read_until(std::uintptr_t address,
-                                            const std::function<bool(std::span<const Byte>)>& predicate,
-                                            std::size_t block_size);
+                                                const std::function<bool(std::span<const Byte>)>& predicate,
+                                                std::size_t block_size);
 
     virtual Result<NativeByteVector> read_block_impl(std::uintptr_t address, std::size_t length) = 0;
     virtual Result<void> write_block_impl(std::uintptr_t address, const NativeByteVector& data) = 0;
