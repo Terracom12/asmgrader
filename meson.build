@@ -112,7 +112,11 @@ libasssert_dep = dependency('libassert', include_type: 'system')
 #
 # for testing
 # =========
-catch2_dep = dependency('catch2', include_type: 'system')
+catch2_dep = dependency(
+  'catch2',
+  include_type: 'system',
+  default_options: ['tests=false'],
+)
 
 
 # ==============================================================================
@@ -149,4 +153,5 @@ subdir('src')
 
 if not meson.is_subproject()
   subdir('tests')
+  subdir('docs')
 endif
