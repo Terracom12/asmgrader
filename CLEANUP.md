@@ -7,3 +7,4 @@
   - with **docker**
 - generate version_macros.hpp DONE
   - should rename to version_config DONE
+- add extra_warnings option
