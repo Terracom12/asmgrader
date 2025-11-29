@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
-#include "api/tempfile.hpp"
-#include "common/aliases.hpp"
+#include <asmgrader/api/tempfile.hpp>
+#include <asmgrader/common/aliases.hpp>
 
 #include <filesystem>
 #include <vector>

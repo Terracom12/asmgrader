@@ -1,32 +1,30 @@
 tests_srcs = [
-  'test_static_expected.cpp',
-  'test_static_formatters.cpp',
-  'test_static_tuple_matcher.cpp',
-  'test_expression_inspection.cpp',
-  'test_syntax_highlighter.cpp',
-  'test_cconstexpr.cpp',
-  'test_static_string.cpp',
-  'test_static_byte.cpp',
-  'test_bit_casts.cpp',
-  'test_metadata.cpp',
-  'test_subprocess.cpp',
+  'test_byte_ranges.cpp',
+  'test_database_reader.cpp',
   'test_expected.cpp',
-  'test_symbol_reader.cpp',
+  'test_file_searcher.cpp',
   'test_memory_io.cpp',
   'test_program.cpp',
-  'test_database_reader.cpp',
-  'test_registers_state.cpp',
-  'test_file_searcher.cpp',
-  'test_byte_ranges.cpp',
+  'test_static_bit_casts.cpp',
+  'test_static_byte.cpp',
+  'test_static_cconstexpr.cpp',
+  'test_static_expected.cpp',
+  'test_static_expression_inspection.cpp',
+  'test_static_formatters.cpp',
+  'test_static_metadata.cpp',
+  'test_static_registers_state.cpp',
+  'test_static_string.cpp',
+  'test_static_subprocess.cpp',
+  'test_static_tuple_matcher.cpp',
+  'test_symbol_reader.cpp',
+  'test_syntax_highlighter.cpp',
   'test_tempfile.cpp',
 ]
 
 static_tests_srcs = []
 
-fs = import('fs')
 foreach t : tests_srcs
-  file_content = fs.read(t, encoding: 'utf-8')
-  if file_content.contains('STATIC_REQUIRE')
+  if t.contains('static')
     static_tests_srcs += [t]
   endif
 endforeach
@@ -34,40 +32,64 @@ endforeach
 
 inc = include_directories('../src')
 
-#   ##### Simple assembly executable
-#   # add_asm_arch_specific_impl(['asm_tests', 'resources/simple_asm'])
-#
-#   asm_tests_weird_name_exec = '(asm_tests () weird (name) ~`'
-#   # add_custom_command(['TARGET', 'asm_tests', 'POST_BUILD', 'COMMAND', 'cp', '$<TARGET_FILE:asm_tests>', '${asm_tests_weird_name_exec}', 'VERBATIM'])
-#   ##### Test runner executable
+arch_suffix = build_machine.cpu_family()
+if arch_suffix not in ['x86_64', 'aarch64']
+  error('Unsupported build CPU family:', build_cpu)
+endif
+
+asm_tests_target = executable(
+  'asm_tests',
+  sources: 'resources/simple_asm_@0@.s'.format(arch_suffix),
+  cpp_args: [
+    '-nostartfiles'
+  ],
+  link_args: [
+    '-nostartfiles'
+  ],
+)
+asm_tests_weird_name_target = custom_target(
+  'asm_tests_weird_name',
+  build_by_default: true,
+  command: ['cp', '@INPUT@', '@OUTPUT@'],
+  input: asm_tests_target,
+  output: '(asm_tests () weird (name) ~`',
+)
+
+tests_defines = [
+  '-DASM_TESTS_EXEC="@0@"'.format(asm_tests_target.full_path()),
+  '-DASM_TESTS_WEIRD_NAME_EXEC="@0@"'.format(asm_tests_weird_name_target.full_path()),
+  '-DRESOURCES_DIR="@0@"'.format(meson.current_source_dir() / 'resources'),
+]
 
 asmgrader_tests_target = executable(
   'asmgrader_tests',
   sources: ['catch2_custom.hpp', tests_srcs, 'catch_main.cpp'],
   dependencies: [catch2_dep, asmgrader_dep],
   include_directories: inc,
-  cpp_args: ['-DCATCH_CONFIG_RUNTIME_STATIC_REQUIRE'],
+  cpp_args: [
+    '-DCATCH_CONFIG_RUNTIME_STATIC_REQUIRE',
+    tests_defines,
+  ],
 )
 
-#   # add_dependencies(['asmgrader_tests', 'asm_tests'])
-#   # target_compile_definitions(['asmgrader_tests', 'PUBLIC', 'CATCH_CONFIG_RUNTIME_STATIC_REQUIRE', 'PRIVATE', 'ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\"', 'RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"', 'ASM_TESTS_WEIRD_NAME_EXEC=R\"abc(${asm_tests_weird_name_exec})abc\"'])
-#   # target_link_libraries(['asmgrader_tests', 'PUBLIC', 'asmgrader_core', 'PRIVATE', 'Catch2::Catch2', 'asmgrader_core_interface', 'asmgrader_warnings'])
-#   # TODO: Migh want to look into changing this later.
-#   # Just attempt to compile all tests in the constexpr version for simplicity,
-#   # since there really aren't that many.
-#   asmgrader_constexpr_tests_exe = executable('asmgrader_constexpr_tests', 'EXCLUDE_FROM_ALL', tests_srcs)
-#   # target_link_libraries(['asmgrader_constexpr_tests', 'PUBLIC', 'asmgrader_core', 'PRIVATE', 'Catch2::Catch2WithMain', 'asmgrader_core_interface', 'asmgrader_warnings'])
-#   asm_tests_weird_name_exec = '${CMAKE_CURRENT_BINARY_DIR}/(asm_tests () weird \\(name) ~`'
-#   # add_custom_command(['TARGET', 'asmgrader_tests', 'POST_BUILD', 'COMMAND', 'cp', '$<TARGET_FILE:asm_tests>', '${asm_tests_weird_name_exec}', 'VERBATIM'])
-#   # target_compile_definitions(['asmgrader_constexpr_tests', 'PRIVATE', 'ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\"', 'RESOURCES_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"', 'ASM_TESTS_WEIRD_NAME_EXEC=R\"abc(${asm_tests_weird_name_exec})abc\"'])
-#   ##### Built executables of the CLI library with no user-defined student tests
-#   # Used to check whether basic flags (--help and --version) work properly
-#   asmgrader_dumb_cli_exe = executable('asmgrader_dumb_cli', 'dumb_assignment.cpp')
-#   # target_compile_definitions(['asmgrader_dumb_cli', 'PRIVATE', 'ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\"'])
-#   # target_link_libraries(['asmgrader_dumb_cli', 'PRIVATE', 'asmgrader_core_with_main', 'asmgrader_warnings'])
-#   asmgrader_dumb_profcli_exe = executable('asmgrader_dumb_profcli', 'dumb_assignment.cpp')
-#   # target_compile_definitions(['asmgrader_dumb_profcli', 'PRIVATE', 'ASM_TESTS_EXEC=\"$<TARGET_FILE:asm_tests>\"'])
-#   # target_link_libraries(['asmgrader_dumb_profcli', 'PRIVATE', 'asmgrader_prof_core_with_main', 'asmgrader_warnings'])
+asmgrader_static_tests_target = library(
+  'asmgrader_static_tests',
+  build_by_default: false,
+  sources: ['catch2_custom.hpp', static_tests_srcs],
+  dependencies: [catch2_dep, asmgrader_dep],
+  include_directories: inc,
+  cpp_args: [
+    tests_defines,
+  ],
+)
+
+test('unittests', asmgrader_tests_target)
+test(
+  'unittests.static',
+  find_program('meson'),
+  args: ['compile', asmgrader_static_tests_target.name()],
+  workdir: meson.project_build_root(),
+)
 #   # Provide a simple smoke test to make sure that the CLI works and can display a --help message
 #   test('NAME', 'cli.has_help', 'COMMAND', 'asmgrader_dumb_cli', '--help')
 #   test('NAME', 'prof_cli.has_help', 'COMMAND', 'asmgrader_dumb_profcli', '--help')

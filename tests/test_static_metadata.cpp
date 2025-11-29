@@ -1,6 +1,6 @@
 #include "catch2_custom.hpp"
 
-#include "api/metadata.hpp"
+#include <asmgrader/api/metadata.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

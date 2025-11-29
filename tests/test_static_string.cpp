@@ -1,6 +1,6 @@
 #include "catch2_custom.hpp"
 
-#include "common/static_string.hpp"
+#include <asmgrader/common/static_string.hpp>
 
 #include <fmt/base.h>
 #include <fmt/compile.h>

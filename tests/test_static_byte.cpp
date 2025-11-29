@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
-#include "common/aliases.hpp"
-#include "common/byte.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/byte.hpp>
 
 #include <compare>
 #include <concepts>

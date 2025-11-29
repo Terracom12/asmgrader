@@ -1,4 +1,4 @@
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
 
 #include <catch2/catch_session.hpp>
 #include <libassert/assert.hpp>

@@ -1,6 +1,6 @@
 #include "catch2_custom.hpp"
 
-#include "api/syntax_highlighter.hpp"
+#include <asmgrader/api/syntax_highlighter.hpp>
 
 #include <fmt/color.h>
 #include <fmt/format.h>

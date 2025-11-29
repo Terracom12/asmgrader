@@ -1,9 +1,9 @@
 #include "catch2_custom.hpp"
 
-#include "common/aliases.hpp"
-#include "common/bit_casts.hpp"
-#include "common/byte.hpp"
-#include "common/byte_vector.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/bit_casts.hpp>
+#include <asmgrader/common/byte.hpp>
+#include <asmgrader/common/byte_vector.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>

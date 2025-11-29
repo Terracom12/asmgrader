@@ -1,7 +1,8 @@
 #include "catch2_custom.hpp"
 
-#include "api/assignment.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "user/assignment_file_searcher.hpp"
 #include "user/file_searcher.hpp"
 

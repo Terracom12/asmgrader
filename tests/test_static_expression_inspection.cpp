@@ -1,6 +1,6 @@
 #include "catch2_custom.hpp"
 
-#include "api/expression_inspection.hpp"
+#include <asmgrader/api/expression_inspection.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <range/v3/range/concepts.hpp>

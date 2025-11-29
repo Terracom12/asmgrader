@@ -1,13 +1,13 @@
 #include "catch2_custom.hpp"
 
-#include "common/aliases.hpp"
-#include "common/byte.hpp"
-#include "common/byte_vector.hpp"
-#include "common/error_types.hpp"
-#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep
-#include "subprocess/memory/memory_io_base.hpp"
-#include "subprocess/memory/memory_io_serde.hpp" // IWYU pragma: keep; document why?
-#include "subprocess/memory/non_terminated_str.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/byte.hpp>
+#include <asmgrader/common/byte_vector.hpp>
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/timespec_operator_eq.hpp> // IWYU pragma: keep
+#include <asmgrader/subprocess/memory/memory_io_base.hpp>
+#include <asmgrader/subprocess/memory/memory_io_serde.hpp> // IWYU pragma: keep; document why?
+#include <asmgrader/subprocess/memory/non_terminated_str.hpp>
 
 #include <libassert/assert.hpp>
 #include <range/v3/algorithm.hpp>

@@ -1,6 +1,6 @@
 #include "catch2_custom.hpp"
 
-#include "common/expected.hpp"
+#include <asmgrader/common/expected.hpp>
 
 #include <array>
 #include <string>

@@ -1,8 +1,8 @@
 #include "catch2_custom.hpp"
 
 #include "symbols/elf_reader.hpp"
-#include "symbols/symbol.hpp"
-#include "symbols/symbol_table.hpp"
+#include <asmgrader/symbols/symbol.hpp>
+#include <asmgrader/symbols/symbol_table.hpp>
 
 #include <range/v3/algorithm.hpp>
 #include <range/v3/algorithm/find_if.hpp>

@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
-#include "common/formatters/enum.hpp" // IWYU pragma: keep
-#include "common/formatters/macros.hpp"
+#include <asmgrader/common/formatters/enum.hpp> // IWYU pragma: keep
+#include <asmgrader/common/formatters/macros.hpp>
 
 #include <boost/describe/enum.hpp>
 #include <fmt/base.h>
