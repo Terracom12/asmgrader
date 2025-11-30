@@ -9,7 +9,6 @@
 #include "user/cl_args.hpp"
 #include "user/program_options.hpp"
 
-#include <boost/stacktrace/stacktrace.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
