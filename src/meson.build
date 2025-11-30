@@ -49,7 +49,7 @@ asmgrader_with_main_sources = ['main.cpp']
 
 asmgrader_defines = []
 if get_option('professor_mode')
-  asmgrader_defines += ['-DPROFESSOR_MODE']
+  asmgrader_defines += ['-DPROFESSOR_VERSION']
 endif
 
 # ==============================================================================
