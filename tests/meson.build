@@ -1,3 +1,15 @@
+# unittests and cli integration testing
+# ==============================================================================
+#
+# ==============================================================================
+# Variables
+# ==============================================================================
+
+# source-file : assignment-name
+assignment_sources = {
+  'assignments/simple.cpp': 'simple'
+}
+
 tests_srcs = [
   'test_byte_ranges.cpp',
   'test_database_reader.cpp',
@@ -29,7 +41,6 @@ foreach t : tests_srcs
   endif
 endforeach
 
-
 inc = include_directories('../src')
 
 arch_suffix = build_machine.cpu_family()
@@ -37,6 +48,14 @@ if arch_suffix not in ['x86_64', 'aarch64']
   error('Unsupported build CPU family:', build_cpu)
 endif
 
+# ==============================================================================
+# Targets
+# ==============================================================================
+
+# =========
+# Simple executable built from asm
+# also copied to "weird" name to test path resolution
+# =========
 asm_tests_target = executable(
   'asm_tests',
   sources: 'resources/simple_asm_@0@.s'.format(arch_suffix),
@@ -45,6 +64,9 @@ asm_tests_target = executable(
   ],
   link_args: [
     '-nostartfiles'
+  ],
+  override_options: [
+    'b_sanitize=none',
   ],
 )
 asm_tests_weird_name_target = custom_target(
@@ -55,12 +77,21 @@ asm_tests_weird_name_target = custom_target(
   output: '(asm_tests () weird (name) ~`',
 )
 
+# =========
+# Macros defined for unit tests so they know where to find
+# asm executables and the resources/ dir
+# =========
 tests_defines = [
   '-DASM_TESTS_EXEC="@0@"'.format(asm_tests_target.full_path()),
   '-DASM_TESTS_WEIRD_NAME_EXEC="@0@"'.format(asm_tests_weird_name_target.full_path()),
   '-DRESOURCES_DIR="@0@"'.format(meson.current_source_dir() / 'resources'),
 ]
 
+# =========
+# Normal unit tests target built with catch2_with_main
+# All compile-time tests are transformed to runtime by:
+#   STATIC_REQUIRE -> REQUIRE
+# =========
 asmgrader_tests_target = executable(
   'asmgrader_tests',
   sources: ['catch2_custom.hpp', tests_srcs, 'catch_main.cpp'],
@@ -72,6 +103,10 @@ asmgrader_tests_target = executable(
   ],
 )
 
+# =========
+# Static (compile-time) tests
+# Only built as a seperate test target
+# =========
 asmgrader_static_tests_target = library(
   'asmgrader_static_tests',
   build_by_default: false,
@@ -83,6 +118,25 @@ asmgrader_static_tests_target = library(
   ],
 )
 
+# =========
+# Full cli app build for integration tests
+# =========
+asmgrader_cli = executable(
+  'asmgrader_cli',
+  sources: assignment_sources.keys(),
+  dependencies: asmgrader_with_main_dep,
+  cpp_args: [
+    tests_defines,
+  ],
+)
+
+# ==============================================================================
+# Tests
+# ==============================================================================
+
+# =========
+# Unit tests and their static (compile-time) counterpart
+# =========
 test('unittests', asmgrader_tests_target)
 test(
   'unittests.static',
@@ -90,6 +144,62 @@ test(
   args: ['compile', asmgrader_static_tests_target.name()],
   workdir: meson.project_build_root(),
 )
+
+# =========
+# Very basic cli tests
+#
+# these will *only* check for a 0 return code
+# =========
+
+test(
+  'cli.has_help', 
+  asmgrader_cli,
+  args: ['--help'],
+  workdir: meson.current_build_dir(),
+)
+test(
+  'cli.has_version', 
+  asmgrader_cli,
+  args: ['--version'],
+  workdir: meson.current_build_dir(),
+)
+
+test(
+  'cli.bad_assignment_name',
+  asmgrader_cli,
+  args: ['534e3b148d1bf2da0b9076b8b70315c842b39589'],
+  workdir: meson.current_build_dir(),
+  should_fail: true,
+)
+
+# Every test assignment is expected to work against the asm program for now
+foreach _,assignment_name : assignment_sources
+  test(
+    'cli.assignment.' + assignment_name,
+    asmgrader_cli,
+    args: [assignment_name, '--file', asm_tests_target],
+    workdir: meson.current_build_dir(),
+  )
+
+  test(
+    'cli.assignment.' + assignment_name + '.infer_exec',
+    asmgrader_cli,
+    args: [assignment_name],
+    workdir: meson.current_build_dir(),
+  )
+
+  # student mode execs should be able to infer assignment from directory contents
+  if not get_option('professor_mode')
+    test(
+      'cli.assignment.' + assignment_name + '.infer-all',
+      asmgrader_cli,
+      workdir: meson.current_build_dir(),
+      suite: ['student_mode'],
+    )
+  endif
+endforeach
+
+
 #   # Provide a simple smoke test to make sure that the CLI works and can display a --help message
 #   test('NAME', 'cli.has_help', 'COMMAND', 'asmgrader_dumb_cli', '--help')
 #   test('NAME', 'prof_cli.has_help', 'COMMAND', 'asmgrader_dumb_profcli', '--help')

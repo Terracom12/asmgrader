@@ -8,7 +8,7 @@ constexpr std::string_view exec_filename = [] {
     return str.substr(idx + 1);
 }();
 
-FILE_METADATA(Assignment("thing", exec_filename));
+FILE_METADATA(Assignment("simple", exec_filename));
 
 TEST("sum function") {
     AsmFunction sum = ctx.find_function<u64(u64, u64)>("putch");
