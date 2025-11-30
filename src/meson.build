@@ -69,7 +69,7 @@ asmgrader_dep = declare_dependency(
 
 asmgrader_with_main_target = library(
   'asmgrader_with_main',
-  sources: asmgrader_sources,
+  sources: asmgrader_with_main_sources,
   include_directories: [asmgrader_public_inc, asmgrader_private_inc],
   dependencies: [asmgrader_deps, asmgrader_dep],
 )
