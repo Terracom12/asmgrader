@@ -47,9 +47,10 @@ asmgrader_sources = [
 
 asmgrader_with_main_sources = ['main.cpp']
 
-##### Helper function to create all core targets. Used to create a near-duplicate target for professor mode
-# function(['create_target', 'basename'])
-#### Interface (just for internal includes and libraries)
+asmgrader_defines = []
+if get_option('professor_mode')
+  asmgrader_defines += ['-DPROFESSOR_MODE']
+endif
 
 # ==============================================================================
 # Project and dependency setup
@@ -60,12 +61,15 @@ asmgrader_target = library(
   sources: asmgrader_sources,
   include_directories: [asmgrader_public_inc, asmgrader_private_inc],
   dependencies: asmgrader_deps,
+  cpp_args: asmgrader_defines,
 )
 asmgrader_dep = declare_dependency(
+  compile_args: asmgrader_defines,
   include_directories: asmgrader_public_inc,
   link_with: asmgrader_target,
   dependencies: asmgrader_deps,
 )
+meson.override_dependency('asmgrader', asmgrader_dep)
 
 asmgrader_with_main_target = library(
   'asmgrader_with_main',
@@ -78,3 +82,4 @@ asmgrader_with_main_dep = declare_dependency(
   link_with: asmgrader_with_main_target,
   dependencies: asmgrader_deps,
 )
+meson.override_dependency('asmgrader_with_main', asmgrader_with_main_dep)
