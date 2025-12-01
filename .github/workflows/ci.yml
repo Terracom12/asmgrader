@@ -42,11 +42,13 @@ jobs:
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
         with:
-          compiler: ${{ matrix.compiler }}
+          compiler: gcc
           cmake: true
           meson: true
           ninja: true
           ccache: true
+          doxygen: 1.12.0
+          graphviz: true
 
       - name: Set CPM cache location
         run: |
