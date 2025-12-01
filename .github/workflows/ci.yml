@@ -42,13 +42,13 @@ jobs:
       - name: Install Dependencies
         uses: aminya/setup-cpp@v1
         with:
-          compiler: gcc
+          compiler: ${{ matrix.compiler }}
           cmake: true
-          meson: true
+          meson: 1.8.5
           ninja: true
           ccache: true
-          doxygen: 1.12.0
-          graphviz: true
+          # doxygen: 1.12.0
+          # graphviz: true
 
       - name: Set CPM cache location
         run: |
@@ -78,6 +78,11 @@ jobs:
       - name: ccache Stats
         run: |
           ccache -s -v
+
+      - name: Output Meson Logs
+        if: success() || failure()
+        run: |
+          cat ./build/meson-logs/meson-log.txt ./build/meson-logs/testlog.txt
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
