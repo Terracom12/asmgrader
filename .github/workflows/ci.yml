@@ -24,7 +24,7 @@ jobs:
       matrix:
         compiler: [gcc-11]  # TODO: Add llvm-14; cpptrace does not work without libgcc's _Unwind though
         build_type: [debug, release]
-        generator: [Ninja] # TODO: Maybe add Unix Makefiles
+        generator: [Ninja]
         os: [ubuntu-22.04, ubuntu-22.04-arm]
     steps:
       - uses: actions/checkout@v4
@@ -44,40 +44,40 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
           cmake: true
+          meson: true
           ninja: true
           ccache: true
 
       - name: Set CPM cache location
         run: |
-          echo "CPM_SOURCE_CACHE=./build/CPM" > .env
-
-      - name: Strip compiler version
-        run: |
-          base_compiler="${{ matrix.compiler }}"
-          base_compiler="${base_compiler%%-*}"
-          base_compiler="${base_compiler/llvm/clang}"
-          echo "Base compiler: $base_compiler"
-          echo "BASE_COMPILER=$base_compiler" >> "$GITHUB_ENV"
+          echo "MESON_PACKAGE_CACHE_DIR=~/.cache/meson-pkgs" >> $GITHUB_ENV
 
       # We want ccache to be capable of caching with a PCH
       - name: Set ccache Config
         run: |
           ccache --set-config 'sloppiness=pch_defines,time_macros,include_file_mtime,include_file_ctime'
 
+      - name: Configure
+        run: |
+          meson setup build/ -Db_coverage=true
+
       - name: Build
         run: |
-          ./scripts/build ${{ matrix.build_type }} $BASE_COMPILER ${{ matrix.generator }}
+          meson compile -C build/
+
+      - name: Test
+        run: |
+          LOG_LEVEL=trace meson test -C build/
+
+      - name: Generate Coverage Reports
+        run: |
+          meson compile -C build/ coverage
 
       - name: ccache Stats
         run: |
           ccache -s -v
 
-      - name: Test
-        run: |
-          LOG_LEVEL=trace ./scripts/utest --no-build ${{ matrix.build_type }} $BASE_COMPILER ${{ matrix.generator }}
-
-      - uses: actions/upload-artifact@v4  # upload test results
-        if: ${{ !cancelled() }}           # run this step even if previous step failed
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
-          path: reports/junit*.xml
+          directory: ./build/meson-logs

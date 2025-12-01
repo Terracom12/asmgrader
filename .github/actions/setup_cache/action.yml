@@ -30,6 +30,7 @@ runs:
         path: |
           ~/.cache/pip
           ~/.cache/ccache
+          ~/.cache/meson-pkgs
           ~/.ccache
           ~/.config/ccache
           ${{ env.LOCALAPPDATA }}/ccache
