@@ -11,6 +11,7 @@ project(
     'warning_level=3',
     'default_library=static',
     'cpp_std=c++20',
+    'b_sanitize=' + (get_option('buildtype') == 'debug' ? 'address' : 'none'),
   ],
 )
 
