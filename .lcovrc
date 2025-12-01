@@ -1,0 +1,5 @@
+exclude = */tests/*
+exclude = */subprojects/*
+exclude = /usr/*
+
+ignore_errors = mismatch,unused
