@@ -6,7 +6,7 @@ project(
   ['cpp'],
   license : 'MIT',
   version : '0.4.4',
-  meson_version : '>=0.56.0',
+  meson_version : '>=1.8.5',
   default_options : [
     'warning_level=3',
     'default_library=static',
