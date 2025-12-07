@@ -1,6 +1,6 @@
-#include "api/process_statistics.hpp"
+#include <asmgrader/api/process_statistics.hpp>
 
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
 
 #include <fmt/format.h>
 

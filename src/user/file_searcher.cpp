@@ -1,6 +1,6 @@
 #include "user/file_searcher.hpp"
 
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
 
 #include <range/v3/algorithm/replace.hpp>
 

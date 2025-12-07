@@ -1,13 +1,14 @@
 #include "app/student_app.hpp"
 
-#include "api/assignment.hpp"
-#include "common/linux.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/common/linux.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/registrars/global_registrar.hpp>
+
 #include "output/plaintext_serializer.hpp"
 #include "output/stdout_sink.hpp"
 #include "output/verbosity.hpp"
-#include "registrars/global_registrar.hpp"
 #include "test_runner.hpp"
 #include "user/program_options.hpp"
 

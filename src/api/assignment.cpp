@@ -1,6 +1,6 @@
-#include "api/assignment.hpp"
+#include <asmgrader/api/assignment.hpp>
 
-#include "api/test_base.hpp"
+#include <asmgrader/api/test_base.hpp>
 
 #include <filesystem>
 #include <memory>

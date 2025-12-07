@@ -1,8 +1,8 @@
 #include "database_reader.hpp"
 
-#include "common/expected.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/split.hpp>

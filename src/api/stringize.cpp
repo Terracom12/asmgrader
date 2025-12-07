@@ -1,6 +1,6 @@
-#include "api/stringize.hpp"
+#include <asmgrader/api/stringize.hpp>
 
-#include "api/syntax_highlighter.hpp"
+#include <asmgrader/api/syntax_highlighter.hpp>
 
 #include <string>
 

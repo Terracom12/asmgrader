@@ -1,0 +1,10 @@
+[wrap-file]
+directory = libassert-2.2.1
+source_url = https://github.com/jeremy-rifkin/libassert/archive/refs/tags/v2.2.1.tar.gz
+source_filename = libassert-2.2.1.tar.gz
+source_hash = a7882ff2922c6d57f955f5ea9418014619e0855e936eb92e5443914dd1a8f724
+method = cmake
+
+[provide]
+libassert = libassert_lib_dep
+cpptrace = cpptrace_lib_dep

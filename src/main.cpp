@@ -4,11 +4,11 @@
 #include "app/student_app.hpp"
 #endif // PROFESSOR_VERSION
 
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
+
 #include "user/cl_args.hpp"
 #include "user/program_options.hpp"
 
-#include <boost/stacktrace/stacktrace.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>

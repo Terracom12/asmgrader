@@ -1,7 +1,8 @@
 #include "multi_student_runner.hpp"
 
-#include "api/assignment.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "output/serializer.hpp"
 #include "test_runner.hpp"
 

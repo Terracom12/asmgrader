@@ -1,16 +1,17 @@
 #include "app/professor_app.hpp"
 
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/extra_formatters.hpp> // IWYU pragma: keep
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/registrars/global_registrar.hpp>
+
 #include "app/student_app.hpp"
-#include "common/expected.hpp"
-#include "common/extra_formatters.hpp" // IWYU pragma: keep
 #include "database_reader.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
 #include "multi_student_runner.hpp"
 #include "output/plaintext_serializer.hpp"
 #include "output/stdout_sink.hpp"
 #include "output/verbosity.hpp"
-#include "registrars/global_registrar.hpp"
 #include "user/assignment_file_searcher.hpp"
 #include "user/program_options.hpp"
 

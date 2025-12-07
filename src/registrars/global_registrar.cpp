@@ -1,6 +1,6 @@
-#include "registrars/global_registrar.hpp"
+#include <asmgrader/registrars/global_registrar.hpp>
 
-#include "api/assignment.hpp"
+#include <asmgrader/api/assignment.hpp>
 
 #include <cstddef>
 #include <string_view>

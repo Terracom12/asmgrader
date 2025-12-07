@@ -5,7 +5,7 @@
 #include <asmgrader/common/formatters/macros.hpp>
 #include <asmgrader/common/os.hpp>
 #include <asmgrader/common/static_string.hpp>
-#include <asmgrader/version_macros.hpp> // IWYU pragma: export
+#include <asmgrader/config.hpp> // IWYU pragma: export
 
 #include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>

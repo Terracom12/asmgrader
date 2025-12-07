@@ -29,6 +29,9 @@ AllowShortFunctionsOnASingleLine: Inline
 
 SortIncludes: CaseInsensitive
 
+# Permit quotes ("") or angled brackets (<>) for the "main" include header
+MainIncludeChar: Any
+
 # Categories:
 #   Main header (top)
 #   Project headers

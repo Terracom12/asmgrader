@@ -1,11 +1,11 @@
 #include "catch2_custom.hpp"
 
-#include "common/aliases.hpp"
-#include "common/bit_casts.hpp"
-#include "common/byte_array.hpp"
-#include "common/byte_vector.hpp"
-#include "common/os.hpp"
-#include "common/to_static_range.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/bit_casts.hpp>
+#include <asmgrader/common/byte_array.hpp>
+#include <asmgrader/common/byte_vector.hpp>
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/common/to_static_range.hpp>
 
 #include <boost/preprocessor.hpp>
 #include <boost/preprocessor/facilities/identity.hpp>
@@ -45,11 +45,17 @@ constexpr auto int_tests = make_tests<u32, NativeByteArray<4>, NativeByteArray<4
             0,
             // expected_msb
             {
-                0x00, 0x00, 0x00, 0x00, // 0
+                0x00,
+                0x00,
+                0x00,
+                0x00, // 0
             },
             // expected_lsb
             {
-                0x00, 0x00, 0x00, 0x00, // 0
+                0x00,
+                0x00,
+                0x00,
+                0x00, // 0
             } //
         },
         {
@@ -57,11 +63,17 @@ constexpr auto int_tests = make_tests<u32, NativeByteArray<4>, NativeByteArray<4
             1,
             // expected_msb
             {
-                0x00, 0x00, 0x00, 0x01, // 1
+                0x00,
+                0x00,
+                0x00,
+                0x01, // 1
             },
             // expected_lsb
             {
-                0x01, 0x00, 0x00, 0x00, // 1
+                0x01,
+                0x00,
+                0x00,
+                0x00, // 1
             } //
         },
         {
@@ -69,11 +81,17 @@ constexpr auto int_tests = make_tests<u32, NativeByteArray<4>, NativeByteArray<4
             0x12345678,
             // expected_msb
             {
-                0x12, 0x34, 0x56, 0x78, // 0x12345678
+                0x12,
+                0x34,
+                0x56,
+                0x78, // 0x12345678
             },
             // expected_lsb
             {
-                0x78, 0x56, 0x34, 0x12, // 0x12345678
+                0x78,
+                0x56,
+                0x34,
+                0x12, // 0x12345678
             } //
         },
         {
@@ -81,11 +99,17 @@ constexpr auto int_tests = make_tests<u32, NativeByteArray<4>, NativeByteArray<4
             0xFFFFFFFF,
             // expected_msb
             {
-                0xFF, 0xFF, 0xFF, 0xFF, // 0xFFFFFFFF
+                0xFF,
+                0xFF,
+                0xFF,
+                0xFF, // 0xFFFFFFFF
             },
             // expected_lsb
             {
-                0xFF, 0xFF, 0xFF, 0xFF, // 0xFFFFFFFF
+                0xFF,
+                0xFF,
+                0xFF,
+                0xFF, // 0xFFFFFFFF
             } //
         },
     });

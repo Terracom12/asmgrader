@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/bit_casts.hpp"
-#include "common/formatters/formatters.hpp" // IWYU pragma: keep
-#include "common/macros.hpp"
+#include <asmgrader/common/bit_casts.hpp>
+#include <asmgrader/common/formatters/formatters.hpp> // IWYU pragma: keep
+#include <asmgrader/common/macros.hpp>
 
 #include <boost/preprocessor/facilities/identity.hpp>
 #include <fmt/base.h>

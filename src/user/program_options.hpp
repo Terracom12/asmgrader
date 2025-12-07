@@ -1,14 +1,14 @@
 #pragma once
 
+#include <asmgrader/app_mode.hpp>
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/formatters/debug.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/program/program.hpp>
 #include <asmgrader/registrars/global_registrar.hpp>
 
-#include "app_mode.hpp"
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
-#include "logging.hpp"
 #include "output/verbosity.hpp"
-#include "program/program.hpp"
 #include "user/assignment_file_searcher.hpp"
 
 #include <fmt/base.h>

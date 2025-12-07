@@ -1,9 +1,9 @@
 #include "catch2_custom.hpp"
 
-#include "common/aliases.hpp"
-#include "common/error_types.hpp"
-#include "program/program.hpp"
-#include "subprocess/subprocess.hpp"
+#include <asmgrader/common/aliases.hpp>
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/program/program.hpp>
+#include <asmgrader/subprocess/subprocess.hpp>
 
 #include <cstdint>
 #include <string>

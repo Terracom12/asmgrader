@@ -1,7 +1,8 @@
 #pragma once
 
-#include "api/assignment.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "user/file_searcher.hpp"
 
 #include <filesystem>

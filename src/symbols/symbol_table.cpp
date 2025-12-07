@@ -1,6 +1,6 @@
-#include "symbols/symbol_table.hpp"
+#include <asmgrader/symbols/symbol_table.hpp>
 
-#include "logging.hpp"
+#include <asmgrader/logging.hpp>
 
 #include <gsl/assert>
 #include <range/v3/algorithm.hpp>

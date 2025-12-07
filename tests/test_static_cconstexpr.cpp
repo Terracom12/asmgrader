@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
-#include "common/cconstexpr.hpp"
-#include "common/static_string.hpp"
+#include <asmgrader/common/cconstexpr.hpp>
+#include <asmgrader/common/static_string.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

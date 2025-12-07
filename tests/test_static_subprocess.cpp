@@ -1,12 +1,12 @@
 #include "catch2_custom.hpp"
 
-#include "common/error_types.hpp"
-#include "common/timespec_operator_eq.hpp" // IWYU pragma: keep
-#include "logging.hpp"
-#include "subprocess/run_result.hpp"
-#include "subprocess/subprocess.hpp"
-#include "subprocess/syscall_record.hpp"
-#include "subprocess/traced_subprocess.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/timespec_operator_eq.hpp> // IWYU pragma: keep
+#include <asmgrader/logging.hpp>
+#include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/subprocess.hpp>
+#include <asmgrader/subprocess/syscall_record.hpp>
+#include <asmgrader/subprocess/traced_subprocess.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/ranges.h>

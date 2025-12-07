@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/expected.hpp"
+#include <asmgrader/common/expected.hpp>
 
 #include <cstdio>
 

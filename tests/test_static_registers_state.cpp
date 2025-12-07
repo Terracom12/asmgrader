@@ -1,7 +1,7 @@
 #include "catch2_custom.hpp"
 
-#include "api/registers_state.hpp"
-#include "common/aliases.hpp"
+#include <asmgrader/api/registers_state.hpp>
+#include <asmgrader/common/aliases.hpp>
 
 using namespace asmgrader::aliases;
 using asmgrader::FloatingPointRegister, asmgrader::IntRegister;

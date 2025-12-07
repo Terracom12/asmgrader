@@ -1,7 +1,8 @@
 #pragma once
 
+#include <asmgrader/common/class_traits.hpp>
+
 #include "app/trace_exception.hpp"
-#include "common/class_traits.hpp"
 #include "user/program_options.hpp"
 
 #include <optional>

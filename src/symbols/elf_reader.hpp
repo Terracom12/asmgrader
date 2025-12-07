@@ -1,7 +1,7 @@
 #pragma once
 
-#include "symbols/symbol.hpp"
-#include "symbols/symbol_table.hpp"
+#include <asmgrader/symbols/symbol.hpp>
+#include <asmgrader/symbols/symbol_table.hpp>
 
 #include <elfio/elfio.hpp>
 

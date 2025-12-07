@@ -1,9 +1,10 @@
 #include "user/assignment_file_searcher.hpp"
 
-#include "api/assignment.hpp"
-#include "common/cconstexpr.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/common/cconstexpr.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+
 #include "user/file_searcher.hpp"
 
 #include <range/v3/action/take_while.hpp>

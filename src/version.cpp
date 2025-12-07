@@ -1,9 +1,9 @@
 // ccache:disable
 // Rational: __DATE__ and __TIME__ macros should correspond to actual build date and time
-#include "version.hpp"
+#include <asmgrader/version.hpp>
 
-#include "common/os.hpp"
-#include "common/static_string.hpp"
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/common/static_string.hpp>
 
 #include <boost/preprocessor/stringize.hpp>
 #include <fmt/base.h>

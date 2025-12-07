@@ -1,15 +1,16 @@
-#include "program/program.hpp"
+#include <asmgrader/program/program.hpp>
 
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
-#include "common/os.hpp"
-#include "logging.hpp"
-#include "subprocess/run_result.hpp"
-#include "subprocess/syscall_record.hpp"
-#include "subprocess/traced_subprocess.hpp"
-#include "subprocess/tracer.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/subprocess/run_result.hpp>
+#include <asmgrader/subprocess/syscall_record.hpp>
+#include <asmgrader/subprocess/traced_subprocess.hpp>
+#include <asmgrader/subprocess/tracer.hpp>
+#include <asmgrader/symbols/symbol_table.hpp>
+
 #include "symbols/elf_reader.hpp"
-#include "symbols/symbol_table.hpp"
 
 #include <elfio/elf_types.hpp>
 #include <elfio/elfio.hpp>

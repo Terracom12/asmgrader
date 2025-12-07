@@ -498,8 +498,8 @@ struct fmt::formatter<::asmgrader::IntRegister<Arch>> : ::asmgrader::DebugFormat
             constexpr auto ALIGN_10 = ::asmgrader::digits10_max_count<IntType>;
             constexpr auto ALIGN_16 = sizeof(IntType) * 2;
             constexpr auto ALIGN_2 = sizeof(IntType) * 8;
-            return fmt::format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10, ALIGN_16,
-                             ALIGN_2);
+            return fmt::format_to(ctx.out(), "{0:>{1}} | 0x{0:0{2}X} | 0b{0:0{3}B}", from.get_value(), ALIGN_10,
+                                  ALIGN_16, ALIGN_2);
         }
 
         return fmt::format_to(ctx.out(), "{}", from.get_value());
@@ -591,7 +591,8 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "NZCV";
 
-            ctx.advance_to(fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+            ctx.advance_to(
+                fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
         } else {
             ctx.advance_to(fmt::format_to(ctx.out(), "{}", short_flags_str));
         }
@@ -617,7 +618,8 @@ struct fmt::formatter<::asmgrader::FlagsRegister<Arch>> : ::asmgrader::DebugForm
             std::string labels_offset(bin_labels_offset + LABEL_INIT_OFFSET, ' ');
             std::string labels = "O   SZ     C";
 
-            ctx.advance_to(fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
+            ctx.advance_to(
+                fmt::format_to(ctx.out(), "{} ({})\n{}{}", flags_bin, short_flags_str, labels_offset, labels));
         } else {
             ctx.advance_to(fmt::format_to(ctx.out(), "{}", short_flags_str));
         }

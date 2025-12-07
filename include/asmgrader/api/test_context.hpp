@@ -126,6 +126,8 @@ public:
     /// Data is more limited when the process is not stopped!
     ProcessStats stats();
 
+    Program& get_program() { return prog_; }
+
 private:
     bool require_impl(bool condition, const std::string& description,
                       const std::optional<exprs::ExpressionRepr>& expression_repr,

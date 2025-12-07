@@ -1,7 +1,8 @@
 #pragma once
 
-#include "api/test_base.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/api/test_base.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "output/serializer.hpp"
 
 #include <filesystem>

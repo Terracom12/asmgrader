@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/class_traits.hpp"
-#include "grading_session.hpp"
+#include <asmgrader/common/class_traits.hpp>
+#include <asmgrader/grading_session.hpp>
+
 #include "output/sink.hpp"
 #include "output/verbosity.hpp"
 #include "user/program_options.hpp"

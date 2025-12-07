@@ -1,17 +1,18 @@
 #include "cl_args.hpp"
 
-#include "api/assignment.hpp"
-#include "app_mode.hpp"
-#include "common/expected.hpp"
-#include "common/os.hpp"
-#include "common/static_string.hpp"
+#include <asmgrader/api/assignment.hpp>
+#include <asmgrader/app_mode.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/common/os.hpp>
+#include <asmgrader/common/static_string.hpp>
+#include <asmgrader/grading_session.hpp>
+#include <asmgrader/logging.hpp>
+#include <asmgrader/registrars/global_registrar.hpp>
+#include <asmgrader/version.hpp>
+
 #include "common/terminal_checks.hpp"
-#include "grading_session.hpp"
-#include "logging.hpp"
 #include "output/verbosity.hpp"
-#include "registrars/global_registrar.hpp"
 #include "user/program_options.hpp"
-#include "version.hpp"
 
 #include <argparse/argparse.hpp>
 #include <boost/preprocessor/stringize.hpp>

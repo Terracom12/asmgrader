@@ -1,0 +1,9 @@
+[wrap-file]
+directory = elfio-3.12
+source_url = https://github.com/serge1/ELFIO/releases/download/Release_3.12/elfio-3.12.tar.gz
+source_filename = elfio-3.12.tar.gz
+source_hash = caf49f3bf55a9c99c98ebea4b05c79281875783802e892729eea0415505f68c4
+method = cmake
+
+[provide]
+elfio = elfio_dep

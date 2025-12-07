@@ -1,0 +1,12 @@
+option(
+  'professor_mode',
+  type: 'boolean',
+  value: false,
+  description: 'build in professor mode (default is student mode)',
+)
+option(
+  'impl_version_info',
+  type: 'string',
+  value: '',
+  description: 'version info for the *implementation*',
+)
