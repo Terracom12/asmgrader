@@ -14,16 +14,14 @@
 
 #include <cerrno>
 #include <chrono>
-#include <cstdio>
-#include <cstdlib> // For abort
-#include <stdexcept>
+#include <cstdlib> // IWYU pragma: keep; abort()
 #include <string>
 #include <string_view>
 #include <system_error>
 // #include <fmt/std.h> // FIXME: This generates errors...
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#if defined(DEBUG) || defined(TRACE)
+#ifndef ASMGRADER_NDEBUG
 #define SPDLOG_FUNCTION __PRETTY_FUNCTION__
 #endif
 
@@ -48,7 +46,7 @@
         std::abort();                                                                                                  \
     } while (false)
 
-#ifdef DEBUG
+#ifndef ASMGRADER_NDEBUG
 #define DEBUG_TIME(expr)                                                                                               \
     [&]() {                                                                                                            \
         ::asmgrader::detail::DebugTimeHelper debug_time_helper__(#expr);                                               \
@@ -92,7 +90,7 @@ inline std::string get_err_msg() {
 }
 
 inline void init_loggers() {
-#if defined(DEBUG)
+#ifndef ASMGRADER_NDEBUG
     spdlog::set_level(spdlog::level::warn);
 #else
     spdlog::set_level(spdlog::level::err);
@@ -101,7 +99,7 @@ inline void init_loggers() {
     // Override any previously set log-level with the enviornment variable SPDLOG_LEVEL, if set
     spdlog::cfg::load_env_levels("LOG_LEVEL");
 
-#if defined(DEBUG) || defined(TRACE)
+#ifndef ASMGRADER_NDEBUG
     spdlog::set_pattern("[%T.%e] [%^%8l%$] [pid %6P] [%30!!@%20!s:%-4#] %v");
 #else
     // Pattern:
