@@ -189,9 +189,11 @@ inline Expected<Fork> fork() {
     }
 
     if (res == 0) {
+        LOG_TRACE("fork() = 0 (this is child proc)");
         return Fork{.which = Fork::Child, .pid = 0};
     }
 
+    LOG_TRACE("fork() = {} (this is parent proc)", res);
     return Fork{.which = Fork::Parent, .pid = res};
 }
 
