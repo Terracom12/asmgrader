@@ -1,11 +1,12 @@
 #include "user/program_options.hpp"
 
-#include "common/error_types.hpp"
-#include "common/expected.hpp"
+#include <asmgrader/common/error_types.hpp>
+#include <asmgrader/common/expected.hpp>
+#include <asmgrader/program/program.hpp>
+#include <asmgrader/registrars/global_registrar.hpp>
+#include <asmgrader/version.hpp>
+
 #include "output/verbosity.hpp"
-#include "program/program.hpp"
-#include "registrars/global_registrar.hpp"
-#include "version.hpp"
 
 #include <fmt/base.h>
 #include <fmt/format.h>

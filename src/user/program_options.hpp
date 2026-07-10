@@ -75,7 +75,50 @@ struct ProgramOptions
                                                                             fmt::format_string<std::string> fmt);
 
     /// Verify that all fields are valid
-    Expected<void, std::string> validate();
+    Expected<void, std::string> validate() {
+        // Assume that all enumerators have valid values except for verbosity
+        // which we will just clamp to [MIN, MAX]
+
+        constexpr auto MAX_VERBOSITY = VerbosityLevel::Max;
+        constexpr auto MIN_VERBOSITY = VerbosityLevel{};
+
+        verbosity = std::clamp(verbosity, MIN_VERBOSITY, MAX_VERBOSITY);
+
+        // Ensure that the matcher is a valid RegEx
+        try {
+            std::ignore = std::regex{file_matcher};
+        } catch (std::exception& ex) {
+            return (fmt::format("File matcher {:?} is invalid. {}", file_matcher, ex.what()));
+        }
+
+        TRY(ensure_is_directory(search_path, "Search path {:?}"));
+
+        // Only check the database path if it's not the default
+        // non-existance will be handled properly in ProfessorApp
+        if (auto res = ensure_is_regular_file(database_path, "Database file {:?}"); !res) {
+            LOG_WARN(res.error());
+        }
+
+        // If the assignment name is empty, we're going to be attempting to infer it elsewhere
+        if (assignment_name.empty()) {
+            return {};
+        }
+
+        // The CLI should verify that the specified assignment is valid
+        // We'll check here just in case and return an error if it's not
+        auto assignment = TRYE(GlobalRegistrar::get().get_assignment(assignment_name),
+                               fmt::format("Error locating assignment {}", assignment_name));
+
+        if (get_builtin_app_mode() != AppMode::Professor) {
+            // TODO: A more friendly diagnostic for non-existant file
+            std::string exec_file_name = file_name.value_or(assignment.get().get_exec_path());
+
+            TRY(ensure_is_regular_file(exec_file_name, "File to run tests on {:?}"));
+            TRY(Program::check_is_compat_elf(exec_file_name));
+        }
+
+        return {};
+    }
 };
 
 } // namespace asmgrader

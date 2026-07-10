@@ -28,8 +28,10 @@ asmgrader_sources = [
   'database_reader.cpp',
   'user/file_searcher.cpp',
   'user/assignment_file_searcher.cpp',
+  'user/program_options.cpp',
   'app/professor_app.cpp',
   'app/student_app.cpp',
+  'app/test_theme_app.cpp',
   'version.cpp',
   'logging.cpp',
 ]

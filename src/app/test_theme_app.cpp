@@ -1,7 +1,8 @@
 #include "app/test_theme_app.hpp"
 
-#include "api/expression_inspection.hpp"
-#include "api/syntax_highlighter.hpp"
+#include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/api/syntax_highlighter.hpp>
+
 #include "common/terminal_checks.hpp"
 
 #include <fmt/base.h>

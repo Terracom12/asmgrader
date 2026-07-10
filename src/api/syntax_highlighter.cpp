@@ -1,8 +1,8 @@
 #include <asmgrader/api/syntax_highlighter.hpp>
 
-#include "api/expression_inspection.hpp"
-#include "common/cconstexpr.hpp"
-#include "logging.hpp"
+#include <asmgrader/api/expression_inspection.hpp>
+#include <asmgrader/common/cconstexpr.hpp>
+#include <asmgrader/logging.hpp>
 
 #include <fmt/base.h>
 #include <fmt/color.h>
