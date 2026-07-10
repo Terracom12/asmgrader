@@ -1751,15 +1751,8 @@ public:
         ranges::copy(tokens_.begin() + start, tokens_.begin() + start + len, result.tokens_.begin());
         result.num_tokens_ = len;
 
-        auto sum_token_lens = [](ranges::range auto&& rng) {
-            return ranges::fold_left(
-                rng | ranges::views::transform([](const Token& token) { return token.str.size(); }), 0, std::plus<>{});
-        };
-
-        std::size_t removed_str_prefix = sum_token_lens(tokens_ | ranges::views::take(start));
-        std::size_t str_len = sum_token_lens(result.tokens_);
-
-        result.original_ = original_.substr(removed_str_prefix, str_len);
+        // The memory between these different tokens should be a contiguous string
+        result.original_ = std::string_view{tokens_[start].str.begin(), tokens_[start + len - 1].str.end()};
 
         return result;
     }
