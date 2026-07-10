@@ -42,9 +42,11 @@ boost_opts.add_cmake_defines({
 boost_subproj = cmake.subproject('boost',
   options: boost_opts
 )
-boost_dep = []
+boost_named_deps = {}
 foreach mod : boost_module_names
-  boost_dep += [boost_subproj.dependency('boost_' + mod, include_type: 'system')]
+  boost_named_deps += {
+    f'Boost(@mod@)': boost_subproj.dependency('boost_' + mod, include_type: 'system')
+  }
 endforeach
 
 # =========
@@ -119,30 +121,22 @@ catch2_dep = dependency(
 )
 
 
-# ==============================================================================
-# Configuration data
-# ==============================================================================
+########
+asmgrader_named_deps = {
+  'Argparse': argparse_dep,
+  'spdlog': spdlog_dep,
+  '{fmt}': fmt_dep,
+  'GSL': gsl_dep,
+  'range-v3': rangev3_dep,
+  'ELFIO': elfio_dep,
+  'Cpptrace': cpptrace_dep,
+  'libassert': libasssert_dep,
+} + boost_named_deps
+asmgrader_deps = []
+foreach _,dep : asmgrader_named_deps
+  asmgrader_deps += dep
+endforeach
 
-split_version = meson.project_version().split('.')
-git_hash_cmd = run_command('git', 'log', '-n1', '--format=%H', capture: true, check: false)
-
-if git_hash_cmd.returncode() == 0
-  git_hash_str = git_hash_cmd.stdout().strip()
-else
-  git_hash_str = ''
-endif
-
-# Used to define macros in the file version_config.hpp.in under include/
-
-asmgrader_conf_data = configuration_data({
-  'ASMGRADER_VERSION_MAJOR': split_version[0],
-  'ASMGRADER_VERSION_MINOR': split_version[1],
-  'ASMGRADER_VERSION_PATCH': split_version[2],
-  'ASMGRADER_VERSION_GIT_HASH': git_hash_str,
-  'ASMGRADER_BUILD_TYPE': get_option('buildtype'),
-  'ASMGRADER_IMPL_VERSION_INFO': get_option('impl_version_info'),
-  'ASMGRADER_DEPENDENCY_VERSIONS_STR': '' # TODO
-})
 
 # ==============================================================================
 # Sub-Directories

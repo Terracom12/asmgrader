@@ -3,18 +3,6 @@
 
 asmgrader_private_inc = include_directories('.')
 
-asmgrader_deps = [
-  boost_dep,
-  argparse_dep,
-  spdlog_dep,
-  fmt_dep,
-  gsl_dep,
-  rangev3_dep,
-  elfio_dep,
-  cpptrace_dep,
-  libasssert_dep,
-]
-
 asmgrader_sources = [
   'subprocess/subprocess.cpp',
   'subprocess/traced_subprocess.cpp',
