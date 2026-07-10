@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Exit on failure
+set -e
+
+meson setup ./build/
+meson compile -C ./build/

@@ -6,6 +6,17 @@
 // worse every time it's changed
 #include <asmgrader/common/extra_formatters.hpp> // IWYU pragma: keep
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#ifndef ASMGRADER_NDEBUG
+#define SPDLOG_FUNCTION __PRETTY_FUNCTION__
+#endif
+
+#include <spdlog/details/console_globals.h>
+#include <spdlog/details/log_msg.h>
+#include <spdlog/details/null_mutex.h>
+#include <spdlog/logger.h>
+#include <spdlog/sinks/base_sink.h>
+
 // Set log level based on whether we're in DEBUG mode
 // Needs to be done before including spdlog
 #include <fmt/chrono.h>
@@ -14,18 +25,16 @@
 
 #include <cerrno>
 #include <chrono>
-#include <cstdio>
-#include <cstdlib> // For abort
-#include <stdexcept>
+#include <cstdlib> // IWYU pragma: keep; abort()
+#include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <system_error>
-// #include <fmt/std.h> // FIXME: This generates errors...
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#if defined(DEBUG) || defined(TRACE)
-#define SPDLOG_FUNCTION __PRETTY_FUNCTION__
-#endif
+#include <fcntl.h>
+#include <unistd.h>
+// #include <fmt/std.h> // FIXME: This generates errors...
 
 #include <spdlog/cfg/env.h>
 #include <spdlog/common.h>
@@ -48,7 +57,7 @@
         std::abort();                                                                                                  \
     } while (false)
 
-#ifdef DEBUG
+#ifndef ASMGRADER_NDEBUG
 #define DEBUG_TIME(expr)                                                                                               \
     [&]() {                                                                                                            \
         ::asmgrader::detail::DebugTimeHelper debug_time_helper__(#expr);                                               \
@@ -91,29 +100,44 @@ inline std::string get_err_msg() {
     return get_err_msg(errno);
 }
 
-inline void init_loggers() {
-#if defined(DEBUG)
-    spdlog::set_level(spdlog::level::warn);
-#else
-    spdlog::set_level(spdlog::level::err);
-#endif
+/// Configure the specified logger with basic settings
+void configure_logger(std::shared_ptr<spdlog::logger>& logger);
 
-    // Override any previously set log-level with the enviornment variable SPDLOG_LEVEL, if set
-    spdlog::cfg::load_env_levels("LOG_LEVEL");
+void init_default_logger();
 
-#if defined(DEBUG) || defined(TRACE)
-    spdlog::set_pattern("[%T.%e] [%^%8l%$] [pid %6P] [%30!!@%20!s:%-4#] %v");
-#else
-    // Pattern:
-    //   time - [HH:MM:SS.MS]
-    //   level (colored, center aligned) - [ info ]
-    //   process id - [pid 12345]
-    //   message - "foo bar"
-    spdlog::set_pattern("[%T.%e] [%^%=8l%$] [pid %6P] %v");
-#endif
+// NOLINTBEGIN(readability-identifier-naming) - Stick to spdlog conventions
 
-    // Log to stderr. See https://github.com/gabime/spdlog/wiki/FAQ#switch-the-default-logger-to-stderr
-    spdlog::set_default_logger(spdlog::stderr_color_st("default"));
-}
+/// Extremely basic sink for spdlog specifically for writing to a file descriptor
+/// Boilerplate from this example: https://github.com/gabime/spdlog/wiki/Sinks#implementing-your-own-sink
+template <typename Mutex>
+class spdlog_fd_sink : public spdlog::sinks::base_sink<Mutex>
+{
+public:
+    explicit spdlog_fd_sink(int fd)
+        : fd_{fd} {}
+
+protected:
+    void sink_it_(const spdlog::details::log_msg& msg) override {
+
+        // log_msg is a struct containing the log entry info like level, timestamp, thread id etc.
+        // msg.payload (before v1.3.0: msg.raw) contains pre formatted log
+
+        // If needed (very likely but not mandatory), the sink formats the message before sending it to its final
+        // destination:
+        spdlog::memory_buf_t formatted;
+        spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
+        write(fd_, formatted.data(), formatted.size());
+    }
+
+    void flush_() override {}
+
+private:
+    int fd_;
+};
+
+using spdlog_fd_sink_mt = spdlog_fd_sink<std::mutex>;
+using spdlog_fd_sink_st = spdlog_fd_sink<spdlog::details::null_mutex>;
+
+// NOLINTEND(readability-identifier-naming)
 
 } // namespace asmgrader

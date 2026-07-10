@@ -42,7 +42,8 @@ asmgrader_sources = [
   'user/assignment_file_searcher.cpp',
   'app/professor_app.cpp',
   'app/student_app.cpp',
-  'version.cpp'
+  'version.cpp',
+  'logging.cpp',
 ]
 
 asmgrader_with_main_sources = ['main.cpp']

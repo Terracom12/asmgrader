@@ -20,7 +20,7 @@
 #include <span>
 
 int main(int argc, const char* argv[]) {
-    asmgrader::init_loggers();
+    asmgrader::init_default_logger();
 
     std::span<const char*> args{argv, static_cast<std::size_t>(argc)};
     const asmgrader::ProgramOptions options = asmgrader::parse_args_or_exit(args);
