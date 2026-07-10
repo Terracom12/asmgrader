@@ -1,5 +1,6 @@
 #include <asmgrader/subprocess/subprocess.hpp>
 
+#include <asmgrader/common/aliases.hpp>
 #include <asmgrader/common/error_types.hpp>
 #include <asmgrader/common/expected.hpp>
 #include <asmgrader/common/linux.hpp>
@@ -13,6 +14,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -25,6 +28,10 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <sched.h>
+#include <spdlog/logger.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/ptrace.h>
@@ -150,6 +157,10 @@ Result<void> Subprocess::close_pipes() {
         TRYE(linux::close(stderr_.pipe.read_fd), SyscallFailure);
         stderr_.pipe.read_fd = -1;
     }
+    if (log_pipe_.read_fd != -1) {
+        TRYE(linux::close(log_pipe_.read_fd), SyscallFailure);
+        log_pipe_.read_fd = -1;
+    }
 
     return {};
 }
@@ -158,15 +169,38 @@ Subprocess::Subprocess(Subprocess&& other) noexcept
     : child_pid_{std::exchange(other.child_pid_, 0)}
     , stdin_pipe_{std::exchange(other.stdin_pipe_, {})}
     , stdout_{std::exchange(other.stdout_, {})}
-    , stderr_{std::exchange(other.stderr_, {})} {}
+    , stderr_{std::exchange(other.stderr_, {})}
+    , log_pipe_{std::exchange(other.log_pipe_, {})} {}
 
 Subprocess& Subprocess::operator=(Subprocess&& rhs) noexcept {
     child_pid_ = std::exchange(rhs.child_pid_, 0);
     stdin_pipe_ = std::exchange(rhs.stdin_pipe_, {});
     stdout_ = std::exchange(rhs.stdout_, {});
     stderr_ = std::exchange(rhs.stderr_, {});
+    log_pipe_ = std::exchange(rhs.log_pipe_, {});
 
     return *this;
+}
+
+Expected<std::string> Subprocess::read_logs() {
+    std::string res;
+    std::string buf;
+
+    do {
+        buf = TRY(linux::read(log_pipe_.read_fd, 1024));
+        res.append(buf);
+    } while (!buf.empty());
+
+    return res;
+}
+
+Expected<> Subprocess::propegate_logs() {
+    std::string logs = TRY(read_logs());
+
+    // TODO: Consider supporting other log sinks
+    std::cerr << logs;
+
+    return {};
 }
 
 bool Subprocess::is_alive() const {
@@ -266,14 +300,16 @@ Result<void> Subprocess::create(const std::string& exec, const std::vector<std::
     stdin_pipe_ = TRYE(linux::pipe2(), SyscallFailure);
     stdout_.pipe = TRYE(linux::pipe2(), SyscallFailure);
     stderr_.pipe = TRYE(linux::pipe2(), SyscallFailure);
+    log_pipe_ = TRYE(linux::pipe2(), SyscallFailure);
 
     if (!mark_cloexec_all()) {
         LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
     }
 
-    if (!mark_cloexec_all()) {
-        LOG_WARN("Failed to set flags for fds; some fds will likely remain open in child proc");
-    }
+    // // Pass the write end of the log pipe to the child proc
+    // u32 flags = TRYE(linux::fcntl(log_pipe_.write_fd, F_GETFD), SyscallFailure);
+    // // NOLINTNEXTLINE(hicpp-signed-bitwise)
+    // TRYE(linux::fcntl(log_pipe_.write_fd, F_SETFD, flags & ~O_CLOEXEC), SyscallFailure);
 
     linux::Fork fork_res = TRYE(linux::fork(), SyscallFailure);
 
@@ -294,52 +330,24 @@ Result<void> Subprocess::create(const std::string& exec, const std::vector<std::
 }
 
 Result<void> Subprocess::init_child() {
+    // Set the logger for the child custom, since stderr is captured
+    auto fd_sink = std::make_shared<spdlog_fd_sink_st>(log_pipe_.write_fd);
+    auto fd_logger = std::make_shared<spdlog::logger>("child", fd_sink);
+    fd_logger->set_level(spdlog::get_level());
+    configure_logger(fd_logger);
+    spdlog::set_default_logger(fd_logger);
+
     TRYE(linux::dup2(stdin_pipe_.read_fd, STDIN_FILENO), SyscallFailure);
     TRYE(linux::dup2(stdout_.pipe.write_fd, STDOUT_FILENO), SyscallFailure);
     TRYE(linux::dup2(stderr_.pipe.write_fd, STDERR_FILENO), SyscallFailure);
 
     // Close the pipe ends not being used in the child proc
-    //  - read end for stdout
+    //  - read end for stdout and logs
     //  - write end for stdin and stderr
     TRYE(linux::close(stdin_pipe_.write_fd), SyscallFailure);
     TRYE(linux::close(stdout_.pipe.read_fd), SyscallFailure);
     TRYE(linux::close(stderr_.pipe.read_fd), SyscallFailure);
-
-    namespace fs = std::filesystem;
-
-    for (const auto& entry : fs::directory_iterator("/proc/self/fd")) {
-        int fd = std::stoi(entry.path().filename().string());
-
-        // skip stdin, stdout, stderr
-        if (fd <= 2) {
-            continue;
-        }
-
-        // auto res = linux::close(fd);
-        //
-        // // If close(2) failed for a reason other than the fd not existing, return an error
-        // if (!res && res != linux::make_error_code(EBADF)) {
-        //     return ErrorKind::SyscallFailure;
-        // }
-    }
-
-    namespace fs = std::filesystem;
-
-    for (const auto& entry : fs::directory_iterator("/proc/self/fd")) {
-        int fd = std::stoi(entry.path().filename().string());
-
-        // skip stdin, stdout, stderr
-        if (fd <= 2) {
-            continue;
-        }
-
-        // auto res = linux::close(fd);
-        //
-        // // If close(2) failed for a reason other than the fd not existing, return an error
-        // if (!res && res != linux::make_error_code(EBADF)) {
-        //     return ErrorKind::SyscallFailure;
-        // }
-    }
+    TRYE(linux::close(log_pipe_.read_fd), SyscallFailure);
 
     return {};
 }
@@ -348,19 +356,24 @@ Result<void> Subprocess::init_parent() {
     // Close the pipe ends being used in the parent proc
     //  - write end for stdout
     //  - read end for stdin and stderr
+    //  - write end for logs
     TRYE(linux::close(stdin_pipe_.read_fd), SyscallFailure);
     TRYE(linux::close(stdout_.pipe.write_fd), SyscallFailure);
     TRYE(linux::close(stderr_.pipe.write_fd), SyscallFailure);
+    TRYE(linux::close(log_pipe_.write_fd), SyscallFailure);
     // stdin_pipefd_ = stdin_pipe.write_fd;  // write end of stdin pipe
     // stdout_pipefd_ = stdout_pipe.read_fd; // read end of stdout pipe
 
-    // Make reading from stdout and stderr non-blocking
+    // Make reading from stdout, stderr, and logs non-blocking
     int pre_flags_stdout = TRYE(linux::fcntl(stdout_.pipe.read_fd, F_GETFL), SyscallFailure);
     int pre_flags_stderr = TRYE(linux::fcntl(stderr_.pipe.read_fd, F_GETFL), SyscallFailure);
+    int pre_flags_logs = TRYE(linux::fcntl(log_pipe_.read_fd, F_GETFL), SyscallFailure);
 
     TRYE(linux::fcntl(stdout_.pipe.read_fd, F_SETFL, pre_flags_stdout | O_NONBLOCK), // NOLINT
          SyscallFailure);
     TRYE(linux::fcntl(stderr_.pipe.read_fd, F_SETFL, pre_flags_stderr | O_NONBLOCK), // NOLINT
+         SyscallFailure);
+    TRYE(linux::fcntl(log_pipe_.read_fd, F_SETFL, pre_flags_logs | O_NONBLOCK), // NOLINT
          SyscallFailure);
 
     return {};
@@ -373,7 +386,7 @@ Expected<> Subprocess::mark_cloexec_all() const {
 
         if (fd > 2) {
             int flags = TRY(linux::fcntl(fd, F_GETFD));
-            TRY(linux::fcntl(fd, F_SETFD, flags | FD_CLOEXEC));
+            TRY(linux::fcntl(fd, F_SETFD, flags | FD_CLOEXEC)); // NOLINT
         }
     }
 

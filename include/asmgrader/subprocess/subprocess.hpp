@@ -50,6 +50,12 @@ public:
     /// Get all output since the program has launched
     OutputResult read_full_output(WhichOutput which = WhichOutput::StdoutAndStderr);
 
+    /// Read log output from child since the last call to this function
+    Expected<std::string> read_logs();
+
+    /// Propegates logs to this processes default logger as by first calling ``read_logs``
+    Expected<> propegate_logs();
+
     template <typename Rep, typename Period>
     [[deprecated]] Result<std::string> read_stdout(const std::chrono::duration<Rep, Period>& timeout) {
         auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count();
@@ -115,6 +121,7 @@ private:
 
     OutputPipe stdout_{};
     OutputPipe stderr_{};
+    linux::Pipe log_pipe_{};
 
     /// Marks all open fds (other than 0,1,2) as FD_CLOEXEC so that they get closed in the child proc
     /// Run in the PARENT process.

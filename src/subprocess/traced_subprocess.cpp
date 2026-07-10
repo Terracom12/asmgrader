@@ -50,6 +50,9 @@ Result<void> TracedSubprocess::init_parent() {
 
     TRY(tracer_.begin(get_pid()));
 
+    // child has execve'd by this point, so we can safely propegate all of its logs
+    TRYE(propegate_logs(), ErrorKind::UnknownError);
+
     return {};
 }
 
