@@ -275,6 +275,8 @@ constexpr std::string_view format_as(const Token::Kind token_kind) {
         return "BoolLiteral";
     case Qualifier:
         return "Qualifier";
+    case Max:
+        return "Max";
     }
     UNREACHABLE(token_kind);
 }
