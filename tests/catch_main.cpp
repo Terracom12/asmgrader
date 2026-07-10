@@ -12,7 +12,7 @@ void libassert_handler(const libassert::assertion_info& info) {
 }
 
 int main(int argc, char* argv[]) {
-    asmgrader::init_loggers();
+    asmgrader::init_default_logger();
 
     libassert::set_failure_handler(libassert_handler);
 
