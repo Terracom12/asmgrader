@@ -154,7 +154,7 @@ TEST_CASE("bit casting conversions") {
         REQUIRE_THAT(to_bytes<NativeByteVector>(empty), IsEmpty());
     }
     SECTION("to ranges") {
-        std::vector<u8> src{0x01, 0x23, 0x45, 0x67, 0x89};
+        std::vector<u8> src{0x00, 0x01, 0x23, 0x45, 0x67, 0x89, 0x80, 0xff};
         auto vec = to_bytes<NativeByteVector>(src);
 
         REQUIRE(vec.size() == src.size());
