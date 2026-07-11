@@ -89,7 +89,7 @@ TEST_CASE("Grouping tokens") {
         STATIC_REQUIRE(Tokenizer("(f(123) + (3 * 2))") == toks(
             grp("("),
                 id("f"), op("("), int10lit("123"), op(")"), 
-                op("+"), 
+                op2("+"),
                 grp("("), 
                     int10lit("3"), op2("*"), int10lit("2"), 
                 grp(")"), 
@@ -193,7 +193,7 @@ TEST_CASE("Operator tokens") {
     STATIC_REQUIRE(Tokenizer("1<<2") == toks(int10lit("1"), op2("<<"), int10lit("2")));
     STATIC_REQUIRE(Tokenizer("1 >> 2") == toks(int10lit("1"), op2(">>"), int10lit("2")));
 
-    STATIC_REQUIRE(Tokenizer("true ? a : b") == toks(boollit("true"), op("?"), id("a"), op(":"), id("b")));
+    STATIC_REQUIRE(Tokenizer("true ? a : b") == toks(boollit("true"), op2("?"), id("a"), op2(":"), id("b")));
 
     STATIC_REQUIRE(Tokenizer("a <=> b") == toks(id("a"), op2("<=>"), id("b")));
 
@@ -361,9 +361,9 @@ TEST_CASE("Binary operator distinction") {
 
     STATIC_REQUIRE(Tokenizer("true ? std::true_type{} : ::std::false_type{}") == toks(
         boollit("true"), 
-        op("?"), 
+        op2("?"), 
         qual("std"), op2("::"), id("true_type"), grp("{"), grp("}"), 
-        op(":"),
+        op2(":"),
         op("::"), qual("std"), op2("::"), id("false_type"), grp("{"), grp("}")
     ));
 

@@ -569,14 +569,17 @@ constexpr auto make_rev_size_sorted(const std::string_view (&arr)[N]) {
 }
 
 constexpr auto binary_operator_tokens = make_rev_size_sorted({
-    "::", ",",                                                           //
-    ".",  "->",                                                          //
-    ".*", "->*",                                                         //
-    "+",  "-",   "*",   "/",  "%",                                       //
-    "<<", ">>",  "^",   "|",  "&",                                       //
-    "&&", "||",                                                          //
-    "==", "!=",  "<=>", "<",  "<=", ">",  ">=",                          //
-    "=",  "+=",  "-=",  "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=" //
+    "::", ",",                                                         //
+    ".", "->",                                                         //
+    ".*", "->*",                                                       //
+    "+", "-", "*", "/", "%",                                           //
+    "<<", ">>", "^", "|", "&",                                         //
+    "&&", "||",                                                        //
+    "==", "!=", "<=>", "<", "<=", ">", ">=",                           //
+    "=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "^=", "|=", //
+    // Yes, these together make up a ternary operator, but taken individually
+    // they very closely resemble binary ops syntactically, so we'll consider them such
+    "?", ":" //
 });
 
 constexpr auto operator_tokens = make_rev_size_sorted({
@@ -588,7 +591,7 @@ constexpr auto operator_tokens = make_rev_size_sorted({
     "throw", "sizeof", "alignof", "new", "delete",                   //
                                                                      //
     "const_cast", "static_cast", "dynamic_cast", "reinterpret_cast", //
-    "::", "?", ":"                                                   //
+    "::"                                                             //
 });
 
 // Only 5 operands, '+' '-' '*' '&' and '::', should be present in both operator_tokens and binary_operator_tokens
@@ -1127,13 +1130,15 @@ constexpr bool matches<BinaryOperator>(const Stream& stream) {
         return false;
     }
 
-    // the last token was an operator -> this one MUST be a unary operator
-    if (Token::Kind kind = stream.ctx.prevs.back().kind; kind == Operator || kind == BinaryOperator) {
+    // the last token was an binary operator -> this one MUST be a unary operator
+    if (Token::Kind kind = stream.ctx.prevs.back().kind; kind == BinaryOperator) {
         return false;
     }
 
     return true;
 }
+
+static_assert(matches<BinaryOperator>("? 123"));
 
 /// \overload
 /// Whether the start of `stream` is an operator token
@@ -1169,7 +1174,6 @@ constexpr bool matches<Operator>(const Stream& stream) {
 
 static_assert(matches<Operator>("+ 123"));
 static_assert(matches<Operator>(":: 123"));
-static_assert(matches<Operator>("? 123"));
 static_assert(matches<Operator>("sizeof 123"));
 static_assert(!matches<Operator>("(123)"));
 static_assert(!matches<Operator>("{ 123"));
